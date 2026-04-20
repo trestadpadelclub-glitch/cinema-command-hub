@@ -42,7 +42,7 @@ export function ManualControls({ settings, onChange }: Props) {
         max={100}
         step={1}
         suffix="%"
-        onChange={(v) => update({ laser_output: v }, "laser")}
+        onChange={(v) => update("laser_output", v, { laser_output: v })}
       />
 
       <SliderRow
@@ -52,7 +52,7 @@ export function ManualControls({ settings, onChange }: Props) {
         min={45}
         max={55}
         step={1}
-        onChange={(v) => update({ brightness: v }, "bright")}
+        onChange={(v) => update("brightness", v, { brightness: v })}
       />
 
       <SliderRow
@@ -61,7 +61,7 @@ export function ManualControls({ settings, onChange }: Props) {
         min={0}
         max={100}
         step={5}
-        onChange={(v) => update({ reality_creation: v }, "reality")}
+        onChange={(v) => update("reality_creation", v, { reality_creation: v })}
       />
 
       <Card className="p-5">
@@ -74,7 +74,7 @@ export function ManualControls({ settings, onChange }: Props) {
                 key={lvl}
                 variant={active ? "default" : "secondary"}
                 size="sm"
-                onClick={() => update({ hdr_enhancer: lvl }, "hdr")}
+                onClick={() => update("hdr_enhancer", lvl, { hdr_enhancer: lvl })}
                 className={`capitalize ${active ? "shadow-[var(--cinema-glow)]" : ""}`}
               >
                 {lvl}
