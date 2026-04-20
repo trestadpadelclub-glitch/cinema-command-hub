@@ -137,6 +137,10 @@ export function ExpertCalibration() {
   );
   const [selectedPresetId, setSelectedPresetId] = useState<string>("");
   const [analyzing, setAnalyzing] = useState(false);
+  const [chat, setChat] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [refining, setRefining] = useState(false);
+  const [savingToKb, setSavingToKb] = useState(false);
 
   useEffect(() => {
     localStorage.setItem(PRESETS_KEY, JSON.stringify(presets));
@@ -187,6 +191,8 @@ export function ExpertCalibration() {
     setSelectedPresetId(id);
     setScenario(preset.scenario);
     setJson(preset.json);
+    setChat([]);
+    setChatInput("");
     toast.success(`Loaded "${preset.name}"`);
   };
 
@@ -203,12 +209,16 @@ export function ExpertCalibration() {
     setJson("");
     setSelectedPresetId("");
     setPresetName("");
+    setChat([]);
+    setChatInput("");
     toast.success("Formuläret återställt");
   };
 
   const handleReuseHistory = (entry: HistoryEntry) => {
     setScenario(entry.scenario);
     setJson(entry.json);
+    setChat([]);
+    setChatInput("");
     toast.success("Inställningar laddade från historiken");
   };
 
