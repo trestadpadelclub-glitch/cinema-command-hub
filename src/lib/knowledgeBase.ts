@@ -27,3 +27,11 @@ export function setMasterInstructions(text: string) {
   if (typeof window === "undefined") return;
   localStorage.setItem(KB_KEY, text);
 }
+
+export function appendToMasterInstructions(addendum: string) {
+  if (typeof window === "undefined") return;
+  const current = getMasterInstructions().trimEnd();
+  const stamp = new Date().toISOString().slice(0, 10);
+  const block = `\n\nLEARNED ${stamp}:\n${addendum.trim()}`;
+  setMasterInstructions(current + block);
+}

@@ -18,10 +18,14 @@ import {
   RotateCcw,
   Eraser,
   Brain,
+  MessageSquare,
+  BookmarkPlus,
+  User,
+  Bot,
 } from "lucide-react";
 import { toast } from "sonner";
 import { KnowledgeBaseDialog } from "@/components/KnowledgeBaseDialog";
-import { getMasterInstructions } from "@/lib/knowledgeBase";
+import { appendToMasterInstructions, getMasterInstructions } from "@/lib/knowledgeBase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -61,6 +65,7 @@ interface Scenario {
   lighting: number;
   screen: Screen;
   priority: Priority;
+  notes: string;
 }
 
 interface ExpertPreset {
@@ -78,6 +83,13 @@ interface HistoryEntry {
   json: string;
 }
 
+interface ChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  timestamp: number;
+}
+
 const DEFAULT_SCENARIO: Scenario = {
   title: "",
   resolution: "4K",
@@ -87,6 +99,7 @@ const DEFAULT_SCENARIO: Scenario = {
   lighting: 0,
   screen: '110" White Spandex',
   priority: "Max Image Quality",
+  notes: "",
 };
 
 const PRESETS_KEY = "expert-calibration-presets";
@@ -95,7 +108,8 @@ const HISTORY_LIMIT = 20;
 
 function formatScenario(s: Scenario): string {
   const priority = s.priority === "Max Image Quality" ? "Max Quality" : "Silent Fan";
-  return `Title: ${s.title || "Untitled"} | Res: ${s.resolution} | Format: ${s.format} | Source: ${s.source} | Service: ${s.service} | Lighting: ${s.lighting}% | Screen: ${s.screen} | Priority: ${priority}`;
+  const base = `Title: ${s.title || "Untitled"} | Res: ${s.resolution} | Format: ${s.format} | Source: ${s.source} | Service: ${s.service} | Lighting: ${s.lighting}% | Screen: ${s.screen} | Priority: ${priority}`;
+  return s.notes.trim() ? `${base}\nNotes: ${s.notes.trim()}` : base;
 }
 
 function loadJSON<T>(key: string, fallback: T): T {
@@ -123,6 +137,10 @@ export function ExpertCalibration() {
   );
   const [selectedPresetId, setSelectedPresetId] = useState<string>("");
   const [analyzing, setAnalyzing] = useState(false);
+  const [chat, setChat] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [refining, setRefining] = useState(false);
+  const [savingToKb, setSavingToKb] = useState(false);
 
   useEffect(() => {
     localStorage.setItem(PRESETS_KEY, JSON.stringify(presets));
@@ -173,6 +191,8 @@ export function ExpertCalibration() {
     setSelectedPresetId(id);
     setScenario(preset.scenario);
     setJson(preset.json);
+    setChat([]);
+    setChatInput("");
     toast.success(`Loaded "${preset.name}"`);
   };
 
@@ -189,12 +209,16 @@ export function ExpertCalibration() {
     setJson("");
     setSelectedPresetId("");
     setPresetName("");
+    setChat([]);
+    setChatInput("");
     toast.success("Formuläret återställt");
   };
 
   const handleReuseHistory = (entry: HistoryEntry) => {
     setScenario(entry.scenario);
     setJson(entry.json);
+    setChat([]);
+    setChatInput("");
     toast.success("Inställningar laddade från historiken");
   };
 
@@ -203,29 +227,51 @@ export function ExpertCalibration() {
     toast.success("Historik rensad");
   };
 
+  const callBrain = async (chatHistory: ChatMessage[]) => {
+    let currentSettings: Record<string, unknown> = {};
+    try {
+      if (json.trim()) currentSettings = JSON.parse(json);
+    } catch {
+      /* ignore — let AI start from scratch */
+    }
+    const res = await fetch("/api/cinema-brain", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        mode: "calibrate",
+        masterInstructions: getMasterInstructions(),
+        scenario,
+        currentSettings,
+        chatHistory: chatHistory.map((m) => ({
+          role: m.role,
+          content: m.content,
+        })),
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data?.error || `AI-fel (${res.status})`);
+    const settings = data?.settings;
+    if (!settings || typeof settings !== "object") {
+      throw new Error("AI returnerade inga settings");
+    }
+    return settings as Record<string, unknown>;
+  };
+
   const handleAnalyze = async () => {
     setAnalyzing(true);
     try {
-      const res = await fetch("/api/cinema-brain", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          masterInstructions: getMasterInstructions(),
-          scenario,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast.error(data?.error || `AI-fel (${res.status})`);
-        return;
-      }
-      const settings = data?.settings;
-      if (!settings || typeof settings !== "object") {
-        toast.error("AI returnerade inga settings");
-        return;
-      }
-      setJson(JSON.stringify(settings, null, 2));
-      toast.success("AI-kalibrering klar — granska och tryck Apply", {
+      const settings = await callBrain([]);
+      const pretty = JSON.stringify(settings, null, 2);
+      setJson(pretty);
+      setChat([
+        {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: pretty,
+          timestamp: Date.now(),
+        },
+      ]);
+      toast.success("AI-kalibrering klar — granska, chatta för justeringar, tryck Apply", {
         description: `${Object.keys(settings).length} inställningar föreslagna`,
       });
     } catch (err) {
@@ -234,6 +280,89 @@ export function ExpertCalibration() {
       });
     } finally {
       setAnalyzing(false);
+    }
+  };
+
+  const handleRefine = async () => {
+    const text = chatInput.trim();
+    if (!text) return;
+    const userMsg: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content: text,
+      timestamp: Date.now(),
+    };
+    const nextChat = [...chat, userMsg];
+    setChat(nextChat);
+    setChatInput("");
+    setRefining(true);
+    try {
+      const settings = await callBrain(nextChat);
+      const pretty = JSON.stringify(settings, null, 2);
+      setJson(pretty);
+      setChat([
+        ...nextChat,
+        {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: pretty,
+          timestamp: Date.now(),
+        },
+      ]);
+    } catch (err) {
+      toast.error("Refinement misslyckades", {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setRefining(false);
+    }
+  };
+
+  const handleSaveToKb = async () => {
+    if (!json.trim()) {
+      toast.error("Ingen aktuell JSON att spara från");
+      return;
+    }
+    let finalSettings: Record<string, unknown>;
+    try {
+      finalSettings = JSON.parse(json);
+    } catch {
+      toast.error("Ogiltig JSON");
+      return;
+    }
+    setSavingToKb(true);
+    try {
+      const res = await fetch("/api/cinema-brain", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: "summarize",
+          masterInstructions: getMasterInstructions(),
+          scenario,
+          finalSettings,
+          chatHistory: chat.map((m) => ({ role: m.role, content: m.content })),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data?.error || `AI-fel (${res.status})`);
+        return;
+      }
+      const summary: string = data?.summary ?? "";
+      if (!summary) {
+        toast.error("AI returnerade ingen sammanfattning");
+        return;
+      }
+      appendToMasterInstructions(summary);
+      toast.success("Lärdomar sparade till Knowledge Base", {
+        description: summary.split("\n")[0],
+      });
+    } catch (err) {
+      toast.error("Kunde inte uppdatera KB", {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setSavingToKb(false);
     }
   };
 
@@ -483,6 +612,19 @@ export function ExpertCalibration() {
               />
             </RadioGroup>
           </Field>
+
+          <Field
+            label="Free-text Notes (skickas med till experten & AI)"
+            icon={<MessageSquare className="h-4 w-4" />}
+            className="sm:col-span-2"
+          >
+            <Textarea
+              value={scenario.notes}
+              onChange={(e) => update("notes", e.target.value)}
+              placeholder="t.ex. 'mörka skuggdetaljer i grottscenen försvinner', 'vill ha varmare hudtoner', 'fläktljud får inte överstiga 28 dB'…"
+              className="min-h-[80px] resize-y"
+            />
+          </Field>
         </div>
 
         <div className="mt-6 flex items-center justify-between gap-3 border-t border-border/60 pt-4">
@@ -557,6 +699,107 @@ export function ExpertCalibration() {
               )}
             </Button>
           </div>
+        </div>
+      </section>
+
+      {/* Refinement Chat */}
+      <section className="rounded-xl border border-border/60 bg-card/40 p-5 sm:p-6 backdrop-blur">
+        <header className="mb-5 flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <MessageSquare className="h-5 w-5" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-base font-semibold">Refinement Chat</h3>
+            <p className="text-xs text-muted-foreground">
+              Chatta med Cinema Brain — beskriv vad du vill justera, AI:n uppdaterar
+              endast det som behövs i JSON ovan.
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSaveToKb}
+            disabled={savingToKb || !json.trim()}
+            title="Låt AI sammanfatta lärdomarna och lägg till i Knowledge Base"
+          >
+            {savingToKb ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                Sparar…
+              </>
+            ) : (
+              <>
+                <BookmarkPlus className="h-4 w-4 mr-1.5" />
+                Save to Knowledge Base
+              </>
+            )}
+          </Button>
+        </header>
+
+        {chat.length === 0 ? (
+          <p className="text-sm text-muted-foreground italic py-6 text-center">
+            Kör "AI Analyze" först — sedan kan du chatta här för att finjustera.
+          </p>
+        ) : (
+          <div className="space-y-3 max-h-[360px] overflow-y-auto pr-1 mb-4">
+            {chat.map((m) => (
+              <div
+                key={m.id}
+                className={`flex gap-3 ${m.role === "user" ? "justify-end" : "justify-start"}`}
+              >
+                {m.role === "assistant" && (
+                  <div className="flex-shrink-0 flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <Bot className="h-4 w-4" />
+                  </div>
+                )}
+                <div
+                  className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
+                    m.role === "user"
+                      ? "bg-primary/10 text-foreground"
+                      : "bg-muted/60 text-foreground"
+                  }`}
+                >
+                  {m.role === "assistant" ? (
+                    <pre className="whitespace-pre-wrap font-mono text-xs">
+                      {m.content}
+                    </pre>
+                  ) : (
+                    <p className="whitespace-pre-wrap">{m.content}</p>
+                  )}
+                </div>
+                {m.role === "user" && (
+                  <div className="flex-shrink-0 flex h-7 w-7 items-center justify-center rounded-full bg-accent/40">
+                    <User className="h-4 w-4" />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="flex gap-2">
+          <Input
+            value={chatInput}
+            onChange={(e) => setChatInput(e.target.value)}
+            placeholder="t.ex. 'sänk lasern lite, fläkten hörs', 'mer skuggdetaljer'…"
+            disabled={refining || chat.length === 0}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleRefine();
+              }
+            }}
+          />
+          <Button
+            onClick={handleRefine}
+            disabled={refining || !chatInput.trim() || chat.length === 0}
+          >
+            {refining ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
+          </Button>
         </div>
       </section>
 
