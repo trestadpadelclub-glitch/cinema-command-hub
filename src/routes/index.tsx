@@ -50,6 +50,7 @@ const DEFAULT_SETTINGS: ProjectorSettings = {
   pic_mode: "Cinema 1",
   laser_output: 75,
   brightness: 50,
+  contrast: 90,
   reality_creation: 20,
   hdr_enhancer: "off",
   dynamic_control: "limited",

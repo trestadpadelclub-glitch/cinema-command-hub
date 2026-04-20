@@ -95,6 +95,15 @@ export function ManualControls({ settings, onChange }: Props) {
       />
 
       <SliderRow
+        label="Contrast"
+        value={settings.contrast ?? 90}
+        min={0}
+        max={100}
+        step={1}
+        onChange={(v) => update("contrast", v, { contrast: v })}
+      />
+
+      <SliderRow
         label="Reality Creation"
         value={settings.reality_creation ?? 20}
         min={0}
