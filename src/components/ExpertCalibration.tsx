@@ -18,10 +18,14 @@ import {
   RotateCcw,
   Eraser,
   Brain,
+  MessageSquare,
+  BookmarkPlus,
+  User,
+  Bot,
 } from "lucide-react";
 import { toast } from "sonner";
 import { KnowledgeBaseDialog } from "@/components/KnowledgeBaseDialog";
-import { getMasterInstructions } from "@/lib/knowledgeBase";
+import { appendToMasterInstructions, getMasterInstructions } from "@/lib/knowledgeBase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -61,6 +65,7 @@ interface Scenario {
   lighting: number;
   screen: Screen;
   priority: Priority;
+  notes: string;
 }
 
 interface ExpertPreset {
@@ -78,6 +83,13 @@ interface HistoryEntry {
   json: string;
 }
 
+interface ChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  timestamp: number;
+}
+
 const DEFAULT_SCENARIO: Scenario = {
   title: "",
   resolution: "4K",
@@ -87,6 +99,7 @@ const DEFAULT_SCENARIO: Scenario = {
   lighting: 0,
   screen: '110" White Spandex',
   priority: "Max Image Quality",
+  notes: "",
 };
 
 const PRESETS_KEY = "expert-calibration-presets";
@@ -95,7 +108,8 @@ const HISTORY_LIMIT = 20;
 
 function formatScenario(s: Scenario): string {
   const priority = s.priority === "Max Image Quality" ? "Max Quality" : "Silent Fan";
-  return `Title: ${s.title || "Untitled"} | Res: ${s.resolution} | Format: ${s.format} | Source: ${s.source} | Service: ${s.service} | Lighting: ${s.lighting}% | Screen: ${s.screen} | Priority: ${priority}`;
+  const base = `Title: ${s.title || "Untitled"} | Res: ${s.resolution} | Format: ${s.format} | Source: ${s.source} | Service: ${s.service} | Lighting: ${s.lighting}% | Screen: ${s.screen} | Priority: ${priority}`;
+  return s.notes.trim() ? `${base}\nNotes: ${s.notes.trim()}` : base;
 }
 
 function loadJSON<T>(key: string, fallback: T): T {
