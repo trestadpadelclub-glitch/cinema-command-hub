@@ -16,7 +16,7 @@ import {
   DEFAULT_BRIDGE_URL,
   getBridgeUrl,
   setBridgeUrl,
-  sendCommand,
+  getStatus,
 } from "@/lib/projector";
 
 export function SettingsDialog() {
@@ -48,7 +48,7 @@ export function SettingsDialog() {
     setTesting(true);
     setTestResult(null);
     setBridgeUrl(url.trim() || DEFAULT_BRIDGE_URL);
-    const res = await sendCommand({ action: "ping" } as never);
+    const res = await getStatus();
     setTesting(false);
     if (res.ok) {
       setTestResult({ ok: true, msg: `Anslutning OK (status ${res.status})` });

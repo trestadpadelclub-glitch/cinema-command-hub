@@ -4,7 +4,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import {
   analyzeInstruction,
-  sendCommand,
+  applySettings,
   type AiSuggestion,
   type ProjectorSettings,
 } from "@/lib/projector";
@@ -39,12 +39,15 @@ export function AiAssistant({ current, onApplied }: Props) {
   };
 
   const apply = async (sug: AiSuggestion) => {
-    const res = await sendCommand({ action: "settings", ...sug.changes });
-    if (res.ok) {
+    const results = await applySettings(sug.changes);
+    const failed = results.find((r) => !r.ok);
+    if (!failed) {
       toast.success("Justering applicerad");
       onApplied({ ...current, ...sug.changes });
     } else {
-      toast.error("Bridge-fel", { description: res.error || `Status ${res.status}` });
+      toast.error(`Fel vid ${failed.command?.action}`, {
+        description: failed.error || `Status ${failed.status}`,
+      });
     }
   };
 
@@ -54,12 +57,15 @@ export function AiAssistant({ current, onApplied }: Props) {
       (acc, s) => ({ ...acc, ...s.changes }),
       {},
     );
-    const res = await sendCommand({ action: "settings", ...merged });
-    if (res.ok) {
-      toast.success(`${suggestions.length} justeringar applicerade`);
+    const results = await applySettings(merged);
+    const failed = results.find((r) => !r.ok);
+    if (!failed) {
+      toast.success(`${results.length} justeringar applicerade`);
       onApplied({ ...current, ...merged });
     } else {
-      toast.error("Bridge-fel", { description: res.error || `Status ${res.status}` });
+      toast.error(`Fel vid ${failed.command?.action}`, {
+        description: failed.error || `Status ${failed.status}`,
+      });
     }
   };
 

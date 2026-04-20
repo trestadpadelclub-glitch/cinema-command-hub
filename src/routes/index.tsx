@@ -9,6 +9,8 @@ import { ManualControls } from "@/components/ManualControls";
 import { AiAssistant } from "@/components/AiAssistant";
 import {
   sendCommand,
+  applySettings,
+  getStatus,
   type ProjectorSettings,
 } from "@/lib/projector";
 
@@ -40,10 +42,14 @@ function Index() {
   useEffect(() => {
     type CinemaApi = {
       sendCommand: typeof sendCommand;
+      applySettings: typeof applySettings;
+      getStatus: typeof getStatus;
       setSettings: typeof setSettings;
     };
     (window as unknown as { cinemaControl: CinemaApi }).cinemaControl = {
       sendCommand,
+      applySettings,
+      getStatus,
       setSettings,
     };
   }, []);

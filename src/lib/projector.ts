@@ -1,4 +1,6 @@
 // Projector bridge client + types
+// Bridge API: POST /api/projector  body: { action, value }
+// One action per request — multi-setting payloads are split client-side.
 
 const BRIDGE_URL_KEY = "sony_xw5000es_bridge_url";
 export const DEFAULT_BRIDGE_URL = "http://localhost:5000/api/projector";
@@ -19,17 +21,38 @@ export type DynamicControl = "off" | "limited" | "middle" | "full";
 
 export interface ProjectorSettings {
   pic_mode?: PicMode;
-  laser_output?: number; // 0-100
-  brightness?: number; // 50-52 typical, allow 45-55
+  laser_output?: number; // 0-100 (bridge multiplies by 10)
+  brightness?: number; // ~45-55
   reality_creation?: number; // 0-100
   hdr_enhancer?: HdrEnhancer;
   dynamic_control?: DynamicControl;
 }
 
-export interface ProjectorCommand extends ProjectorSettings {
-  action?: "power" | "settings" | "preset";
-  value?: "on" | "off" | string;
+export type Action =
+  | "power"
+  | "pic_mode"
+  | "hdr_enhancer"
+  | "dynamic_control"
+  | "laser_output"
+  | "reality_creation"
+  | "brightness"
+  | "contrast"
+  | "range";
+
+export interface SingleCommand {
+  action: Action;
+  value: string | number;
 }
+
+export interface CommandResult {
+  ok: boolean;
+  status: number;
+  data?: unknown;
+  error?: string;
+  command?: SingleCommand;
+}
+
+// --- bridge URL persistence ---
 
 export function getBridgeUrl(): string {
   if (typeof window === "undefined") return DEFAULT_BRIDGE_URL;
@@ -41,25 +64,48 @@ export function setBridgeUrl(url: string) {
   localStorage.setItem(BRIDGE_URL_KEY, url);
 }
 
-export async function sendCommand(payload: ProjectorCommand): Promise<{
-  ok: boolean;
-  status: number;
-  data?: unknown;
-  error?: string;
-}> {
+function statusUrl(): string {
+  // /api/projector  ->  /api/projector/status
+  return getBridgeUrl().replace(/\/+$/, "") + "/status";
+}
+
+// --- low level ---
+
+export async function sendCommand(cmd: SingleCommand): Promise<CommandResult> {
   const url = getBridgeUrl();
   try {
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(cmd),
     });
-    let data: unknown = undefined;
     const text = await res.text();
+    let data: unknown = text;
     try {
       data = text ? JSON.parse(text) : undefined;
     } catch {
-      data = text;
+      /* keep raw text */
+    }
+    return { ok: res.ok, status: res.status, data, command: cmd };
+  } catch (err) {
+    return {
+      ok: false,
+      status: 0,
+      error: err instanceof Error ? err.message : String(err),
+      command: cmd,
+    };
+  }
+}
+
+export async function getStatus(): Promise<CommandResult> {
+  try {
+    const res = await fetch(statusUrl(), { method: "GET" });
+    const text = await res.text();
+    let data: unknown = text;
+    try {
+      data = text ? JSON.parse(text) : undefined;
+    } catch {
+      /* keep */
     }
     return { ok: res.ok, status: res.status, data };
   } catch (err) {
@@ -69,6 +115,35 @@ export async function sendCommand(payload: ProjectorCommand): Promise<{
       error: err instanceof Error ? err.message : String(err),
     };
   }
+}
+
+// Map of which ProjectorSettings keys correspond to which bridge action.
+// All listed keys map 1:1 to the action name.
+const SETTINGS_ACTIONS: Action[] = [
+  "pic_mode",
+  "laser_output",
+  "brightness",
+  "reality_creation",
+  "hdr_enhancer",
+  "dynamic_control",
+];
+
+/**
+ * Apply multiple settings sequentially — bridge accepts ONE action per call.
+ * Returns array of per-command results.
+ */
+export async function applySettings(
+  settings: ProjectorSettings,
+): Promise<CommandResult[]> {
+  const results: CommandResult[] = [];
+  for (const action of SETTINGS_ACTIONS) {
+    const value = settings[action as keyof ProjectorSettings];
+    if (value === undefined || value === null) continue;
+    const res = await sendCommand({ action, value: value as string | number });
+    results.push(res);
+    if (!res.ok) break; // stop on first failure
+  }
+  return results;
 }
 
 // ----- Quick presets -----
@@ -149,10 +224,8 @@ export function analyzeInstruction(
 ): AiSuggestion[] {
   const t = text.toLowerCase();
   const out: AiSuggestion[] = [];
-
   const has = (...words: string[]) => words.some((w) => t.includes(w));
 
-  // Too dark in shadows / black crush
   if (
     has("för mörk", "mörk i skugg", "skuggor", "black crush", "too dark", "shadows")
   ) {
@@ -166,7 +239,6 @@ export function analyzeInstruction(
     });
   }
 
-  // Too bright / washed out
   if (has("för ljus", "för ljust", "blekt", "uttvättad", "washed out", "too bright")) {
     out.push({
       reason: "Sänker brightness till 50 (neutralt referensvärde).",
@@ -178,7 +250,6 @@ export function analyzeInstruction(
     });
   }
 
-  // Soft / blurry
   if (has("suddig", "mjuk", "oskarp", "soft", "blurry", "komprim")) {
     out.push({
       reason: "Höjer Reality Creation till 60 för skarpare detaljer.",
@@ -186,7 +257,6 @@ export function analyzeInstruction(
     });
   }
 
-  // Too sharp / artifacts
   if (has("för skarp", "artefakt", "ringing", "too sharp")) {
     out.push({
       reason: "Sänker Reality Creation till 20 för naturligare bild.",
@@ -194,7 +264,6 @@ export function analyzeInstruction(
     });
   }
 
-  // Highlights clipping
   if (has("utbränd", "clipping", "highlights", "vitt utbränt")) {
     out.push({
       reason: "Sätter Dynamic Control till Limited för att skydda highlights.",
@@ -206,7 +275,6 @@ export function analyzeInstruction(
     });
   }
 
-  // Eye strain / too intense
   if (has("ansträngande", "trött i ögon", "för intensiv", "eye strain")) {
     out.push({
       reason: "Sänker laser till 60 för bekvämare ljusstyrka.",
