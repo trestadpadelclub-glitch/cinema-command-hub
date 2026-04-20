@@ -2,7 +2,14 @@ import { Card } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { sendCommand, type HdrEnhancer, type Action, type ProjectorSettings } from "@/lib/projector";
+import {
+  sendCommand,
+  type HdrEnhancer,
+  type DynamicControl,
+  type PicMode,
+  type Action,
+  type ProjectorSettings,
+} from "@/lib/projector";
 import { toast } from "sonner";
 import { useRef } from "react";
 
@@ -12,6 +19,18 @@ interface Props {
 }
 
 const HDR_LEVELS: HdrEnhancer[] = ["off", "low", "middle", "high"];
+const DYNAMIC_LEVELS: DynamicControl[] = ["off", "limited", "middle", "full"];
+const PIC_MODES: PicMode[] = [
+  "Cinema 1",
+  "Cinema 2",
+  "Reference",
+  "TV",
+  "Photo",
+  "Game",
+  "Bright Cinema",
+  "Bright TV",
+  "User",
+];
 
 export function ManualControls({ settings, onChange }: Props) {
   const debounceRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
@@ -35,6 +54,26 @@ export function ManualControls({ settings, onChange }: Props) {
 
   return (
     <div className="space-y-4">
+      <Card className="p-5">
+        <Label className="text-sm font-medium mb-3 block">Picture Mode</Label>
+        <div className="grid grid-cols-3 gap-2">
+          {PIC_MODES.map((m) => {
+            const active = (settings.pic_mode ?? "Cinema 1") === m;
+            return (
+              <Button
+                key={m}
+                variant={active ? "default" : "secondary"}
+                size="sm"
+                onClick={() => update("pic_mode", m, { pic_mode: m })}
+                className={active ? "shadow-[var(--cinema-glow)]" : ""}
+              >
+                {m}
+              </Button>
+            );
+          })}
+        </div>
+      </Card>
+
       <SliderRow
         label="Laser Output"
         value={settings.laser_output ?? 75}
@@ -75,6 +114,26 @@ export function ManualControls({ settings, onChange }: Props) {
                 variant={active ? "default" : "secondary"}
                 size="sm"
                 onClick={() => update("hdr_enhancer", lvl, { hdr_enhancer: lvl })}
+                className={`capitalize ${active ? "shadow-[var(--cinema-glow)]" : ""}`}
+              >
+                {lvl}
+              </Button>
+            );
+          })}
+        </div>
+      </Card>
+
+      <Card className="p-5">
+        <Label className="text-sm font-medium mb-3 block">Dynamic Control</Label>
+        <div className="grid grid-cols-4 gap-2">
+          {DYNAMIC_LEVELS.map((lvl) => {
+            const active = (settings.dynamic_control ?? "limited") === lvl;
+            return (
+              <Button
+                key={lvl}
+                variant={active ? "default" : "secondary"}
+                size="sm"
+                onClick={() => update("dynamic_control", lvl, { dynamic_control: lvl })}
                 className={`capitalize ${active ? "shadow-[var(--cinema-glow)]" : ""}`}
               >
                 {lvl}
