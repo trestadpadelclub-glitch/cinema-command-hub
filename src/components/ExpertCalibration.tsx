@@ -502,13 +502,26 @@ export function ExpertCalibration() {
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <Download className="h-5 w-5" />
           </div>
-          <div>
+          <div className="flex-1">
             <h3 className="text-base font-semibold">Apply Expert Settings</h3>
             <p className="text-xs text-muted-foreground">
-              Klistra in JSON från experten — varje nyckel/värde skickas som ett
-              kommando.
+              Låt Cinema Brain (AI) generera, eller klistra in JSON från experten.
             </p>
           </div>
+          <KnowledgeBaseDialog />
+          <Button onClick={handleAnalyze} disabled={analyzing} size="sm">
+            {analyzing ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                Analyserar…
+              </>
+            ) : (
+              <>
+                <Brain className="h-4 w-4 mr-1.5" />
+                AI Analyze
+              </>
+            )}
+          </Button>
         </header>
 
         <div className="space-y-3">
