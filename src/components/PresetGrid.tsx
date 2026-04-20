@@ -32,7 +32,11 @@ export function PresetGrid({
   onDeleteCustom,
 }: Props) {
   const [busy, setBusy] = useState<string | null>(null);
-  const all = [...PRESETS, ...customPresets];
+  // Custom preset med samma id som en fast preset överskrider den fasta
+  const all = [
+    ...PRESETS.map((p) => customPresets.find((c) => c.id === p.id) ?? p),
+    ...customPresets.filter((c) => !PRESETS.find((p) => p.id === c.id)),
+  ];
 
   const apply = async (p: Preset) => {
     setBusy(p.id);
