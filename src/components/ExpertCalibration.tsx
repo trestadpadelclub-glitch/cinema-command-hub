@@ -17,8 +17,11 @@ import {
   Trash2,
   RotateCcw,
   Eraser,
+  Brain,
 } from "lucide-react";
 import { toast } from "sonner";
+import { KnowledgeBaseDialog } from "@/components/KnowledgeBaseDialog";
+import { getMasterInstructions } from "@/lib/knowledgeBase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -119,6 +122,7 @@ export function ExpertCalibration() {
     loadJSON<HistoryEntry[]>(HISTORY_KEY, []),
   );
   const [selectedPresetId, setSelectedPresetId] = useState<string>("");
+  const [analyzing, setAnalyzing] = useState(false);
 
   useEffect(() => {
     localStorage.setItem(PRESETS_KEY, JSON.stringify(presets));
@@ -197,6 +201,40 @@ export function ExpertCalibration() {
   const handleClearHistory = () => {
     setHistory([]);
     toast.success("Historik rensad");
+  };
+
+  const handleAnalyze = async () => {
+    setAnalyzing(true);
+    try {
+      const res = await fetch("/api/cinema-brain", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          masterInstructions: getMasterInstructions(),
+          scenario,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data?.error || `AI-fel (${res.status})`);
+        return;
+      }
+      const settings = data?.settings;
+      if (!settings || typeof settings !== "object") {
+        toast.error("AI returnerade inga settings");
+        return;
+      }
+      setJson(JSON.stringify(settings, null, 2));
+      toast.success("AI-kalibrering klar — granska och tryck Apply", {
+        description: `${Object.keys(settings).length} inställningar föreslagna`,
+      });
+    } catch (err) {
+      toast.error("Kunde inte nå AI:n", {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setAnalyzing(false);
+    }
   };
 
   const handleApply = async () => {
@@ -464,13 +502,26 @@ export function ExpertCalibration() {
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <Download className="h-5 w-5" />
           </div>
-          <div>
+          <div className="flex-1">
             <h3 className="text-base font-semibold">Apply Expert Settings</h3>
             <p className="text-xs text-muted-foreground">
-              Klistra in JSON från experten — varje nyckel/värde skickas som ett
-              kommando.
+              Låt Cinema Brain (AI) generera, eller klistra in JSON från experten.
             </p>
           </div>
+          <KnowledgeBaseDialog />
+          <Button onClick={handleAnalyze} disabled={analyzing} size="sm">
+            {analyzing ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                Analyserar…
+              </>
+            ) : (
+              <>
+                <Brain className="h-4 w-4 mr-1.5" />
+                AI Analyze
+              </>
+            )}
+          </Button>
         </header>
 
         <div className="space-y-3">

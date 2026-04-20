@@ -1,0 +1,200 @@
+import { createFileRoute } from "@tanstack/react-router";
+
+const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+
+const SCHEMA_HINT = `Return ONLY a JSON object with these allowed keys (omit any you don't want to set):
+- pic_mode: "cinema_film_1" | "cinema_film_2" | "reference" | "tv" | "bright_cinema"
+- laser_output: integer 0-100
+- brightness: integer 0-100
+- contrast: integer 0-100
+- color: integer 0-100
+- reality_creation: integer 0-100
+- hdr_enhancer: "off" | "low" | "middle" | "high"
+- dynamic_control: "off" | "limited" | "middle" | "full"
+- motionflow: "off" | "true_cinema" | "smooth_low" | "smooth_high" | "impulse" | "combination"
+- gamma_correction: "off" | "1.8" | "2.0" | "2.1" | "2.2" | "2.4" | "2.6"
+
+Each key/value will be sent to the Sony bridge as { command: "<key> <value>" }.`;
+
+export const Route = createFileRoute("/api/cinema-brain")({
+  server: {
+    handlers: {
+      POST: async ({ request }) => {
+        const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
+        if (!LOVABLE_API_KEY) {
+          return Response.json(
+            { error: "LOVABLE_API_KEY is not configured" },
+            { status: 500 },
+          );
+        }
+
+        let body: {
+          masterInstructions?: string;
+          scenario?: Record<string, unknown>;
+          currentSettings?: Record<string, unknown>;
+        };
+        try {
+          body = await request.json();
+        } catch {
+          return Response.json({ error: "Invalid JSON body" }, { status: 400 });
+        }
+
+        const masterInstructions =
+          (body.masterInstructions ?? "").toString().trim() ||
+          "(no master instructions provided)";
+        const scenario = body.scenario ?? {};
+        const currentSettings = body.currentSettings ?? {};
+
+        const systemPrompt = `You are an expert home cinema calibrator for the Sony VPL-XW5000ES laser projector.
+You output projector settings as a single JSON object that matches the bridge schema below.
+Do NOT include explanations, markdown, or extra keys — only the JSON object.
+
+${SCHEMA_HINT}`;
+
+        const userPrompt = `MASTER INSTRUCTIONS (knowledge base):
+${masterInstructions}
+
+CURRENT SCENARIO:
+${JSON.stringify(scenario, null, 2)}
+
+CURRENT PROJECTOR SETTINGS (for reference):
+${JSON.stringify(currentSettings, null, 2)}
+
+Produce the optimal calibration JSON for this scenario.`;
+
+        const aiRes = await fetch(GATEWAY_URL, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash",
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userPrompt },
+            ],
+            tools: [
+              {
+                type: "function",
+                function: {
+                  name: "set_projector_settings",
+                  description: "Apply calibrated projector settings to the Sony bridge.",
+                  parameters: {
+                    type: "object",
+                    properties: {
+                      pic_mode: {
+                        type: "string",
+                        enum: [
+                          "cinema_film_1",
+                          "cinema_film_2",
+                          "reference",
+                          "tv",
+                          "bright_cinema",
+                        ],
+                      },
+                      laser_output: { type: "integer", minimum: 0, maximum: 100 },
+                      brightness: { type: "integer", minimum: 0, maximum: 100 },
+                      contrast: { type: "integer", minimum: 0, maximum: 100 },
+                      color: { type: "integer", minimum: 0, maximum: 100 },
+                      reality_creation: { type: "integer", minimum: 0, maximum: 100 },
+                      hdr_enhancer: {
+                        type: "string",
+                        enum: ["off", "low", "middle", "high"],
+                      },
+                      dynamic_control: {
+                        type: "string",
+                        enum: ["off", "limited", "middle", "full"],
+                      },
+                      motionflow: {
+                        type: "string",
+                        enum: [
+                          "off",
+                          "true_cinema",
+                          "smooth_low",
+                          "smooth_high",
+                          "impulse",
+                          "combination",
+                        ],
+                      },
+                      gamma_correction: {
+                        type: "string",
+                        enum: ["off", "1.8", "2.0", "2.1", "2.2", "2.4", "2.6"],
+                      },
+                    },
+                    additionalProperties: false,
+                  },
+                },
+              },
+            ],
+            tool_choice: {
+              type: "function",
+              function: { name: "set_projector_settings" },
+            },
+          }),
+        });
+
+        if (!aiRes.ok) {
+          if (aiRes.status === 429) {
+            return Response.json(
+              { error: "Rate limit exceeded, please try again later." },
+              { status: 429 },
+            );
+          }
+          if (aiRes.status === 402) {
+            return Response.json(
+              {
+                error:
+                  "AI credits exhausted. Add funds at Settings → Workspace → Usage.",
+              },
+              { status: 402 },
+            );
+          }
+          const text = await aiRes.text();
+          console.error("AI gateway error:", aiRes.status, text);
+          return Response.json(
+            { error: `AI gateway error (${aiRes.status})` },
+            { status: 502 },
+          );
+        }
+
+        const data = await aiRes.json();
+        const toolCall = data?.choices?.[0]?.message?.tool_calls?.[0];
+        const argsStr: string | undefined = toolCall?.function?.arguments;
+
+        let settings: Record<string, unknown> | null = null;
+        if (argsStr) {
+          try {
+            settings = JSON.parse(argsStr);
+          } catch (e) {
+            console.error("Failed to parse tool args:", argsStr, e);
+          }
+        }
+
+        if (!settings) {
+          // Fallback: try to parse content as JSON
+          const content: string | undefined = data?.choices?.[0]?.message?.content;
+          if (content) {
+            const match = content.match(/\{[\s\S]*\}/);
+            if (match) {
+              try {
+                settings = JSON.parse(match[0]);
+              } catch {
+                /* ignore */
+              }
+            }
+          }
+        }
+
+        if (!settings) {
+          return Response.json(
+            { error: "AI did not return valid settings JSON." },
+            { status: 502 },
+          );
+        }
+
+        return Response.json({ settings });
+      },
+    },
+  },
+});
