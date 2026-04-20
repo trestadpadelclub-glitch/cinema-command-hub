@@ -166,9 +166,12 @@ const SETTINGS_ACTIONS: Action[] = [
   "laser_output",
   "brightness",
   "contrast",
+  "color",
   "reality_creation",
   "hdr_enhancer",
   "dynamic_control",
+  "motionflow",
+  "gamma_correction",
 ];
 
 /**
