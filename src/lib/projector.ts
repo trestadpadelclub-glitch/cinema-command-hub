@@ -15,7 +15,7 @@ export type PicMode =
   | "User";
 
 export type HdrEnhancer = "off" | "low" | "middle" | "high";
-export type DynamicControl = "off" | "limited" | "full";
+export type DynamicControl = "off" | "limited" | "middle" | "full";
 
 export interface ProjectorSettings {
   pic_mode?: PicMode;
