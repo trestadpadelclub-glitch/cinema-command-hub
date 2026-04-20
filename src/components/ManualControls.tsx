@@ -6,11 +6,13 @@ import {
   sendCommand,
   PIC_MODE_LABELS,
   MOTIONFLOW_LABELS,
+  COLOR_TEMP_LABELS,
   type HdrEnhancer,
   type DynamicControl,
   type PicMode,
   type Motionflow,
   type Gamma,
+  type ColorTemp,
   type Action,
   type ProjectorSettings,
 } from "@/lib/projector";
@@ -40,6 +42,17 @@ const MOTIONFLOW_OPTS: Motionflow[] = [
   "combination",
 ];
 const GAMMA_OPTS: Gamma[] = ["off", "1.8", "2.0", "2.1", "2.2", "2.4", "2.6"];
+const COLOR_TEMP_OPTS: ColorTemp[] = [
+  "d93",
+  "d75",
+  "d65",
+  "d55",
+  "custom1",
+  "custom2",
+  "custom3",
+  "custom4",
+  "custom5",
+];
 
 export function ManualControls({ settings, onChange }: Props) {
   const debounceRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
@@ -205,6 +218,29 @@ export function ManualControls({ settings, onChange }: Props) {
                 className={active ? "shadow-[var(--cinema-glow)]" : ""}
               >
                 {g}
+              </Button>
+            );
+          })}
+        </div>
+      </Card>
+
+      <Card className="p-5">
+        <Label className="text-sm font-medium mb-3 block">Color Temperature</Label>
+        <p className="text-xs text-muted-foreground mb-3">
+          D65 = filmreferens · D93 = kallare/blåare · Custom 1-5 = egna kalibreringar
+        </p>
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+          {COLOR_TEMP_OPTS.map((ct) => {
+            const active = (settings.color_temp ?? "d65") === ct;
+            return (
+              <Button
+                key={ct}
+                variant={active ? "default" : "secondary"}
+                size="sm"
+                onClick={() => update("color_temp", ct, { color_temp: ct })}
+                className={active ? "shadow-[var(--cinema-glow)]" : ""}
+              >
+                {COLOR_TEMP_LABELS[ct]}
               </Button>
             );
           })}
