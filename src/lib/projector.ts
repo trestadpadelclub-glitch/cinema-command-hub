@@ -228,6 +228,9 @@ export const PRESETS: Preset[] = [
       hdr_enhancer: "middle",
       dynamic_control: "limited",
       reality_creation: 20,
+      color: 50,
+      motionflow: "off",
+      gamma_correction: "2.2",
     },
   },
   {
