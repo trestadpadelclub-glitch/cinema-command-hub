@@ -218,7 +218,7 @@ export const PRESETS: Preset[] = [
     label: "4K HDR Movie",
     description: "Cinema 1 · Laser 100 · Brightness 50 · HDR Middle · Limited dynamic",
     settings: {
-      pic_mode: "Cinema 1",
+      pic_mode: "cinema_film_1",
       laser_output: 100,
       brightness: 50,
       contrast: 90,
@@ -230,9 +230,9 @@ export const PRESETS: Preset[] = [
   {
     id: "sdr-tv-sports",
     label: "SDR TV / Sports",
-    description: "Cinema 2 · Laser 75 · Brightness 50 · HDR Off · Middle dynamic",
+    description: "Cinema Film 2 · Laser 75 · Brightness 50 · HDR Off · Middle dynamic",
     settings: {
-      pic_mode: "Cinema 2",
+      pic_mode: "cinema_film_2",
       laser_output: 75,
       brightness: 50,
       contrast: 90,
@@ -244,9 +244,9 @@ export const PRESETS: Preset[] = [
   {
     id: "iptv-formuler",
     label: "IPTV / Formuler",
-    description: "Cinema 2 · Laser 75 · Brightness 50 · Reality 60 (motverkar komprimering)",
+    description: "Cinema Film 2 · Laser 75 · Brightness 50 · Reality 60 (motverkar komprimering)",
     settings: {
-      pic_mode: "Cinema 2",
+      pic_mode: "cinema_film_2",
       laser_output: 75,
       brightness: 50,
       contrast: 90,
