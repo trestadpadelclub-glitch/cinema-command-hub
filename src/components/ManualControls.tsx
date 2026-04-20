@@ -4,9 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
   sendCommand,
+  PIC_MODE_LABELS,
+  MOTIONFLOW_LABELS,
   type HdrEnhancer,
   type DynamicControl,
   type PicMode,
+  type Motionflow,
+  type Gamma,
   type Action,
   type ProjectorSettings,
 } from "@/lib/projector";
@@ -21,16 +25,21 @@ interface Props {
 const HDR_LEVELS: HdrEnhancer[] = ["off", "low", "middle", "high"];
 const DYNAMIC_LEVELS: DynamicControl[] = ["off", "limited", "middle", "full"];
 const PIC_MODES: PicMode[] = [
-  "Cinema 1",
-  "Cinema 2",
-  "Reference",
-  "TV",
-  "Photo",
-  "Game",
-  "Bright Cinema",
-  "Bright TV",
-  "User",
+  "cinema_film_1",
+  "cinema_film_2",
+  "reference",
+  "tv",
+  "bright_cinema",
 ];
+const MOTIONFLOW_OPTS: Motionflow[] = [
+  "off",
+  "true_cinema",
+  "smooth_low",
+  "smooth_high",
+  "impulse",
+  "combination",
+];
+const GAMMA_OPTS: Gamma[] = ["off", "1.8", "2.0", "2.1", "2.2", "2.4", "2.6"];
 
 export function ManualControls({ settings, onChange }: Props) {
   const debounceRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
@@ -58,7 +67,7 @@ export function ManualControls({ settings, onChange }: Props) {
         <Label className="text-sm font-medium mb-3 block">Picture Mode</Label>
         <div className="grid grid-cols-3 gap-2">
           {PIC_MODES.map((m) => {
-            const active = (settings.pic_mode ?? "Cinema 1") === m;
+            const active = (settings.pic_mode ?? "cinema_film_1") === m;
             return (
               <Button
                 key={m}
@@ -67,7 +76,7 @@ export function ManualControls({ settings, onChange }: Props) {
                 onClick={() => update("pic_mode", m, { pic_mode: m })}
                 className={active ? "shadow-[var(--cinema-glow)]" : ""}
               >
-                {m}
+                {PIC_MODE_LABELS[m]}
               </Button>
             );
           })}
@@ -101,6 +110,16 @@ export function ManualControls({ settings, onChange }: Props) {
         max={100}
         step={1}
         onChange={(v) => update("contrast", v, { contrast: v })}
+      />
+
+      <SliderRow
+        label="Color"
+        hint="50 = neutral mättnad"
+        value={settings.color ?? 50}
+        min={0}
+        max={100}
+        step={1}
+        onChange={(v) => update("color", v, { color: v })}
       />
 
       <SliderRow
@@ -146,6 +165,46 @@ export function ManualControls({ settings, onChange }: Props) {
                 className={`capitalize ${active ? "shadow-[var(--cinema-glow)]" : ""}`}
               >
                 {lvl}
+              </Button>
+            );
+          })}
+        </div>
+      </Card>
+
+      <Card className="p-5">
+        <Label className="text-sm font-medium mb-3 block">Motionflow</Label>
+        <div className="grid grid-cols-3 gap-2">
+          {MOTIONFLOW_OPTS.map((m) => {
+            const active = (settings.motionflow ?? "off") === m;
+            return (
+              <Button
+                key={m}
+                variant={active ? "default" : "secondary"}
+                size="sm"
+                onClick={() => update("motionflow", m, { motionflow: m })}
+                className={active ? "shadow-[var(--cinema-glow)]" : ""}
+              >
+                {MOTIONFLOW_LABELS[m]}
+              </Button>
+            );
+          })}
+        </div>
+      </Card>
+
+      <Card className="p-5">
+        <Label className="text-sm font-medium mb-3 block">Gamma Correction</Label>
+        <div className="grid grid-cols-7 gap-2">
+          {GAMMA_OPTS.map((g) => {
+            const active = (settings.gamma_correction ?? "2.2") === g;
+            return (
+              <Button
+                key={g}
+                variant={active ? "default" : "secondary"}
+                size="sm"
+                onClick={() => update("gamma_correction", g, { gamma_correction: g })}
+                className={active ? "shadow-[var(--cinema-glow)]" : ""}
+              >
+                {g}
               </Button>
             );
           })}
