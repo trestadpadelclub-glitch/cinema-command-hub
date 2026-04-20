@@ -17,8 +17,11 @@ import {
   Trash2,
   RotateCcw,
   Eraser,
+  Brain,
 } from "lucide-react";
 import { toast } from "sonner";
+import { KnowledgeBaseDialog } from "@/components/KnowledgeBaseDialog";
+import { getMasterInstructions } from "@/lib/knowledgeBase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
