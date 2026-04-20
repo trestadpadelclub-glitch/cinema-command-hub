@@ -95,6 +95,7 @@ export type Action =
   | "color"
   | "motionflow"
   | "gamma_correction"
+  | "color_temp"
   | "range";
 
 export interface SingleCommand {
