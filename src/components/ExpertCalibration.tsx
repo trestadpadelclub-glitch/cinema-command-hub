@@ -782,7 +782,7 @@ export function ExpertCalibration() {
             value={chatInput}
             onChange={(e) => setChatInput(e.target.value)}
             placeholder="t.ex. 'sänk lasern lite, fläkten hörs', 'mer skuggdetaljer'…"
-            disabled={refining || chat.length === 0}
+            disabled={refining}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
