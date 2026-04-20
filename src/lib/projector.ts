@@ -54,19 +54,28 @@ export interface CommandResult {
 
 // --- bridge URL persistence ---
 
+function sanitizeBridgeUrl(raw: string): string {
+  // Trim whitespace, strip trailing slashes, and remove an accidental
+  // trailing "/status" so users can paste the status URL by mistake.
+  let u = raw.trim().replace(/\/+$/, "");
+  u = u.replace(/\/status$/i, "");
+  return u || DEFAULT_BRIDGE_URL;
+}
+
 export function getBridgeUrl(): string {
   if (typeof window === "undefined") return DEFAULT_BRIDGE_URL;
-  return localStorage.getItem(BRIDGE_URL_KEY) || DEFAULT_BRIDGE_URL;
+  const stored = localStorage.getItem(BRIDGE_URL_KEY);
+  return stored ? sanitizeBridgeUrl(stored) : DEFAULT_BRIDGE_URL;
 }
 
 export function setBridgeUrl(url: string) {
   if (typeof window === "undefined") return;
-  localStorage.setItem(BRIDGE_URL_KEY, url);
+  localStorage.setItem(BRIDGE_URL_KEY, sanitizeBridgeUrl(url));
 }
 
 function statusUrl(): string {
   // /api/projector  ->  /api/projector/status
-  return getBridgeUrl().replace(/\/+$/, "") + "/status";
+  return getBridgeUrl() + "/status";
 }
 
 // --- low level ---
