@@ -227,29 +227,51 @@ export function ExpertCalibration() {
     toast.success("Historik rensad");
   };
 
+  const callBrain = async (chatHistory: ChatMessage[]) => {
+    let currentSettings: Record<string, unknown> = {};
+    try {
+      if (json.trim()) currentSettings = JSON.parse(json);
+    } catch {
+      /* ignore — let AI start from scratch */
+    }
+    const res = await fetch("/api/cinema-brain", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        mode: "calibrate",
+        masterInstructions: getMasterInstructions(),
+        scenario,
+        currentSettings,
+        chatHistory: chatHistory.map((m) => ({
+          role: m.role,
+          content: m.content,
+        })),
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data?.error || `AI-fel (${res.status})`);
+    const settings = data?.settings;
+    if (!settings || typeof settings !== "object") {
+      throw new Error("AI returnerade inga settings");
+    }
+    return settings as Record<string, unknown>;
+  };
+
   const handleAnalyze = async () => {
     setAnalyzing(true);
     try {
-      const res = await fetch("/api/cinema-brain", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          masterInstructions: getMasterInstructions(),
-          scenario,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast.error(data?.error || `AI-fel (${res.status})`);
-        return;
-      }
-      const settings = data?.settings;
-      if (!settings || typeof settings !== "object") {
-        toast.error("AI returnerade inga settings");
-        return;
-      }
-      setJson(JSON.stringify(settings, null, 2));
-      toast.success("AI-kalibrering klar — granska och tryck Apply", {
+      const settings = await callBrain([]);
+      const pretty = JSON.stringify(settings, null, 2);
+      setJson(pretty);
+      setChat([
+        {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: pretty,
+          timestamp: Date.now(),
+        },
+      ]);
+      toast.success("AI-kalibrering klar — granska, chatta för justeringar, tryck Apply", {
         description: `${Object.keys(settings).length} inställningar föreslagna`,
       });
     } catch (err) {
@@ -258,6 +280,89 @@ export function ExpertCalibration() {
       });
     } finally {
       setAnalyzing(false);
+    }
+  };
+
+  const handleRefine = async () => {
+    const text = chatInput.trim();
+    if (!text) return;
+    const userMsg: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content: text,
+      timestamp: Date.now(),
+    };
+    const nextChat = [...chat, userMsg];
+    setChat(nextChat);
+    setChatInput("");
+    setRefining(true);
+    try {
+      const settings = await callBrain(nextChat);
+      const pretty = JSON.stringify(settings, null, 2);
+      setJson(pretty);
+      setChat([
+        ...nextChat,
+        {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: pretty,
+          timestamp: Date.now(),
+        },
+      ]);
+    } catch (err) {
+      toast.error("Refinement misslyckades", {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setRefining(false);
+    }
+  };
+
+  const handleSaveToKb = async () => {
+    if (!json.trim()) {
+      toast.error("Ingen aktuell JSON att spara från");
+      return;
+    }
+    let finalSettings: Record<string, unknown>;
+    try {
+      finalSettings = JSON.parse(json);
+    } catch {
+      toast.error("Ogiltig JSON");
+      return;
+    }
+    setSavingToKb(true);
+    try {
+      const res = await fetch("/api/cinema-brain", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: "summarize",
+          masterInstructions: getMasterInstructions(),
+          scenario,
+          finalSettings,
+          chatHistory: chat.map((m) => ({ role: m.role, content: m.content })),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data?.error || `AI-fel (${res.status})`);
+        return;
+      }
+      const summary: string = data?.summary ?? "";
+      if (!summary) {
+        toast.error("AI returnerade ingen sammanfattning");
+        return;
+      }
+      appendToMasterInstructions(summary);
+      toast.success("Lärdomar sparade till Knowledge Base", {
+        description: summary.split("\n")[0],
+      });
+    } catch (err) {
+      toast.error("Kunde inte uppdatera KB", {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setSavingToKb(false);
     }
   };
 
