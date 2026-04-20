@@ -238,6 +238,7 @@ export interface Preset {
       | "reality_creation"
       | "motionflow"
       | "gamma_correction"
+      | "color_temp"
     >
   >;
 }
@@ -258,6 +259,7 @@ export const PRESETS: Preset[] = [
       color: 50,
       motionflow: "off",
       gamma_correction: "2.2",
+      color_temp: "d65",
     },
   },
   {
@@ -275,6 +277,7 @@ export const PRESETS: Preset[] = [
       color: 50,
       motionflow: "off",
       gamma_correction: "2.2",
+      color_temp: "d65",
     },
   },
   {
@@ -292,6 +295,7 @@ export const PRESETS: Preset[] = [
       color: 50,
       motionflow: "smooth_low",
       gamma_correction: "2.2",
+      color_temp: "d65",
     },
   },
 ];
@@ -328,6 +332,7 @@ const PRESET_KEYS: (keyof Preset["settings"])[] = [
   "reality_creation",
   "motionflow",
   "gamma_correction",
+  "color_temp",
 ];
 
 /** True if any preset-tracked field in `current` deviates from `baseline`. */
@@ -353,6 +358,7 @@ export function extractPresetSettings(
     reality_creation: s.reality_creation ?? 20,
     motionflow: s.motionflow ?? "off",
     gamma_correction: s.gamma_correction ?? "2.2",
+    color_temp: s.color_temp ?? "d65",
   };
 }
 
