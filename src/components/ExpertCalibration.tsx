@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Film,
   Monitor,
@@ -11,6 +11,12 @@ import {
   Send,
   Download,
   Loader2,
+  Save,
+  FolderOpen,
+  History,
+  Trash2,
+  RotateCcw,
+  Eraser,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -26,6 +32,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { getBridgeUrl, sendCommand, type Action } from "@/lib/projector";
 
 type Resolution = "4K" | "1080p" | "HD/SD";
@@ -46,6 +60,21 @@ interface Scenario {
   priority: Priority;
 }
 
+interface ExpertPreset {
+  id: string;
+  name: string;
+  scenario: Scenario;
+  json: string;
+  createdAt: number;
+}
+
+interface HistoryEntry {
+  id: string;
+  timestamp: number;
+  scenario: Scenario;
+  json: string;
+}
+
 const DEFAULT_SCENARIO: Scenario = {
   title: "",
   resolution: "4K",
@@ -57,9 +86,22 @@ const DEFAULT_SCENARIO: Scenario = {
   priority: "Max Image Quality",
 };
 
+const PRESETS_KEY = "expert-calibration-presets";
+const HISTORY_KEY = "expert-calibration-history";
+const HISTORY_LIMIT = 20;
+
 function formatScenario(s: Scenario): string {
   const priority = s.priority === "Max Image Quality" ? "Max Quality" : "Silent Fan";
   return `Title: ${s.title || "Untitled"} | Res: ${s.resolution} | Format: ${s.format} | Source: ${s.source} | Service: ${s.service} | Lighting: ${s.lighting}% | Screen: ${s.screen} | Priority: ${priority}`;
+}
+
+function loadJSON<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : fallback;
+  } catch {
+    return fallback;
+  }
 }
 
 export function ExpertCalibration() {
@@ -69,6 +111,22 @@ export function ExpertCalibration() {
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(
     null,
   );
+  const [presetName, setPresetName] = useState("");
+  const [presets, setPresets] = useState<ExpertPreset[]>(() =>
+    loadJSON<ExpertPreset[]>(PRESETS_KEY, []),
+  );
+  const [history, setHistory] = useState<HistoryEntry[]>(() =>
+    loadJSON<HistoryEntry[]>(HISTORY_KEY, []),
+  );
+  const [selectedPresetId, setSelectedPresetId] = useState<string>("");
+
+  useEffect(() => {
+    localStorage.setItem(PRESETS_KEY, JSON.stringify(presets));
+  }, [presets]);
+
+  useEffect(() => {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+  }, [history]);
 
   const update = <K extends keyof Scenario>(key: K, value: Scenario[K]) => {
     setScenario((prev) => ({ ...prev, [key]: value }));
@@ -84,6 +142,61 @@ export function ExpertCalibration() {
     } catch {
       toast.error("Kunde inte kopiera till urklipp", { description: text });
     }
+  };
+
+  const handleSavePreset = () => {
+    const name = presetName.trim();
+    if (!name) {
+      toast.error("Ange ett namn för presetten");
+      return;
+    }
+    const preset: ExpertPreset = {
+      id: crypto.randomUUID(),
+      name,
+      scenario,
+      json,
+      createdAt: Date.now(),
+    };
+    setPresets((prev) => [preset, ...prev]);
+    setPresetName("");
+    setSelectedPresetId(preset.id);
+    toast.success(`Preset "${name}" sparad`);
+  };
+
+  const handleLoadPreset = (id: string) => {
+    const preset = presets.find((p) => p.id === id);
+    if (!preset) return;
+    setSelectedPresetId(id);
+    setScenario(preset.scenario);
+    setJson(preset.json);
+    toast.success(`Loaded "${preset.name}"`);
+  };
+
+  const handleDeletePreset = () => {
+    if (!selectedPresetId) return;
+    const preset = presets.find((p) => p.id === selectedPresetId);
+    setPresets((prev) => prev.filter((p) => p.id !== selectedPresetId));
+    setSelectedPresetId("");
+    if (preset) toast.success(`Removed "${preset.name}"`);
+  };
+
+  const handleClearForm = () => {
+    setScenario(DEFAULT_SCENARIO);
+    setJson("");
+    setSelectedPresetId("");
+    setPresetName("");
+    toast.success("Formuläret återställt");
+  };
+
+  const handleReuseHistory = (entry: HistoryEntry) => {
+    setScenario(entry.scenario);
+    setJson(entry.json);
+    toast.success("Inställningar laddade från historiken");
+  };
+
+  const handleClearHistory = () => {
+    setHistory([]);
+    toast.success("Historik rensad");
   };
 
   const handleApply = async () => {
@@ -112,7 +225,6 @@ export function ExpertCalibration() {
 
     for (let i = 0; i < entries.length; i++) {
       const [key, value] = entries[i];
-      // Bridge expects: { command: "key value" }
       const commandStr = `${key} ${value}`;
       try {
         const res = await fetch(getBridgeUrl(), {
@@ -133,6 +245,15 @@ export function ExpertCalibration() {
     setApplying(false);
     setProgress(null);
 
+    // Append to history
+    const entry: HistoryEntry = {
+      id: crypto.randomUUID(),
+      timestamp: Date.now(),
+      scenario,
+      json,
+    };
+    setHistory((prev) => [entry, ...prev].slice(0, HISTORY_LIMIT));
+
     if (failures === 0) {
       toast.success(`Kalibrering applicerad — ${entries.length} kommandon skickade`);
     } else {
@@ -144,18 +265,96 @@ export function ExpertCalibration() {
 
   return (
     <div className="space-y-8">
+      {/* Presets bar */}
+      <section className="rounded-xl border border-border/60 bg-card/40 p-5 sm:p-6 backdrop-blur">
+        <header className="mb-5 flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <FolderOpen className="h-5 w-5" />
+          </div>
+          <div>
+            <h3 className="text-base font-semibold">My Presets</h3>
+            <p className="text-xs text-muted-foreground">
+              Spara och ladda dina favoritkonfigurationer.
+            </p>
+          </div>
+        </header>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+              Load Preset
+            </Label>
+            <div className="flex gap-2">
+              <Select
+                value={selectedPresetId}
+                onValueChange={handleLoadPreset}
+                disabled={presets.length === 0}
+              >
+                <SelectTrigger className="flex-1">
+                  <SelectValue
+                    placeholder={
+                      presets.length === 0 ? "Inga sparade presets" : "Välj preset…"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {presets.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleDeletePreset}
+                disabled={!selectedPresetId}
+                title="Ta bort vald preset"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+              Save Current as Preset
+            </Label>
+            <div className="flex gap-2">
+              <Input
+                value={presetName}
+                onChange={(e) => setPresetName(e.target.value)}
+                placeholder="Preset name…"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleSavePreset();
+                }}
+              />
+              <Button onClick={handleSavePreset} disabled={!presetName.trim()}>
+                <Save className="h-4 w-4 mr-1.5" />
+                Save
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Questionnaire */}
       <section className="rounded-xl border border-border/60 bg-card/40 p-5 sm:p-6 backdrop-blur">
         <header className="mb-5 flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <Film className="h-5 w-5" />
           </div>
-          <div>
+          <div className="flex-1">
             <h3 className="text-base font-semibold">Scenario Questionnaire</h3>
             <p className="text-xs text-muted-foreground">
               Beskriv visningsscenariot för din kalibreringsexpert.
             </p>
           </div>
+          <Button variant="outline" size="sm" onClick={handleClearForm}>
+            <Eraser className="h-4 w-4 mr-1.5" />
+            Clear Form
+          </Button>
         </header>
 
         <div className="grid gap-4 sm:grid-cols-2">
@@ -282,7 +481,7 @@ export function ExpertCalibration() {
             id="expert-json"
             value={json}
             onChange={(e) => setJson(e.target.value)}
-            placeholder={`{\n  "pic_mode": "Cinema 1",\n  "contrast": 84,\n  "brightness": 50,\n  "laser_output": 90,\n  "hdr_enhancer": "middle"\n}`}
+            placeholder={`{\n  "pic_mode": "cinema_film_1",\n  "contrast": 84,\n  "brightness": 50,\n  "laser_output": 90,\n  "hdr_enhancer": "middle"\n}`}
             spellCheck={false}
             className="font-mono text-sm min-h-[180px] resize-y"
           />
@@ -308,6 +507,67 @@ export function ExpertCalibration() {
             </Button>
           </div>
         </div>
+      </section>
+
+      {/* History */}
+      <section className="rounded-xl border border-border/60 bg-card/40 p-5 sm:p-6 backdrop-blur">
+        <header className="mb-5 flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <History className="h-5 w-5" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-base font-semibold">Recent Calibrations</h3>
+            <p className="text-xs text-muted-foreground">
+              De senaste {HISTORY_LIMIT} applicerade kalibreringarna.
+            </p>
+          </div>
+          {history.length > 0 && (
+            <Button variant="outline" size="sm" onClick={handleClearHistory}>
+              <Trash2 className="h-4 w-4 mr-1.5" />
+              Clear
+            </Button>
+          )}
+        </header>
+
+        {history.length === 0 ? (
+          <p className="text-sm text-muted-foreground italic py-6 text-center">
+            Inga applicerade kalibreringar ännu.
+          </p>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Timestamp</TableHead>
+                <TableHead>Movie Title</TableHead>
+                <TableHead>Resolution</TableHead>
+                <TableHead>Format</TableHead>
+                <TableHead className="text-right">Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {history.map((h) => (
+                <TableRow key={h.id}>
+                  <TableCell className="font-mono text-xs">
+                    {new Date(h.timestamp).toLocaleString()}
+                  </TableCell>
+                  <TableCell>{h.scenario.title || "—"}</TableCell>
+                  <TableCell>{h.scenario.resolution}</TableCell>
+                  <TableCell>{h.scenario.format}</TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleReuseHistory(h)}
+                    >
+                      <RotateCcw className="h-4 w-4 mr-1.5" />
+                      Re-use
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </section>
     </div>
   );
@@ -390,6 +650,5 @@ function PriorityCard({
   );
 }
 
-// Note: `sendCommand` and `Action` re-exported for tree-shake friendliness
 void sendCommand;
 export type { Action };
