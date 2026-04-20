@@ -42,6 +42,17 @@ const MOTIONFLOW_OPTS: Motionflow[] = [
   "combination",
 ];
 const GAMMA_OPTS: Gamma[] = ["off", "1.8", "2.0", "2.1", "2.2", "2.4", "2.6"];
+const COLOR_TEMP_OPTS: ColorTemp[] = [
+  "d93",
+  "d75",
+  "d65",
+  "d55",
+  "custom1",
+  "custom2",
+  "custom3",
+  "custom4",
+  "custom5",
+];
 
 export function ManualControls({ settings, onChange }: Props) {
   const debounceRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
