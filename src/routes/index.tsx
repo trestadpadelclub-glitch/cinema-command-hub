@@ -18,6 +18,8 @@ import { PowerControl } from "@/components/PowerControl";
 import { PresetGrid } from "@/components/PresetGrid";
 import { ManualControls } from "@/components/ManualControls";
 import { AiAssistant } from "@/components/AiAssistant";
+import { ExpertCalibration } from "@/components/ExpertCalibration";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   sendCommand,
   applySettings,
@@ -177,85 +179,98 @@ function Index() {
           <SettingsDialog />
         </header>
 
-        <main className="grid gap-6 lg:grid-cols-[1fr_360px]">
-          <div className="space-y-6">
-            <Section title="Power">
-              <PowerControl />
-            </Section>
+        <Tabs defaultValue="control" className="w-full">
+          <TabsList className="mb-6">
+            <TabsTrigger value="control">Control</TabsTrigger>
+            <TabsTrigger value="calibration">Expert Calibration</TabsTrigger>
+          </TabsList>
 
-            <Section title="Quick Presets">
-              <PresetGrid
-                customPresets={customPresets}
-                activePresetId={activePresetId}
-                modified={modified}
-                onApplied={handlePresetApplied}
-                onDeleteCustom={handleDeleteCustom}
-              />
-            </Section>
+          <TabsContent value="control" className="mt-0">
+            <main className="grid gap-6 lg:grid-cols-[1fr_360px]">
+              <div className="space-y-6">
+                <Section title="Power">
+                  <PowerControl />
+                </Section>
 
-            {modified && (
-              <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-500/40 bg-amber-500/5 px-4 py-3">
-                <p className="text-sm text-amber-200/90">
-                  Du har osparade ändringar (avvikelse från preset).
-                </p>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="secondary" onClick={handleSaveOver}>
-                    <Save className="h-4 w-4 mr-1.5" />
-                    Spara
-                  </Button>
-                  <Dialog open={saveAsOpen} onOpenChange={setSaveAsOpen}>
-                    <DialogTrigger asChild>
-                      <Button size="sm">
-                        <Plus className="h-4 w-4 mr-1.5" />
-                        Spara som ny
+                <Section title="Quick Presets">
+                  <PresetGrid
+                    customPresets={customPresets}
+                    activePresetId={activePresetId}
+                    modified={modified}
+                    onApplied={handlePresetApplied}
+                    onDeleteCustom={handleDeleteCustom}
+                  />
+                </Section>
+
+                {modified && (
+                  <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-500/40 bg-amber-500/5 px-4 py-3">
+                    <p className="text-sm text-amber-200/90">
+                      Du har osparade ändringar (avvikelse från preset).
+                    </p>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="secondary" onClick={handleSaveOver}>
+                        <Save className="h-4 w-4 mr-1.5" />
+                        Spara
                       </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Spara som ny preset</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-2">
-                        <Label htmlFor="preset-name">Namn</Label>
-                        <Input
-                          id="preset-name"
-                          value={newName}
-                          onChange={(e) => setNewName(e.target.value)}
-                          placeholder="T.ex. Kvällsläge"
-                          autoFocus
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") handleSaveAs();
-                          }}
-                        />
-                      </div>
-                      <DialogFooter>
-                        <Button
-                          variant="ghost"
-                          onClick={() => setSaveAsOpen(false)}
-                        >
-                          Avbryt
-                        </Button>
-                        <Button onClick={handleSaveAs} disabled={!newName.trim()}>
-                          Spara
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                </div>
+                      <Dialog open={saveAsOpen} onOpenChange={setSaveAsOpen}>
+                        <DialogTrigger asChild>
+                          <Button size="sm">
+                            <Plus className="h-4 w-4 mr-1.5" />
+                            Spara som ny
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Spara som ny preset</DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-2">
+                            <Label htmlFor="preset-name">Namn</Label>
+                            <Input
+                              id="preset-name"
+                              value={newName}
+                              onChange={(e) => setNewName(e.target.value)}
+                              placeholder="T.ex. Kvällsläge"
+                              autoFocus
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") handleSaveAs();
+                              }}
+                            />
+                          </div>
+                          <DialogFooter>
+                            <Button
+                              variant="ghost"
+                              onClick={() => setSaveAsOpen(false)}
+                            >
+                              Avbryt
+                            </Button>
+                            <Button onClick={handleSaveAs} disabled={!newName.trim()}>
+                              Spara
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+                  </div>
+                )}
+
+                <Section title="Manual Controls">
+                  <ManualControls
+                    settings={settings}
+                    onChange={handleManualChange}
+                  />
+                </Section>
               </div>
-            )}
 
-            <Section title="Manual Controls">
-              <ManualControls
-                settings={settings}
-                onChange={handleManualChange}
-              />
-            </Section>
-          </div>
+              <aside className="lg:sticky lg:top-6 lg:self-start">
+                <AiAssistant current={settings} onApplied={handleAiApplied} />
+              </aside>
+            </main>
+          </TabsContent>
 
-          <aside className="lg:sticky lg:top-6 lg:self-start">
-            <AiAssistant current={settings} onApplied={handleAiApplied} />
-          </aside>
-        </main>
+          <TabsContent value="calibration" className="mt-0">
+            <ExpertCalibration />
+          </TabsContent>
+        </Tabs>
 
         <footer className="mt-10 text-center text-xs text-muted-foreground/70">
           Bridge-URL konfigureras via kugghjulet · Inställningar sparas lokalt
