@@ -6,11 +6,13 @@ import {
   sendCommand,
   PIC_MODE_LABELS,
   MOTIONFLOW_LABELS,
+  COLOR_TEMP_LABELS,
   type HdrEnhancer,
   type DynamicControl,
   type PicMode,
   type Motionflow,
   type Gamma,
+  type ColorTemp,
   type Action,
   type ProjectorSettings,
 } from "@/lib/projector";
