@@ -122,6 +122,7 @@ export function ExpertCalibration() {
     loadJSON<HistoryEntry[]>(HISTORY_KEY, []),
   );
   const [selectedPresetId, setSelectedPresetId] = useState<string>("");
+  const [analyzing, setAnalyzing] = useState(false);
 
   useEffect(() => {
     localStorage.setItem(PRESETS_KEY, JSON.stringify(presets));
@@ -200,6 +201,40 @@ export function ExpertCalibration() {
   const handleClearHistory = () => {
     setHistory([]);
     toast.success("Historik rensad");
+  };
+
+  const handleAnalyze = async () => {
+    setAnalyzing(true);
+    try {
+      const res = await fetch("/api/cinema-brain", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          masterInstructions: getMasterInstructions(),
+          scenario,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data?.error || `AI-fel (${res.status})`);
+        return;
+      }
+      const settings = data?.settings;
+      if (!settings || typeof settings !== "object") {
+        toast.error("AI returnerade inga settings");
+        return;
+      }
+      setJson(JSON.stringify(settings, null, 2));
+      toast.success("AI-kalibrering klar — granska och tryck Apply", {
+        description: `${Object.keys(settings).length} inställningar föreslagna`,
+      });
+    } catch (err) {
+      toast.error("Kunde inte nå AI:n", {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setAnalyzing(false);
+    }
   };
 
   const handleApply = async () => {
