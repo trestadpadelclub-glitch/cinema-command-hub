@@ -18,6 +18,8 @@ import { PowerControl } from "@/components/PowerControl";
 import { PresetGrid } from "@/components/PresetGrid";
 import { ManualControls } from "@/components/ManualControls";
 import { AiAssistant } from "@/components/AiAssistant";
+import { ExpertCalibration } from "@/components/ExpertCalibration";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   sendCommand,
   applySettings,
