@@ -612,6 +612,19 @@ export function ExpertCalibration() {
               />
             </RadioGroup>
           </Field>
+
+          <Field
+            label="Free-text Notes (skickas med till experten & AI)"
+            icon={<MessageSquare className="h-4 w-4" />}
+            className="sm:col-span-2"
+          >
+            <Textarea
+              value={scenario.notes}
+              onChange={(e) => update("notes", e.target.value)}
+              placeholder="t.ex. 'mörka skuggdetaljer i grottscenen försvinner', 'vill ha varmare hudtoner', 'fläktljud får inte överstiga 28 dB'…"
+              className="min-h-[80px] resize-y"
+            />
+          </Field>
         </div>
 
         <div className="mt-6 flex items-center justify-between gap-3 border-t border-border/60 pt-4">
