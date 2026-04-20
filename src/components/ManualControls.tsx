@@ -2,7 +2,14 @@ import { Card } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { sendCommand, type HdrEnhancer, type Action, type ProjectorSettings } from "@/lib/projector";
+import {
+  sendCommand,
+  type HdrEnhancer,
+  type DynamicControl,
+  type PicMode,
+  type Action,
+  type ProjectorSettings,
+} from "@/lib/projector";
 import { toast } from "sonner";
 import { useRef } from "react";
 
@@ -12,6 +19,18 @@ interface Props {
 }
 
 const HDR_LEVELS: HdrEnhancer[] = ["off", "low", "middle", "high"];
+const DYNAMIC_LEVELS: DynamicControl[] = ["off", "limited", "middle", "full"];
+const PIC_MODES: PicMode[] = [
+  "Cinema 1",
+  "Cinema 2",
+  "Reference",
+  "TV",
+  "Photo",
+  "Game",
+  "Bright Cinema",
+  "Bright TV",
+  "User",
+];
 
 export function ManualControls({ settings, onChange }: Props) {
   const debounceRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
