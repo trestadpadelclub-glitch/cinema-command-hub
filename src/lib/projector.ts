@@ -23,6 +23,7 @@ export interface ProjectorSettings {
   pic_mode?: PicMode;
   laser_output?: number; // 0-100 (bridge multiplies by 10)
   brightness?: number; // ~45-55
+  contrast?: number; // 0-100
   reality_creation?: number; // 0-100
   hdr_enhancer?: HdrEnhancer;
   dynamic_control?: DynamicControl;
@@ -132,6 +133,7 @@ const SETTINGS_ACTIONS: Action[] = [
   "pic_mode",
   "laser_output",
   "brightness",
+  "contrast",
   "reality_creation",
   "hdr_enhancer",
   "dynamic_control",
@@ -167,6 +169,7 @@ export interface Preset {
       | "pic_mode"
       | "laser_output"
       | "brightness"
+      | "contrast"
       | "hdr_enhancer"
       | "dynamic_control"
       | "reality_creation"
@@ -183,6 +186,7 @@ export const PRESETS: Preset[] = [
       pic_mode: "Cinema 1",
       laser_output: 100,
       brightness: 50,
+      contrast: 90,
       hdr_enhancer: "middle",
       dynamic_control: "limited",
       reality_creation: 20,
@@ -196,6 +200,7 @@ export const PRESETS: Preset[] = [
       pic_mode: "Cinema 2",
       laser_output: 75,
       brightness: 50,
+      contrast: 90,
       hdr_enhancer: "off",
       dynamic_control: "middle",
       reality_creation: 40,
@@ -209,6 +214,7 @@ export const PRESETS: Preset[] = [
       pic_mode: "Cinema 2",
       laser_output: 75,
       brightness: 50,
+      contrast: 90,
       hdr_enhancer: "off",
       dynamic_control: "middle",
       reality_creation: 60,
@@ -241,6 +247,7 @@ const PRESET_KEYS: (keyof Preset["settings"])[] = [
   "pic_mode",
   "laser_output",
   "brightness",
+  "contrast",
   "hdr_enhancer",
   "dynamic_control",
   "reality_creation",
@@ -262,6 +269,7 @@ export function extractPresetSettings(
     pic_mode: s.pic_mode ?? "Cinema 1",
     laser_output: s.laser_output ?? 75,
     brightness: s.brightness ?? 50,
+    contrast: s.contrast ?? 90,
     hdr_enhancer: s.hdr_enhancer ?? "off",
     dynamic_control: s.dynamic_control ?? "limited",
     reality_creation: s.reality_creation ?? 20,
