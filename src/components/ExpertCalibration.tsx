@@ -702,6 +702,107 @@ export function ExpertCalibration() {
         </div>
       </section>
 
+      {/* Refinement Chat */}
+      <section className="rounded-xl border border-border/60 bg-card/40 p-5 sm:p-6 backdrop-blur">
+        <header className="mb-5 flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <MessageSquare className="h-5 w-5" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-base font-semibold">Refinement Chat</h3>
+            <p className="text-xs text-muted-foreground">
+              Chatta med Cinema Brain — beskriv vad du vill justera, AI:n uppdaterar
+              endast det som behövs i JSON ovan.
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSaveToKb}
+            disabled={savingToKb || !json.trim()}
+            title="Låt AI sammanfatta lärdomarna och lägg till i Knowledge Base"
+          >
+            {savingToKb ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                Sparar…
+              </>
+            ) : (
+              <>
+                <BookmarkPlus className="h-4 w-4 mr-1.5" />
+                Save to Knowledge Base
+              </>
+            )}
+          </Button>
+        </header>
+
+        {chat.length === 0 ? (
+          <p className="text-sm text-muted-foreground italic py-6 text-center">
+            Kör "AI Analyze" först — sedan kan du chatta här för att finjustera.
+          </p>
+        ) : (
+          <div className="space-y-3 max-h-[360px] overflow-y-auto pr-1 mb-4">
+            {chat.map((m) => (
+              <div
+                key={m.id}
+                className={`flex gap-3 ${m.role === "user" ? "justify-end" : "justify-start"}`}
+              >
+                {m.role === "assistant" && (
+                  <div className="flex-shrink-0 flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <Bot className="h-4 w-4" />
+                  </div>
+                )}
+                <div
+                  className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
+                    m.role === "user"
+                      ? "bg-primary/10 text-foreground"
+                      : "bg-muted/60 text-foreground"
+                  }`}
+                >
+                  {m.role === "assistant" ? (
+                    <pre className="whitespace-pre-wrap font-mono text-xs">
+                      {m.content}
+                    </pre>
+                  ) : (
+                    <p className="whitespace-pre-wrap">{m.content}</p>
+                  )}
+                </div>
+                {m.role === "user" && (
+                  <div className="flex-shrink-0 flex h-7 w-7 items-center justify-center rounded-full bg-accent/40">
+                    <User className="h-4 w-4" />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="flex gap-2">
+          <Input
+            value={chatInput}
+            onChange={(e) => setChatInput(e.target.value)}
+            placeholder="t.ex. 'sänk lasern lite, fläkten hörs', 'mer skuggdetaljer'…"
+            disabled={refining || chat.length === 0}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleRefine();
+              }
+            }}
+          />
+          <Button
+            onClick={handleRefine}
+            disabled={refining || !chatInput.trim() || chat.length === 0}
+          >
+            {refining ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
+      </section>
+
       {/* History */}
       <section className="rounded-xl border border-border/60 bg-card/40 p-5 sm:p-6 backdrop-blur">
         <header className="mb-5 flex items-center gap-3">
