@@ -84,10 +84,11 @@ export function AiAssistant({ current, onApplied }: Props) {
     history: ChatMessage[],
   ): Promise<ProjectorSettings | null> => {
     try {
-      const chatHistory = history.flatMap((m) =>
+      type Turn = { role: "user" | "assistant"; content: string };
+      const chatHistory: Turn[] = history.map((m) =>
         m.role === "user"
-          ? [{ role: "user" as const, content: m.text }]
-          : [{ role: "assistant" as const, content: JSON.stringify(m.proposal) }],
+          ? { role: "user", content: m.text }
+          : { role: "assistant", content: JSON.stringify(m.proposal) },
       );
       chatHistory.push({ role: "user", content: userText });
 
