@@ -45,6 +45,30 @@ export const MOTIONFLOW_LABELS: Record<Motionflow, string> = {
 // Gamma values supported by bridge (sent as gamma_correct "<value>")
 export type Gamma = "off" | "1.8" | "2.0" | "2.1" | "2.2" | "2.4" | "2.6";
 
+// Color temperature presets supported by XW5000ES bridge
+export type ColorTemp =
+  | "d93"
+  | "d75"
+  | "d65"
+  | "d55"
+  | "custom1"
+  | "custom2"
+  | "custom3"
+  | "custom4"
+  | "custom5";
+
+export const COLOR_TEMP_LABELS: Record<ColorTemp, string> = {
+  d93: "D93",
+  d75: "D75",
+  d65: "D65 (Cinema)",
+  d55: "D55",
+  custom1: "Custom 1",
+  custom2: "Custom 2",
+  custom3: "Custom 3",
+  custom4: "Custom 4",
+  custom5: "Custom 5",
+};
+
 export interface ProjectorSettings {
   pic_mode?: PicMode;
   laser_output?: number; // 0-100 (bridge multiplies by 10)
@@ -56,6 +80,7 @@ export interface ProjectorSettings {
   dynamic_control?: DynamicControl;
   motionflow?: Motionflow;
   gamma_correction?: Gamma;
+  color_temp?: ColorTemp;
 }
 
 export type Action =
