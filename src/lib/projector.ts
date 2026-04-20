@@ -5,28 +5,57 @@
 const BRIDGE_URL_KEY = "sony_xw5000es_bridge_url";
 export const DEFAULT_BRIDGE_URL = "http://localhost:5000/api/projector";
 
+// Bridge-supported pic modes (XW5000ES). Values match what the bridge expects.
 export type PicMode =
-  | "Cinema 1"
-  | "Cinema 2"
-  | "Reference"
-  | "TV"
-  | "Photo"
-  | "Game"
-  | "Bright Cinema"
-  | "Bright TV"
-  | "User";
+  | "cinema_film_1"
+  | "cinema_film_2"
+  | "reference"
+  | "tv"
+  | "bright_cinema";
+
+export const PIC_MODE_LABELS: Record<PicMode, string> = {
+  cinema_film_1: "Cinema Film 1",
+  cinema_film_2: "Cinema Film 2",
+  reference: "Reference",
+  tv: "TV",
+  bright_cinema: "Bright Cinema",
+};
 
 export type HdrEnhancer = "off" | "low" | "middle" | "high";
 export type DynamicControl = "off" | "limited" | "middle" | "full";
 
+// Motionflow: bridge sends motion_flow "<value>"
+export type Motionflow =
+  | "off"
+  | "true_cinema"
+  | "smooth_low"
+  | "smooth_high"
+  | "impulse"
+  | "combination";
+
+export const MOTIONFLOW_LABELS: Record<Motionflow, string> = {
+  off: "Off",
+  true_cinema: "True Cinema",
+  smooth_low: "Smooth Low",
+  smooth_high: "Smooth High",
+  impulse: "Impulse",
+  combination: "Combination",
+};
+
+// Gamma values supported by bridge (sent as gamma_correct "<value>")
+export type Gamma = "off" | "1.8" | "2.0" | "2.1" | "2.2" | "2.4" | "2.6";
+
 export interface ProjectorSettings {
   pic_mode?: PicMode;
   laser_output?: number; // 0-100 (bridge multiplies by 10)
-  brightness?: number; // ~45-55
+  brightness?: number; // 0-100
   contrast?: number; // 0-100
+  color?: number; // 0-100
   reality_creation?: number; // 0-100
   hdr_enhancer?: HdrEnhancer;
   dynamic_control?: DynamicControl;
+  motionflow?: Motionflow;
+  gamma_correction?: Gamma;
 }
 
 export type Action =
@@ -38,6 +67,9 @@ export type Action =
   | "reality_creation"
   | "brightness"
   | "contrast"
+  | "color"
+  | "motionflow"
+  | "gamma_correction"
   | "range";
 
 export interface SingleCommand {
