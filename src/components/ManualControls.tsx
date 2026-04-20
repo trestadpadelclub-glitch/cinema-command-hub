@@ -88,8 +88,8 @@ export function ManualControls({ settings, onChange }: Props) {
         label="Brightness"
         hint="50 = neutral · 51-52 lyfter skuggor (Black Crush)"
         value={settings.brightness ?? 50}
-        min={45}
-        max={55}
+        min={0}
+        max={100}
         step={1}
         onChange={(v) => update("brightness", v, { brightness: v })}
       />
