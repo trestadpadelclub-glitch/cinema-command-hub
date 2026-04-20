@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { sendCommand, type HdrEnhancer, type ProjectorSettings } from "@/lib/projector";
+import { sendCommand, type HdrEnhancer, type Action, type ProjectorSettings } from "@/lib/projector";
 import { toast } from "sonner";
 import { useRef } from "react";
 
@@ -16,10 +16,10 @@ const HDR_LEVELS: HdrEnhancer[] = ["off", "low", "middle", "high"];
 export function ManualControls({ settings, onChange }: Props) {
   const debounceRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
-  const send = (key: string, payload: ProjectorSettings) => {
-    clearTimeout(debounceRef.current[key]);
-    debounceRef.current[key] = setTimeout(async () => {
-      const res = await sendCommand({ action: "settings", ...payload });
+  const send = (action: Action, value: string | number) => {
+    clearTimeout(debounceRef.current[action]);
+    debounceRef.current[action] = setTimeout(async () => {
+      const res = await sendCommand({ action, value });
       if (!res.ok) {
         toast.error("Bridge-fel", {
           description: res.error || `Status ${res.status}`,
@@ -28,9 +28,9 @@ export function ManualControls({ settings, onChange }: Props) {
     }, 250);
   };
 
-  const update = (patch: ProjectorSettings, key: string) => {
+  const update = (action: Action, value: string | number, patch: ProjectorSettings) => {
     onChange({ ...settings, ...patch });
-    send(key, patch);
+    send(action, value);
   };
 
   return (

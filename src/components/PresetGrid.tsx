@@ -1,6 +1,6 @@
 import { Film, Tv, Radio } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { PRESETS, sendCommand, type Preset, type ProjectorSettings } from "@/lib/projector";
+import { PRESETS, applySettings, type Preset, type ProjectorSettings } from "@/lib/projector";
 import { toast } from "sonner";
 import { useState } from "react";
 
@@ -19,13 +19,18 @@ export function PresetGrid({ onApplied }: Props) {
 
   const apply = async (p: Preset) => {
     setBusy(p.id);
-    const res = await sendCommand({ action: "preset", value: p.id, ...p.settings });
+    const results = await applySettings(p.settings);
     setBusy(null);
-    if (res.ok) {
-      toast.success(`Preset: ${p.label}`);
+    const failed = results.find((r) => !r.ok);
+    if (!failed) {
+      toast.success(`Preset: ${p.label}`, {
+        description: `${results.length} inställningar skickade`,
+      });
       onApplied(p.settings);
     } else {
-      toast.error("Bridge-fel", { description: res.error || `Status ${res.status}` });
+      toast.error(`Preset misslyckades vid ${failed.command?.action}`, {
+        description: failed.error || `Status ${failed.status}`,
+      });
     }
   };
 
