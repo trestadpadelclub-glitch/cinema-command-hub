@@ -205,9 +205,12 @@ export interface Preset {
       | "laser_output"
       | "brightness"
       | "contrast"
+      | "color"
       | "hdr_enhancer"
       | "dynamic_control"
       | "reality_creation"
+      | "motionflow"
+      | "gamma_correction"
     >
   >;
 }
