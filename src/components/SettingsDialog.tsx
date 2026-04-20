@@ -94,7 +94,23 @@ export function SettingsDialog() {
             />
             <p className="text-xs text-muted-foreground">
               Standard: <code className="text-primary/80">{DEFAULT_BRIDGE_URL}</code>
+              <br />
+              Skriv <strong>basadressen</strong> (utan <code>/status</code>) — t.ex.{" "}
+              <code className="text-primary/80">http://192.168.86.40:5000/api/projector</code>.
             </p>
+            {typeof window !== "undefined" &&
+              window.location.protocol === "https:" &&
+              url.trim().toLowerCase().startsWith("http://") && (
+                <div className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200">
+                  <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span>
+                    Sidan körs på <strong>HTTPS</strong> men bridgen är{" "}
+                    <strong>HTTP</strong>. Webbläsaren blockerar anropet (Mixed
+                    Content). Öppna appen via HTTP, kör den lokalt, eller exponera
+                    bridgen via HTTPS (t.ex. <code>ngrok http 5000</code>).
+                  </span>
+                </div>
+              )}
           </div>
 
           <div className="flex items-center gap-2">
