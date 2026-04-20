@@ -212,6 +212,56 @@ export const PRESETS: Preset[] = [
   },
 ];
 
+// ----- Custom presets (localStorage) -----
+
+const CUSTOM_PRESETS_KEY = "sony_xw5000es_custom_presets";
+
+export function getCustomPresets(): Preset[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(CUSTOM_PRESETS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as Preset[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveCustomPresets(presets: Preset[]) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(CUSTOM_PRESETS_KEY, JSON.stringify(presets));
+}
+
+const PRESET_KEYS: (keyof Preset["settings"])[] = [
+  "pic_mode",
+  "laser_output",
+  "hdr_enhancer",
+  "dynamic_control",
+  "reality_creation",
+];
+
+/** True if any preset-tracked field in `current` deviates from `baseline`. */
+export function isModifiedFrom(
+  current: ProjectorSettings,
+  baseline: ProjectorSettings,
+): boolean {
+  return PRESET_KEYS.some((k) => current[k] !== baseline[k]);
+}
+
+/** Extract only the preset-tracked fields from a settings object. */
+export function extractPresetSettings(
+  s: ProjectorSettings,
+): Preset["settings"] {
+  return {
+    pic_mode: s.pic_mode ?? "Cinema 1",
+    laser_output: s.laser_output ?? 75,
+    hdr_enhancer: s.hdr_enhancer ?? "off",
+    dynamic_control: s.dynamic_control ?? "limited",
+    reality_creation: s.reality_creation ?? 20,
+  };
+}
+
 // ----- Rule-based AI assistant -----
 
 export interface AiSuggestion {
