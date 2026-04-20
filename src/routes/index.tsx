@@ -111,34 +111,30 @@ function Index() {
 
   const handleSaveOver = () => {
     if (!activePresetId) return;
-    const isFixed = PRESETS.find((p) => p.id === activePresetId);
-    if (isFixed) {
-      // Fasta presets är readonly → spara som custom kopia med samma namn + (custom)
-      const newPreset: Preset = {
-        id: `custom-${Date.now()}`,
-        label: `${isFixed.label} (custom)`,
-        description: "Egen variant av fast preset",
-        settings: extractPresetSettings(settings),
+    const fixed = PRESETS.find((p) => p.id === activePresetId);
+    const existingCustom = customPresets.find((p) => p.id === activePresetId);
+    const nextSettings = extractPresetSettings(settings);
+
+    let updated: Preset[];
+    if (existingCustom) {
+      // Uppdatera befintlig custom preset (inkl. override av fast preset med samma id)
+      updated = customPresets.map((p) =>
+        p.id === activePresetId ? { ...p, settings: nextSettings } : p,
+      );
+    } else {
+      // Skapa override för fast preset under samma id — vinner över den fasta i listan
+      const base: Preset = fixed ?? {
+        id: activePresetId,
+        label: activePresetId,
+        description: "",
+        settings: nextSettings,
       };
-      const updated = [...customPresets, newPreset];
-      setCustomPresets(updated);
-      saveCustomPresets(updated);
-      setActivePresetId(newPreset.id);
-      setBaseline(settings);
-      toast.success(`Sparad som "${newPreset.label}"`, {
-        description: "Fasta presets kan inte skrivas över",
-      });
-      return;
+      updated = [...customPresets, { ...base, settings: nextSettings }];
     }
-    const updated = customPresets.map((p) =>
-      p.id === activePresetId
-        ? { ...p, settings: extractPresetSettings(settings) }
-        : p,
-    );
     setCustomPresets(updated);
     saveCustomPresets(updated);
     setBaseline(settings);
-    toast.success("Preset uppdaterad");
+    toast.success(`"${fixed?.label ?? existingCustom?.label}" uppdaterad`);
   };
 
   const handleSaveAs = () => {
