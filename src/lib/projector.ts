@@ -295,9 +295,12 @@ const PRESET_KEYS: (keyof Preset["settings"])[] = [
   "laser_output",
   "brightness",
   "contrast",
+  "color",
   "hdr_enhancer",
   "dynamic_control",
   "reality_creation",
+  "motionflow",
+  "gamma_correction",
 ];
 
 /** True if any preset-tracked field in `current` deviates from `baseline`. */
@@ -313,13 +316,16 @@ export function extractPresetSettings(
   s: ProjectorSettings,
 ): Preset["settings"] {
   return {
-    pic_mode: s.pic_mode ?? "Cinema 1",
+    pic_mode: s.pic_mode ?? "cinema_film_1",
     laser_output: s.laser_output ?? 75,
     brightness: s.brightness ?? 50,
     contrast: s.contrast ?? 90,
+    color: s.color ?? 50,
     hdr_enhancer: s.hdr_enhancer ?? "off",
     dynamic_control: s.dynamic_control ?? "limited",
     reality_creation: s.reality_creation ?? 20,
+    motionflow: s.motionflow ?? "off",
+    gamma_correction: s.gamma_correction ?? "2.2",
   };
 }
 
