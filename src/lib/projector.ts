@@ -198,6 +198,7 @@ const SETTINGS_ACTIONS: Action[] = [
   "dynamic_control",
   "motionflow",
   "gamma_correction",
+  "color_temp",
 ];
 
 /**
