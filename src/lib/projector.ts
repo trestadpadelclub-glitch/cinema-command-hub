@@ -166,6 +166,7 @@ export interface Preset {
       ProjectorSettings,
       | "pic_mode"
       | "laser_output"
+      | "brightness"
       | "hdr_enhancer"
       | "dynamic_control"
       | "reality_creation"
@@ -177,10 +178,11 @@ export const PRESETS: Preset[] = [
   {
     id: "4k-hdr-movie",
     label: "4K HDR Movie",
-    description: "Cinema 1 · Laser 100 · HDR Middle · Limited dynamic",
+    description: "Cinema 1 · Laser 100 · Brightness 50 · HDR Middle · Limited dynamic",
     settings: {
       pic_mode: "Cinema 1",
       laser_output: 100,
+      brightness: 50,
       hdr_enhancer: "middle",
       dynamic_control: "limited",
       reality_creation: 20,
@@ -189,10 +191,11 @@ export const PRESETS: Preset[] = [
   {
     id: "sdr-tv-sports",
     label: "SDR TV / Sports",
-    description: "Cinema 2 · Laser 75 · HDR Off · Middle dynamic",
+    description: "Cinema 2 · Laser 75 · Brightness 50 · HDR Off · Middle dynamic",
     settings: {
       pic_mode: "Cinema 2",
       laser_output: 75,
+      brightness: 50,
       hdr_enhancer: "off",
       dynamic_control: "middle",
       reality_creation: 40,
@@ -201,10 +204,11 @@ export const PRESETS: Preset[] = [
   {
     id: "iptv-formuler",
     label: "IPTV / Formuler",
-    description: "Cinema 2 · Laser 75 · Reality 60 (motverkar komprimering)",
+    description: "Cinema 2 · Laser 75 · Brightness 50 · Reality 60 (motverkar komprimering)",
     settings: {
       pic_mode: "Cinema 2",
       laser_output: 75,
+      brightness: 50,
       hdr_enhancer: "off",
       dynamic_control: "middle",
       reality_creation: 60,
@@ -236,6 +240,7 @@ export function saveCustomPresets(presets: Preset[]) {
 const PRESET_KEYS: (keyof Preset["settings"])[] = [
   "pic_mode",
   "laser_output",
+  "brightness",
   "hdr_enhancer",
   "dynamic_control",
   "reality_creation",
@@ -256,6 +261,7 @@ export function extractPresetSettings(
   return {
     pic_mode: s.pic_mode ?? "Cinema 1",
     laser_output: s.laser_output ?? 75,
+    brightness: s.brightness ?? 50,
     hdr_enhancer: s.hdr_enhancer ?? "off",
     dynamic_control: s.dynamic_control ?? "limited",
     reality_creation: s.reality_creation ?? 20,
