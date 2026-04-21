@@ -70,31 +70,39 @@ function Index() {
   const [saveAsOpen, setSaveAsOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+  const [power, setPower] = useState<"on" | "off" | "unknown">("unknown");
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
+  const syncStatus = async (showToast = false) => {
     const res = await getStatus();
-    setRefreshing(false);
     if (!res.ok) {
-      toast.error("Kunde inte hämta status", {
-        description: res.error || `Status ${res.status}`,
-      });
+      setPower("unknown");
+      if (showToast) {
+        toast.error("Kunde inte hämta status", {
+          description: res.error || `Status ${res.status}`,
+        });
+      }
       return;
     }
     const parsed = parseStatus(res.data);
+    if (parsed.power === "on" || parsed.power === "off") {
+      setPower(parsed.power);
+    }
     setSettings((prev) => ({ ...prev, ...parsed }));
-    toast.success("Status synkad från projektorn");
+    if (showToast) toast.success("Status synkad från projektorn");
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await syncStatus(true);
+    setRefreshing(false);
   };
 
   useEffect(() => {
     setCustomPresets(getCustomPresets());
-    // Initial status sync — silent (no toast on failure to avoid noise on first load)
-    getStatus().then((res) => {
-      if (res.ok) {
-        const parsed = parseStatus(res.data);
-        setSettings((prev) => ({ ...prev, ...parsed }));
-      }
-    });
+    // Initial sync + poll every 10s for power-status LED
+    syncStatus(false);
+    const id = setInterval(() => syncStatus(false), 10000);
+    return () => clearInterval(id);
   }, []);
 
   // Expose actions globally for future Web Speech API integration
