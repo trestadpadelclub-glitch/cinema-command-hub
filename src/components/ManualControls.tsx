@@ -42,7 +42,13 @@ const PIC_MODES: PicMode[] = [
   "reference",
   "tv",
   "bright_cinema",
+  "bright_tv",
+  "game",
+  "user1",
+  "user2",
+  "user3",
 ];
+const INPUT_OPTS: InputSource[] = ["hdmi1", "hdmi2"];
 const MOTIONFLOW_OPTS: Motionflow[] = [
   "off",
   "true_cinema",
@@ -101,6 +107,13 @@ const PIC_MODE_INFO: Record<PicMode, string> = {
   tv: "Ljus och färgstark profil för broadcast-TV och nyheter. Mer kontrast och färg, mindre filmkänsla.",
   bright_cinema:
     "Halvljust rum eller dagsljus. Maxar ljusstyrka på bekostnad av svärta och färgnoggrannhet.",
+  bright_tv:
+    "Maxljust TV-profil för dagsljus / mycket omgivande ljus. Sämre svärta men bilden 'orkar' synas.",
+  game:
+    "Optimerad för minsta input lag. Mindre bildbehandling — använd när responstid är viktigare än bildkvalitet.",
+  user1: "Egen sparad profil #1. Använd för en personligt kalibrerad inställning.",
+  user2: "Egen sparad profil #2.",
+  user3: "Egen sparad profil #3.",
 };
 
 const HDR_INFO: Record<HdrEnhancer, string> = {
