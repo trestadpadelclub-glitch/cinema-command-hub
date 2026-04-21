@@ -139,7 +139,8 @@ function Index() {
     };
   }, []);
 
-  const modified = activePresetId !== null && isModifiedFrom(settings, baseline);
+  const modified = isModifiedFrom(settings, baseline);
+  const canSaveOverActivePreset = activePresetId !== null;
 
   const handlePresetApplied = (preset: Preset) => {
     const next = { ...settings, ...preset.settings };
@@ -291,13 +292,15 @@ function Index() {
                 {modified && (
                   <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-500/40 bg-amber-500/5 px-4 py-3">
                     <p className="text-sm text-amber-200/90">
-                      Du har osparade ändringar (avvikelse från preset).
+                      Du har osparade ändringar.
                     </p>
                     <div className="flex gap-2">
-                      <Button size="sm" variant="secondary" onClick={handleSaveOver}>
-                        <Save className="h-4 w-4 mr-1.5" />
-                        Spara
-                      </Button>
+                      {canSaveOverActivePreset && (
+                        <Button size="sm" variant="secondary" onClick={handleSaveOver}>
+                          <Save className="h-4 w-4 mr-1.5" />
+                          Spara
+                        </Button>
+                      )}
                       <Dialog open={saveAsOpen} onOpenChange={setSaveAsOpen}>
                         <DialogTrigger asChild>
                           <Button size="sm">
