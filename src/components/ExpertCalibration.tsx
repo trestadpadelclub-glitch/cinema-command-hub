@@ -392,17 +392,15 @@ export function ExpertCalibration() {
 
     for (let i = 0; i < entries.length; i++) {
       const [key, value] = entries[i];
-      const commandStr = `${key} ${value}`;
-      try {
-        const res = await fetch(getBridgeUrl(), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ command: commandStr }),
-        });
-        if (!res.ok) failures++;
-      } catch {
-        failures++;
+      if (value === undefined || value === null) {
+        setProgress({ done: i + 1, total: entries.length });
+        continue;
       }
+      const res = await sendCommand({
+        action: key as Action,
+        value: value as string | number,
+      });
+      if (!res.ok) failures++;
       setProgress({ done: i + 1, total: entries.length });
       if (i < entries.length - 1) {
         await new Promise((r) => setTimeout(r, 100));
