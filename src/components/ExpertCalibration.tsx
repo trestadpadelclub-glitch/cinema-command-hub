@@ -47,7 +47,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { getBridgeUrl, sendCommand, type Action } from "@/lib/projector";
+import { sendCommand, type Action } from "@/lib/projector";
 
 type Resolution = "4K" | "1080p" | "HD/SD";
 type Format = "SDR" | "HDR10" | "HLG";
