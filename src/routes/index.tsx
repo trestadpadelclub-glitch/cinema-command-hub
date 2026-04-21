@@ -243,6 +243,15 @@ function Index() {
                         : "bg-muted-foreground/40"
                   }`}
                 />
+                <button
+                  type="button"
+                  onClick={() => syncStatus("power", true)}
+                  title="Hämta status nu"
+                  aria-label="Hämta status nu"
+                  className="inline-flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                >
+                  <RotateCw className="h-3 w-3" />
+                </button>
               </div>
               <p className="text-xs text-muted-foreground">
                 Intelligent Cinema Control
