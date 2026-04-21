@@ -203,7 +203,21 @@ function Index() {
               </p>
             </div>
           </div>
-          <SettingsDialog />
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={refreshing}
+              title="Hämta aktuell status från projektorn"
+            >
+              <RefreshCw
+                className={`h-4 w-4 mr-1.5 ${refreshing ? "animate-spin" : ""}`}
+              />
+              Refresh
+            </Button>
+            <SettingsDialog />
+          </div>
         </header>
 
         <Tabs defaultValue="control" className="w-full">
