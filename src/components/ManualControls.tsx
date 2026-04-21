@@ -95,6 +95,12 @@ const SECTION_INFO: Record<string, string> = {
     "Bestämmer hur snabbt bilden går från svart till vitt. Högre tal = mörkare mellantoner / mer kontrast. 2.2 = standard SDR. 2.4 = mörkt rum / film.",
   color_temp:
     "Vitpunkt. D65 är film/Rec.709/HDR10-referens. Lägre D-tal = varmare/rödare. Högre = kallare/blåare. Custom = egen kalibrering.",
+  sharpness:
+    "Klassisk skärpa (kantförstärkning). 0 = naturlig. Höga värden ger ringingar / halo runt kanter. Behövs sällan om Reality Creation används.",
+  input: "Aktiv HDMI-ingång på projektorn.",
+  blank:
+    "Släck bilden tillfälligt utan att stänga av projektorn. Lasern står kvar i standby-läge.",
+  remote: "Virtuell fjärrkontroll — navigera projektorns OSD-meny.",
 };
 
 const PIC_MODE_INFO: Record<PicMode, string> = {
