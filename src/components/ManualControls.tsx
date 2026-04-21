@@ -436,8 +436,113 @@ export function ManualControls({ settings, onChange }: Props) {
             ))}
           </div>
         </Card>
+
+        <SliderRow
+          label="Sharpness"
+          info={SECTION_INFO.sharpness}
+          hint="0 = naturlig · höga värden ger ringingar"
+          value={settings.sharpness ?? 0}
+          min={0}
+          max={100}
+          step={1}
+          onChange={(v) => update("sharpness", v, { sharpness: v })}
+        />
+
+        <Card className="p-5">
+          <SectionLabel info={SECTION_INFO.input}>Input</SectionLabel>
+          <div className="grid grid-cols-2 gap-2">
+            {INPUT_OPTS.map((i) => (
+              <OptionButton
+                key={i}
+                active={(settings.input ?? "hdmi1") === i}
+                onClick={() => update("input", i, { input: i })}
+                info={`Växla aktiv ingång till ${i.toUpperCase()}.`}
+                className="uppercase"
+              >
+                {i}
+              </OptionButton>
+            ))}
+          </div>
+        </Card>
+
+        <Card className="p-5">
+          <SectionLabel info={SECTION_INFO.blank}>Blank Screen</SectionLabel>
+          <div className="grid grid-cols-2 gap-2">
+            <OptionButton
+              active={(settings.blank ?? "off") === "off"}
+              onClick={() => update("blank", "off", { blank: "off" })}
+              info="Visa bilden normalt."
+            >
+              <Eye className="h-4 w-4 mr-1.5" /> Visible
+            </OptionButton>
+            <OptionButton
+              active={settings.blank === "on"}
+              onClick={() => update("blank", "on", { blank: "on" })}
+              info="Släck bilden tillfälligt (laser går till standby)."
+            >
+              <EyeOff className="h-4 w-4 mr-1.5" /> Blank
+            </OptionButton>
+          </div>
+        </Card>
+
+        <Card className="p-5">
+          <SectionLabel info={SECTION_INFO.remote}>Remote</SectionLabel>
+          <RemotePad onKey={(k) => sendRemote(k)} />
+        </Card>
       </div>
     </TooltipProvider>
+  );
+
+  function sendRemote(key: RemoteKey) {
+    sendCommand({ action: "remote_key", value: key }).then((res) => {
+      if (!res.ok)
+        toast.error("Bridge-fel", {
+          description: res.error || `Status ${res.status}`,
+        });
+    });
+  }
+}
+
+function RemotePad({ onKey }: { onKey: (k: RemoteKey) => void }) {
+  const btn =
+    "h-10 w-10 inline-flex items-center justify-center rounded-md bg-secondary hover:bg-secondary/80 text-foreground transition-colors";
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <button className={btn} onClick={() => onKey("up")} aria-label="Up">
+        <ChevronUp className="h-5 w-5" />
+      </button>
+      <div className="flex items-center gap-2">
+        <button className={btn} onClick={() => onKey("left")} aria-label="Left">
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+        <button
+          className={`${btn} bg-primary text-primary-foreground hover:bg-primary/90 px-3 w-auto`}
+          onClick={() => onKey("enter")}
+        >
+          Enter
+        </button>
+        <button className={btn} onClick={() => onKey("right")} aria-label="Right">
+          <ChevronRight className="h-5 w-5" />
+        </button>
+      </div>
+      <button className={btn} onClick={() => onKey("down")} aria-label="Down">
+        <ChevronDown className="h-5 w-5" />
+      </button>
+      <div className="flex gap-2 mt-2">
+        <button
+          className={`${btn} w-auto px-3 gap-1.5`}
+          onClick={() => onKey("menu")}
+        >
+          <Menu className="h-4 w-4" /> Menu
+        </button>
+        <button
+          className={`${btn} w-auto px-3 gap-1.5`}
+          onClick={() => onKey("reset")}
+        >
+          <RotateCcw className="h-4 w-4" /> Reset
+        </button>
+      </div>
+    </div>
   );
 }
 
