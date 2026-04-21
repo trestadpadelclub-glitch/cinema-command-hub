@@ -2,13 +2,51 @@ import { Film, Tv, Radio, Star, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
+import {
   PRESETS,
   applySettings,
+  PIC_MODE_LABELS,
+  MOTIONFLOW_LABELS,
+  COLOR_TEMP_LABELS,
   type Preset,
-  type ProjectorSettings,
 } from "@/lib/projector";
 import { toast } from "sonner";
 import { useState } from "react";
+
+const RECIPE_LABELS: Record<string, string> = {
+  pic_mode: "Picture Mode",
+  laser_output: "Laser Output",
+  brightness: "Brightness",
+  contrast: "Contrast",
+  color: "Color",
+  reality_creation: "Reality Creation",
+  hdr_enhancer: "HDR Enhancer",
+  dynamic_control: "Dynamic Control",
+  motionflow: "Motionflow",
+  gamma_correction: "Gamma",
+  color_temp: "Color Temp",
+};
+
+function formatRecipeValue(key: string, value: unknown): string {
+  if (value === undefined || value === null) return "—";
+  switch (key) {
+    case "pic_mode":
+      return PIC_MODE_LABELS[value as keyof typeof PIC_MODE_LABELS] ?? String(value);
+    case "motionflow":
+      return MOTIONFLOW_LABELS[value as keyof typeof MOTIONFLOW_LABELS] ?? String(value);
+    case "color_temp":
+      return COLOR_TEMP_LABELS[value as keyof typeof COLOR_TEMP_LABELS] ?? String(value);
+    case "hdr_enhancer":
+    case "dynamic_control":
+      return String(value).charAt(0).toUpperCase() + String(value).slice(1);
+    default:
+      return String(value);
+  }
+}
 
 const ICONS: Record<string, typeof Film> = {
   "4k-hdr-movie": Film,
