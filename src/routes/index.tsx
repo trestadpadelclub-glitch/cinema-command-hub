@@ -70,31 +70,39 @@ function Index() {
   const [saveAsOpen, setSaveAsOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+  const [power, setPower] = useState<"on" | "off" | "unknown">("unknown");
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
+  const syncStatus = async (showToast = false) => {
     const res = await getStatus();
-    setRefreshing(false);
     if (!res.ok) {
-      toast.error("Kunde inte hämta status", {
-        description: res.error || `Status ${res.status}`,
-      });
+      setPower("unknown");
+      if (showToast) {
+        toast.error("Kunde inte hämta status", {
+          description: res.error || `Status ${res.status}`,
+        });
+      }
       return;
     }
     const parsed = parseStatus(res.data);
+    if (parsed.power === "on" || parsed.power === "off") {
+      setPower(parsed.power);
+    }
     setSettings((prev) => ({ ...prev, ...parsed }));
-    toast.success("Status synkad från projektorn");
+    if (showToast) toast.success("Status synkad från projektorn");
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await syncStatus(true);
+    setRefreshing(false);
   };
 
   useEffect(() => {
     setCustomPresets(getCustomPresets());
-    // Initial status sync — silent (no toast on failure to avoid noise on first load)
-    getStatus().then((res) => {
-      if (res.ok) {
-        const parsed = parseStatus(res.data);
-        setSettings((prev) => ({ ...prev, ...parsed }));
-      }
-    });
+    // Initial sync + poll every 10s for power-status LED
+    syncStatus(false);
+    const id = setInterval(() => syncStatus(false), 10000);
+    return () => clearInterval(id);
   }, []);
 
   // Expose actions globally for future Web Speech API integration
@@ -195,9 +203,28 @@ function Index() {
               <Projector className="h-6 w-6 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
-                Sony XW5000ES
-              </h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
+                  Sony XW5000ES
+                </h1>
+                <span
+                  title={
+                    power === "on"
+                      ? "Projektor på"
+                      : power === "off"
+                        ? "Projektor av"
+                        : "Status okänd (bridge offline?)"
+                  }
+                  aria-label={`Projektor status: ${power}`}
+                  className={`inline-block h-3 w-3 rounded-full border border-black/30 transition-colors ${
+                    power === "on"
+                      ? "bg-emerald-500 shadow-[0_0_10px_oklch(0.72_0.18_150/0.9)] animate-pulse"
+                      : power === "off"
+                        ? "bg-red-500 shadow-[0_0_8px_oklch(0.62_0.22_27/0.7)]"
+                        : "bg-muted-foreground/40"
+                  }`}
+                />
+              </div>
               <p className="text-xs text-muted-foreground">
                 Intelligent Cinema Control
               </p>
