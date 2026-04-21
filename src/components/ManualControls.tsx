@@ -8,7 +8,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Info } from "lucide-react";
+import { Info, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Menu, RotateCcw, EyeOff, Eye } from "lucide-react";
 import {
   sendCommand,
   PIC_MODE_LABELS,
@@ -22,6 +22,9 @@ import {
   type ColorTemp,
   type Action,
   type ProjectorSettings,
+  type InputSource,
+  type BlankState,
+  type RemoteKey,
 } from "@/lib/projector";
 import { toast } from "sonner";
 import { useRef, type ReactNode } from "react";
