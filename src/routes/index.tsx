@@ -72,7 +72,18 @@ function Index() {
   const [refreshing, setRefreshing] = useState(false);
   const [power, setPower] = useState<"on" | "off" | "unknown">("unknown");
 
-  const syncStatus = async (showToast = false) => {
+  /**
+   * syncStatus
+   * - mode "power": uppdaterar BARA power-LED (används av bakgrundspolling).
+   *   Får INTE skriva över `settings`, annars nollställs användarens
+   *   lokala ändringar var 10:e sekund och "modified"-banner visas aldrig.
+   * - mode "full": hämtar allt och synkar in i settings + nollställer
+   *   baseline (manuell Refresh-knapp eller initial laddning).
+   */
+  const syncStatus = async (
+    mode: "power" | "full" = "power",
+    showToast = false,
+  ) => {
     const res = await getStatus();
     if (!res.ok) {
       setPower("unknown");
@@ -87,21 +98,28 @@ function Index() {
     if (parsed.power === "on" || parsed.power === "off") {
       setPower(parsed.power);
     }
-    setSettings((prev) => ({ ...prev, ...parsed }));
-    if (showToast) toast.success("Status synkad från projektorn");
+    if (mode === "full") {
+      setSettings((prev) => {
+        const next = { ...prev, ...parsed };
+        // Synkad från projektorn = ny baseline (inga osparade ändringar)
+        setBaseline(next);
+        return next;
+      });
+      if (showToast) toast.success("Status synkad från projektorn");
+    }
   };
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await syncStatus(true);
+    await syncStatus("full", true);
     setRefreshing(false);
   };
 
   useEffect(() => {
     setCustomPresets(getCustomPresets());
-    // Initial sync + poll every 10s for power-status LED
-    syncStatus(false);
-    const id = setInterval(() => syncStatus(false), 10000);
+    // Initial full-sync, sedan endast power-polling (rör inte settings)
+    syncStatus("full", false);
+    const id = setInterval(() => syncStatus("power", false), 10000);
     return () => clearInterval(id);
   }, []);
 
