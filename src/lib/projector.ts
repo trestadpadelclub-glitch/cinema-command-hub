@@ -11,7 +11,12 @@ export type PicMode =
   | "cinema_film_2"
   | "reference"
   | "tv"
-  | "bright_cinema";
+  | "bright_cinema"
+  | "bright_tv"
+  | "game"
+  | "user1"
+  | "user2"
+  | "user3";
 
 export const PIC_MODE_LABELS: Record<PicMode, string> = {
   cinema_film_1: "Cinema Film 1",
@@ -19,7 +24,23 @@ export const PIC_MODE_LABELS: Record<PicMode, string> = {
   reference: "Reference",
   tv: "TV",
   bright_cinema: "Bright Cinema",
+  bright_tv: "Bright TV",
+  game: "Game",
+  user1: "User 1",
+  user2: "User 2",
+  user3: "User 3",
 };
+
+export type InputSource = "hdmi1" | "hdmi2";
+export type BlankState = "on" | "off";
+export type RemoteKey =
+  | "menu"
+  | "up"
+  | "down"
+  | "left"
+  | "right"
+  | "enter"
+  | "reset";
 
 export type HdrEnhancer = "off" | "low" | "middle" | "high";
 export type DynamicControl = "off" | "limited" | "middle" | "full";
@@ -75,12 +96,15 @@ export interface ProjectorSettings {
   brightness?: number; // 0-100
   contrast?: number; // 0-100
   color?: number; // 0-100
+  sharpness?: number; // 0-100
   reality_creation?: number; // 0-100
   hdr_enhancer?: HdrEnhancer;
   dynamic_control?: DynamicControl;
   motionflow?: Motionflow;
   gamma_correction?: Gamma;
   color_temp?: ColorTemp;
+  input?: InputSource;
+  blank?: BlankState;
 }
 
 export type Action =
@@ -93,9 +117,13 @@ export type Action =
   | "brightness"
   | "contrast"
   | "color"
+  | "sharpness"
   | "motionflow"
   | "gamma_correction"
   | "color_temp"
+  | "input"
+  | "blank"
+  | "remote_key"
   | "range";
 
 export interface SingleCommand {
@@ -193,6 +221,7 @@ const SETTINGS_ACTIONS: Action[] = [
   "brightness",
   "contrast",
   "color",
+  "sharpness",
   "reality_creation",
   "hdr_enhancer",
   "dynamic_control",
@@ -200,6 +229,73 @@ const SETTINGS_ACTIONS: Action[] = [
   "gamma_correction",
   "color_temp",
 ];
+
+/**
+ * Parse the JSON returned by GET /api/projector/status into ProjectorSettings.
+ * - laser_level (0-1000) is divided by 10 → 0-100
+ * - picture_mode bridge variants like "cinema_film1" are normalized to "cinema_film_1"
+ * - unknown / null values are skipped
+ */
+export interface ProjectorStatus extends ProjectorSettings {
+  power?: "on" | "off" | string;
+}
+
+export function parseStatus(raw: unknown): ProjectorStatus {
+  const out: ProjectorStatus = {};
+  if (!raw || typeof raw !== "object") return out;
+  const r = raw as Record<string, unknown>;
+
+  const str = (v: unknown) =>
+    typeof v === "string" ? v.replace(/^"|"$/g, "").trim() : undefined;
+  const num = (v: unknown) => {
+    if (typeof v === "number") return v;
+    if (typeof v === "string" && v.trim() !== "" && !isNaN(Number(v)))
+      return Number(v);
+    return undefined;
+  };
+
+  const power = str(r.power);
+  if (power) out.power = power.toLowerCase() as "on" | "off";
+
+  const pm = str(r.picture_mode ?? r.pic_mode);
+  if (pm) {
+    const map: Record<string, PicMode> = {
+      cinema_film1: "cinema_film_1",
+      cinema_film2: "cinema_film_2",
+      brt_tv: "bright_tv",
+      brt_cine: "bright_cinema",
+      bright_cine: "bright_cinema",
+    };
+    out.pic_mode = (map[pm] ?? pm) as PicMode;
+  }
+
+  const laser = num(r.laser_level ?? r.laser_output);
+  if (laser !== undefined)
+    out.laser_output = Math.round(laser > 100 ? laser / 10 : laser);
+
+  const dyn = str(r.dynamic_control);
+  if (dyn) out.dynamic_control = dyn as DynamicControl;
+
+  const input = str(r.input);
+  if (input) out.input = input as InputSource;
+
+  const brightness = num(r.brightness);
+  if (brightness !== undefined) out.brightness = brightness;
+  const contrast = num(r.contrast);
+  if (contrast !== undefined) out.contrast = contrast;
+  const color = num(r.color);
+  if (color !== undefined) out.color = color;
+  const sharpness = num(r.sharpness);
+  if (sharpness !== undefined) out.sharpness = sharpness;
+
+  const hdr = str(r.hdr_enhancer);
+  if (hdr) out.hdr_enhancer = hdr as HdrEnhancer;
+
+  const blank = str(r.blank);
+  if (blank) out.blank = blank.toLowerCase() as BlankState;
+
+  return out;
+}
 
 /**
  * Apply multiple settings sequentially — bridge accepts ONE action per call.

@@ -8,7 +8,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Info } from "lucide-react";
+import { Info, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Menu, RotateCcw, EyeOff, Eye } from "lucide-react";
 import {
   sendCommand,
   PIC_MODE_LABELS,
@@ -22,6 +22,9 @@ import {
   type ColorTemp,
   type Action,
   type ProjectorSettings,
+  type InputSource,
+  type BlankState,
+  type RemoteKey,
 } from "@/lib/projector";
 import { toast } from "sonner";
 import { useRef, type ReactNode } from "react";
@@ -39,7 +42,13 @@ const PIC_MODES: PicMode[] = [
   "reference",
   "tv",
   "bright_cinema",
+  "bright_tv",
+  "game",
+  "user1",
+  "user2",
+  "user3",
 ];
+const INPUT_OPTS: InputSource[] = ["hdmi1", "hdmi2"];
 const MOTIONFLOW_OPTS: Motionflow[] = [
   "off",
   "true_cinema",
@@ -86,6 +95,12 @@ const SECTION_INFO: Record<string, string> = {
     "Bestämmer hur snabbt bilden går från svart till vitt. Högre tal = mörkare mellantoner / mer kontrast. 2.2 = standard SDR. 2.4 = mörkt rum / film.",
   color_temp:
     "Vitpunkt. D65 är film/Rec.709/HDR10-referens. Lägre D-tal = varmare/rödare. Högre = kallare/blåare. Custom = egen kalibrering.",
+  sharpness:
+    "Klassisk skärpa (kantförstärkning). 0 = naturlig. Höga värden ger ringingar / halo runt kanter. Behövs sällan om Reality Creation används.",
+  input: "Aktiv HDMI-ingång på projektorn.",
+  blank:
+    "Släck bilden tillfälligt utan att stänga av projektorn. Lasern står kvar i standby-läge.",
+  remote: "Virtuell fjärrkontroll — navigera projektorns OSD-meny.",
 };
 
 const PIC_MODE_INFO: Record<PicMode, string> = {
@@ -98,6 +113,13 @@ const PIC_MODE_INFO: Record<PicMode, string> = {
   tv: "Ljus och färgstark profil för broadcast-TV och nyheter. Mer kontrast och färg, mindre filmkänsla.",
   bright_cinema:
     "Halvljust rum eller dagsljus. Maxar ljusstyrka på bekostnad av svärta och färgnoggrannhet.",
+  bright_tv:
+    "Maxljust TV-profil för dagsljus / mycket omgivande ljus. Sämre svärta men bilden 'orkar' synas.",
+  game:
+    "Optimerad för minsta input lag. Mindre bildbehandling — använd när responstid är viktigare än bildkvalitet.",
+  user1: "Egen sparad profil #1. Använd för en personligt kalibrerad inställning.",
+  user2: "Egen sparad profil #2.",
+  user3: "Egen sparad profil #3.",
 };
 
 const HDR_INFO: Record<HdrEnhancer, string> = {
@@ -414,8 +436,113 @@ export function ManualControls({ settings, onChange }: Props) {
             ))}
           </div>
         </Card>
+
+        <SliderRow
+          label="Sharpness"
+          info={SECTION_INFO.sharpness}
+          hint="0 = naturlig · höga värden ger ringingar"
+          value={settings.sharpness ?? 0}
+          min={0}
+          max={100}
+          step={1}
+          onChange={(v) => update("sharpness", v, { sharpness: v })}
+        />
+
+        <Card className="p-5">
+          <SectionLabel info={SECTION_INFO.input}>Input</SectionLabel>
+          <div className="grid grid-cols-2 gap-2">
+            {INPUT_OPTS.map((i) => (
+              <OptionButton
+                key={i}
+                active={(settings.input ?? "hdmi1") === i}
+                onClick={() => update("input", i, { input: i })}
+                info={`Växla aktiv ingång till ${i.toUpperCase()}.`}
+                className="uppercase"
+              >
+                {i}
+              </OptionButton>
+            ))}
+          </div>
+        </Card>
+
+        <Card className="p-5">
+          <SectionLabel info={SECTION_INFO.blank}>Blank Screen</SectionLabel>
+          <div className="grid grid-cols-2 gap-2">
+            <OptionButton
+              active={(settings.blank ?? "off") === "off"}
+              onClick={() => update("blank", "off", { blank: "off" })}
+              info="Visa bilden normalt."
+            >
+              <Eye className="h-4 w-4 mr-1.5" /> Visible
+            </OptionButton>
+            <OptionButton
+              active={settings.blank === "on"}
+              onClick={() => update("blank", "on", { blank: "on" })}
+              info="Släck bilden tillfälligt (laser går till standby)."
+            >
+              <EyeOff className="h-4 w-4 mr-1.5" /> Blank
+            </OptionButton>
+          </div>
+        </Card>
+
+        <Card className="p-5">
+          <SectionLabel info={SECTION_INFO.remote}>Remote</SectionLabel>
+          <RemotePad onKey={(k) => sendRemote(k)} />
+        </Card>
       </div>
     </TooltipProvider>
+  );
+
+  function sendRemote(key: RemoteKey) {
+    sendCommand({ action: "remote_key", value: key }).then((res) => {
+      if (!res.ok)
+        toast.error("Bridge-fel", {
+          description: res.error || `Status ${res.status}`,
+        });
+    });
+  }
+}
+
+function RemotePad({ onKey }: { onKey: (k: RemoteKey) => void }) {
+  const btn =
+    "h-10 w-10 inline-flex items-center justify-center rounded-md bg-secondary hover:bg-secondary/80 text-foreground transition-colors";
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <button className={btn} onClick={() => onKey("up")} aria-label="Up">
+        <ChevronUp className="h-5 w-5" />
+      </button>
+      <div className="flex items-center gap-2">
+        <button className={btn} onClick={() => onKey("left")} aria-label="Left">
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+        <button
+          className={`${btn} bg-primary text-primary-foreground hover:bg-primary/90 px-3 w-auto`}
+          onClick={() => onKey("enter")}
+        >
+          Enter
+        </button>
+        <button className={btn} onClick={() => onKey("right")} aria-label="Right">
+          <ChevronRight className="h-5 w-5" />
+        </button>
+      </div>
+      <button className={btn} onClick={() => onKey("down")} aria-label="Down">
+        <ChevronDown className="h-5 w-5" />
+      </button>
+      <div className="flex gap-2 mt-2">
+        <button
+          className={`${btn} w-auto px-3 gap-1.5`}
+          onClick={() => onKey("menu")}
+        >
+          <Menu className="h-4 w-4" /> Menu
+        </button>
+        <button
+          className={`${btn} w-auto px-3 gap-1.5`}
+          onClick={() => onKey("reset")}
+        >
+          <RotateCcw className="h-4 w-4" /> Reset
+        </button>
+      </div>
+    </div>
   );
 }
 
