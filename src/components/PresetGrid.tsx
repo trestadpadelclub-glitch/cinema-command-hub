@@ -78,6 +78,7 @@ export function PresetGrid({
 
   const apply = async (p: Preset) => {
     setBusy(p.id);
+    onApplied(p);
     const results = await applySettings(p.settings);
     setBusy(null);
     const failed = results.find((r) => !r.ok);
@@ -85,7 +86,6 @@ export function PresetGrid({
       toast.success(`Preset: ${p.label}`, {
         description: `${results.length} inställningar skickade`,
       });
-      onApplied(p);
     } else {
       toast.error(`Preset misslyckades vid ${failed.command?.action}`, {
         description: failed.error || `Status ${failed.status}`,
