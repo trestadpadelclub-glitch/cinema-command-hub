@@ -14,13 +14,165 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      app_settings: {
+        Row: {
+          household_code: string
+          poll_enabled: boolean
+          poll_interval_seconds: number
+          updated_at: string
+        }
+        Insert: {
+          household_code: string
+          poll_enabled?: boolean
+          poll_interval_seconds?: number
+          updated_at?: string
+        }
+        Update: {
+          household_code?: string
+          poll_enabled?: boolean
+          poll_interval_seconds?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      automation_events: {
+        Row: {
+          delay_ms: number
+          enabled: boolean
+          event_key: string
+          fade_ms: number
+          household_code: string
+          id: string
+          label: string
+          lights_target: number | null
+          updated_at: string
+        }
+        Insert: {
+          delay_ms?: number
+          enabled?: boolean
+          event_key: string
+          fade_ms?: number
+          household_code: string
+          id?: string
+          label: string
+          lights_target?: number | null
+          updated_at?: string
+        }
+        Update: {
+          delay_ms?: number
+          enabled?: boolean
+          event_key?: string
+          fade_ms?: number
+          household_code?: string
+          id?: string
+          label?: string
+          lights_target?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      households: {
+        Row: {
+          code: string
+          created_at: string
+          name: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          name?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          name?: string | null
+        }
+        Relationships: []
+      }
+      marantz_inputs: {
+        Row: {
+          created_at: string
+          household_code: string
+          icon: string
+          id: string
+          label: string
+          marantz_code: string
+          position: number
+        }
+        Insert: {
+          created_at?: string
+          household_code: string
+          icon?: string
+          id?: string
+          label: string
+          marantz_code: string
+          position: number
+        }
+        Update: {
+          created_at?: string
+          household_code?: string
+          icon?: string
+          id?: string
+          label?: string
+          marantz_code?: string
+          position?: number
+        }
+        Relationships: []
+      }
+      scenes: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          household_code: string
+          id: string
+          lights_on: boolean | null
+          marantz_input: string | null
+          marantz_volume: number | null
+          name: string
+          projector_settings: Json
+          scene_number: number
+          scene_payload: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          household_code: string
+          id?: string
+          lights_on?: boolean | null
+          marantz_input?: string | null
+          marantz_volume?: number | null
+          name: string
+          projector_settings?: Json
+          scene_number: number
+          scene_payload?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          household_code?: string
+          id?: string
+          lights_on?: boolean | null
+          marantz_input?: string | null
+          marantz_volume?: number | null
+          name?: string
+          projector_settings?: Json
+          scene_number?: number
+          scene_payload?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      seed_household: {
+        Args: { _code: string; _name?: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
