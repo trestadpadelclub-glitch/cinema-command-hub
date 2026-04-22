@@ -11,6 +11,7 @@ import {
 import { Info, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Menu, RotateCcw, EyeOff, Eye } from "lucide-react";
 import {
   sendCommand,
+  sendRealityCreation,
   PIC_MODE_LABELS,
   MOTIONFLOW_LABELS,
   COLOR_TEMP_LABELS,
