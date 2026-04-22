@@ -313,7 +313,13 @@ export function parseStatus(raw: unknown): ProjectorStatus {
   };
 
   const power = str(r.power);
-  if (power) out.power = power.toLowerCase() as "on" | "off";
+  if (power) {
+    const p = power.toLowerCase();
+    // "err_cmd" / "error" / "" => behandla som okänd (skriv inte över UI)
+    if (p === "on" || p === "off" || p === "standby") {
+      out.power = p === "standby" ? "off" : (p as "on" | "off");
+    }
+  }
 
   const pm = str(r.picture_mode ?? r.pic_mode);
   if (pm) {

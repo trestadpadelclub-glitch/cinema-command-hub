@@ -77,9 +77,14 @@ function Index() {
     }
     const parsed = parseStatus(res.data);
     if (parsed.power === "on" || parsed.power === "off") setPower(parsed.power);
-    if (mode === "full") {
-      setSettings((prev) => ({ ...prev, ...parsed }));
-      if (showToast) toast.success("Status synkad från projektorn");
+    // Slå alltid in alla parsade fält i state — annars halkar reglagen efter.
+    // Vi tar bort `power` så det inte krockar med ProjectorSettings-typen.
+    const { power: _ignored, ...settingsPatch } = parsed;
+    if (Object.keys(settingsPatch).length > 0) {
+      setSettings((prev) => ({ ...prev, ...settingsPatch }));
+    }
+    if (mode === "full" && showToast) {
+      toast.success("Status synkad från projektorn");
     }
     // Marantz input om bridgen råkar skicka det
     const raw = res.data as Record<string, unknown> | undefined;
