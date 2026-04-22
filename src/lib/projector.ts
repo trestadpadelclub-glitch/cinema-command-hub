@@ -240,17 +240,28 @@ export async function sendCommand(cmd: SingleCommand): Promise<CommandResult> {
 }
 
 export async function getStatus(): Promise<CommandResult> {
+  const url = statusUrl();
   try {
-    const res = await fetch(statusUrl(), { method: "GET" });
+    console.log("[bridge] GET", url);
+    const res = await fetch(url, {
+      method: "GET",
+      headers: {
+        // Skip the ngrok free-tier HTML warning page
+        "ngrok-skip-browser-warning": "true",
+        Accept: "application/json",
+      },
+    });
     const text = await res.text();
     let data: unknown = text;
     try {
       data = text ? JSON.parse(text) : undefined;
     } catch {
-      /* keep */
+      /* keep raw */
     }
+    console.log("[bridge] status", res.status, data);
     return { ok: res.ok, status: res.status, data };
   } catch (err) {
+    console.error("[bridge] fetch failed", url, err);
     return {
       ok: false,
       status: 0,
