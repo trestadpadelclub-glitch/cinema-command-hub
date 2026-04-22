@@ -124,7 +124,11 @@ export type Action =
   | "input"
   | "blank"
   | "remote_key"
-  | "range";
+  | "range"
+  | "scene"
+  | "marantz"
+  | "lights";
+
 
 export interface SingleCommand {
   action: Action;
@@ -539,3 +543,63 @@ export function analyzeInstruction(
 
   return out;
 }
+
+// =====================================================================
+// Master Control Hub: scen, marantz, lights
+// Backend (Python) tar emot ALLA via samma POST /api/projector
+// med {action, value} (samt valfria extra-fält som payload).
+// =====================================================================
+
+export interface SceneCommandPayload {
+  scenePayload: string; // t.ex. "1"
+  projectorSettings?: ProjectorSettings;
+  marantzInput?: string | null;
+  marantzVolume?: number | null;
+  lightsOn?: boolean | null;
+}
+
+/** Skicka en scen — först {action:"scene", value:N}, sen ev. extra parametrar. */
+export async function sendScene(p: SceneCommandPayload): Promise<CommandResult[]> {
+  const results: CommandResult[] = [];
+  // 1. själva scen-kommandot
+  results.push(
+    await sendCommand({ action: "scene" as Action, value: p.scenePayload }),
+  );
+  // 2. ljus
+  if (p.lightsOn === true || p.lightsOn === false) {
+    results.push(
+      await sendCommand({
+        action: "lights" as Action,
+        value: p.lightsOn ? "on" : "off",
+      }),
+    );
+  }
+  // 3. marantz input
+  if (p.marantzInput) {
+    results.push(
+      await sendCommand({ action: "marantz" as Action, value: `SI${p.marantzInput}` }),
+    );
+  }
+  // 4. marantz volym
+  if (typeof p.marantzVolume === "number") {
+    const v = String(p.marantzVolume).padStart(2, "0");
+    results.push(await sendCommand({ action: "marantz" as Action, value: `MV${v}` }));
+  }
+  // 5. övriga projektor-inställningar (om angivna)
+  if (p.projectorSettings && Object.keys(p.projectorSettings).length > 0) {
+    const more = await applySettings(p.projectorSettings);
+    results.push(...more);
+  }
+  return results;
+}
+
+/** Marantz remote control — vol/mute/input osv. */
+export async function sendMarantz(value: string): Promise<CommandResult> {
+  return sendCommand({ action: "marantz" as Action, value });
+}
+
+/** Toggle / explicit set lights. */
+export async function sendLights(value: "toggle" | "on" | "off"): Promise<CommandResult> {
+  return sendCommand({ action: "lights" as Action, value });
+}
+

@@ -1,0 +1,145 @@
+import { supabase } from "@/integrations/supabase/client";
+import type { ProjectorSettings } from "@/lib/projector";
+
+export interface Scene {
+  id: string;
+  household_code: string;
+  scene_number: number;
+  name: string;
+  enabled: boolean;
+  projector_settings: ProjectorSettings;
+  marantz_input: string | null;
+  marantz_volume: number | null;
+  lights_on: boolean | null;
+  scene_payload: string | null;
+  updated_at: string;
+}
+
+export interface MarantzInput {
+  id: string;
+  position: number;
+  label: string;
+  marantz_code: string;
+  icon: string;
+}
+
+export interface AutomationEvent {
+  id: string;
+  event_key: string;
+  label: string;
+  delay_ms: number;
+  fade_ms: number;
+  lights_target: number | null;
+  enabled: boolean;
+}
+
+export interface AppSettings {
+  household_code: string;
+  poll_enabled: boolean;
+  poll_interval_seconds: number;
+}
+
+// ---------- Scenes ----------
+
+export async function fetchScenes(householdCode: string): Promise<Scene[]> {
+  const { data, error } = await supabase
+    .from("scenes")
+    .select("*")
+    .eq("household_code", householdCode)
+    .order("scene_number");
+  if (error) throw error;
+  return (data ?? []) as unknown as Scene[];
+}
+
+export async function updateScene(
+  id: string,
+  patch: Partial<Omit<Scene, "id" | "household_code" | "updated_at">>,
+) {
+  const { error } = await supabase
+    .from("scenes")
+    .update(patch as never)
+    .eq("id", id);
+  if (error) throw error;
+}
+
+// ---------- Marantz inputs ----------
+
+export async function fetchInputs(householdCode: string): Promise<MarantzInput[]> {
+  const { data, error } = await supabase
+    .from("marantz_inputs")
+    .select("*")
+    .eq("household_code", householdCode)
+    .order("position");
+  if (error) throw error;
+  return (data ?? []) as unknown as MarantzInput[];
+}
+
+export async function upsertInput(
+  householdCode: string,
+  input: Omit<MarantzInput, "id">,
+) {
+  const { error } = await supabase
+    .from("marantz_inputs")
+    .upsert(
+      { household_code: householdCode, ...input },
+      { onConflict: "household_code,position" },
+    );
+  if (error) throw error;
+}
+
+export async function deleteInput(id: string) {
+  const { error } = await supabase.from("marantz_inputs").delete().eq("id", id);
+  if (error) throw error;
+}
+
+// ---------- Automation events ----------
+
+export async function fetchEvents(householdCode: string): Promise<AutomationEvent[]> {
+  const { data, error } = await supabase
+    .from("automation_events")
+    .select("*")
+    .eq("household_code", householdCode)
+    .order("event_key");
+  if (error) throw error;
+  return (data ?? []) as unknown as AutomationEvent[];
+}
+
+export async function updateEvent(
+  id: string,
+  patch: Partial<Omit<AutomationEvent, "id" | "event_key">>,
+) {
+  const { error } = await supabase.from("automation_events").update(patch).eq("id", id);
+  if (error) throw error;
+}
+
+// ---------- App settings ----------
+
+export async function fetchAppSettings(householdCode: string): Promise<AppSettings> {
+  const { data, error } = await supabase
+    .from("app_settings")
+    .select("*")
+    .eq("household_code", householdCode)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) {
+    return {
+      household_code: householdCode,
+      poll_enabled: true,
+      poll_interval_seconds: 5,
+    };
+  }
+  return data as unknown as AppSettings;
+}
+
+export async function updateAppSettings(
+  householdCode: string,
+  patch: Partial<Pick<AppSettings, "poll_enabled" | "poll_interval_seconds">>,
+) {
+  const { error } = await supabase
+    .from("app_settings")
+    .upsert(
+      { household_code: householdCode, ...patch },
+      { onConflict: "household_code" },
+    );
+  if (error) throw error;
+}
