@@ -644,41 +644,22 @@ export async function sendScene(p: SceneCommandPayload): Promise<CommandResult[]
   );
   if (p.lightsOn === true || p.lightsOn === false) {
     results.push(
-      await sendCommand({
-        action: "lights" as Action,
-        value: p.lightsOn ? "on" : "off",
-      }),
+      await postJson(
+        lightsUrl(),
+        { action: "lights", value: p.lightsOn ? "on" : "off" },
+        { action: "lights" as Action, value: p.lightsOn ? "on" : "off" },
+      ),
     );
   }
-  // Bulk per-lampa
+  // Bulk per-lampa → POST /api/lights
   if (p.sceneLights && p.sceneLights.length > 0) {
-    const url = getBridgeUrl();
-    try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "scene_lights",
-          value: { lights: p.sceneLights },
-        }),
-      });
-      const text = await res.text();
-      let data: unknown = text;
-      try { data = text ? JSON.parse(text) : undefined; } catch { /* keep */ }
-      results.push({
-        ok: res.ok,
-        status: res.status,
-        data,
-        command: { action: "scene_lights" as Action, value: p.sceneLights.length },
-      });
-    } catch (err) {
-      results.push({
-        ok: false,
-        status: 0,
-        error: err instanceof Error ? err.message : String(err),
-        command: { action: "scene_lights" as Action, value: p.sceneLights.length },
-      });
-    }
+    results.push(
+      await postJson(
+        lightsUrl(),
+        { action: "scene_lights", value: { lights: p.sceneLights } },
+        { action: "scene_lights" as Action, value: p.sceneLights.length },
+      ),
+    );
   }
   if (p.marantzInput) {
     results.push(
