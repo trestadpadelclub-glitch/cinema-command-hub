@@ -6,11 +6,13 @@ import {
   Settings2,
   Power,
   Loader2,
+  Zap,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -21,6 +23,8 @@ import {
 import { Label } from "@/components/ui/label";
 import { ManualControls } from "@/components/ManualControls";
 import { SceneLightsDialog } from "@/components/SceneLightsDialog";
+import { SceneTriggersDialog } from "@/components/SceneTriggersDialog";
+import { fetchTriggers, type SceneTrigger } from "@/lib/triggers";
 import { toast } from "sonner";
 import {
   sendScene,
