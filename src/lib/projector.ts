@@ -124,7 +124,11 @@ export type Action =
   | "input"
   | "blank"
   | "remote_key"
-  | "range";
+  | "range"
+  | "scene"
+  | "marantz"
+  | "lights";
+
 
 export interface SingleCommand {
   action: Action;
