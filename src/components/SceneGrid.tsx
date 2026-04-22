@@ -228,6 +228,15 @@ export function SceneGrid({ householdCode, activeSceneId }: Props) {
                   size="sm"
                   variant="ghost"
                   className="h-8 w-8 p-0"
+                  onClick={() => setTuningLights(s)}
+                  title="Tuna lampor för denna scen"
+                >
+                  <Lightbulb className="h-3.5 w-3.5 text-amber-400" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-8 w-8 p-0"
                   onClick={() => setTuning(s)}
                   title="Tuna projektor-inställningar"
                 >
