@@ -254,6 +254,9 @@ function Index() {
                 <Section title="Marantz Cinema 50">
                   <MarantzPanel householdCode={household} activeInput={activeInput} />
                 </Section>
+                <Section title="Lights — dina lampor">
+                  <LightsManager householdCode={household} />
+                </Section>
                 <Section title="Sony XW5000ES — Manual Controls">
                   <ManualControls settings={settings} onChange={setSettings} />
                 </Section>
