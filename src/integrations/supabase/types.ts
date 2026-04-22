@@ -206,6 +206,45 @@ export type Database = {
           },
         ]
       }
+      scene_triggers: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          household_code: string
+          id: string
+          run_lights: boolean
+          run_marantz: boolean
+          run_projector: boolean
+          scene_id: string
+          trigger_key: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          household_code: string
+          id?: string
+          run_lights?: boolean
+          run_marantz?: boolean
+          run_projector?: boolean
+          scene_id: string
+          trigger_key: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          household_code?: string
+          id?: string
+          run_lights?: boolean
+          run_marantz?: boolean
+          run_projector?: boolean
+          scene_id?: string
+          trigger_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       scenes: {
         Row: {
           created_at: string

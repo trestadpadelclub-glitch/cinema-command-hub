@@ -12,6 +12,7 @@ import { SceneGrid } from "@/components/SceneGrid";
 import { MarantzPanel } from "@/components/MarantzPanel";
 import { LightsManager } from "@/components/LightsManager";
 import { AutomationSettings } from "@/components/AutomationSettings";
+import { TriggerTester } from "@/components/TriggerTester";
 import { PollingControl } from "@/components/PollingControl";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
@@ -278,6 +279,9 @@ function Index() {
             </Section>
             <Section title="Ljus-automation">
               <AutomationSettings householdCode={household} />
+            </Section>
+            <Section title="Scen-triggers (auto-körning)">
+              <TriggerTester householdCode={household} />
             </Section>
           </TabsContent>
 

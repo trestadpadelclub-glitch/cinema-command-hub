@@ -6,11 +6,13 @@ import {
   Settings2,
   Power,
   Loader2,
+  Zap,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -21,6 +23,8 @@ import {
 import { Label } from "@/components/ui/label";
 import { ManualControls } from "@/components/ManualControls";
 import { SceneLightsDialog } from "@/components/SceneLightsDialog";
+import { SceneTriggersDialog } from "@/components/SceneTriggersDialog";
+import { fetchTriggers, type SceneTrigger } from "@/lib/triggers";
 import { toast } from "sonner";
 import {
   sendScene,
@@ -57,14 +61,21 @@ export function SceneGrid({ householdCode, activeSceneId }: Props) {
   const [editing, setEditing] = useState<Scene | null>(null);
   const [tuning, setTuning] = useState<Scene | null>(null);
   const [tuningLights, setTuningLights] = useState<Scene | null>(null);
+  const [tuningTriggers, setTuningTriggers] = useState<Scene | null>(null);
+  const [triggers, setTriggers] = useState<SceneTrigger[]>([]);
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([fetchScenes(householdCode), fetchInputs(householdCode)])
-      .then(([s, i]) => {
+    Promise.all([
+      fetchScenes(householdCode),
+      fetchInputs(householdCode),
+      fetchTriggers(householdCode),
+    ])
+      .then(([s, i, t]) => {
         if (!cancelled) {
           setScenes(s);
           setInputs(i);
+          setTriggers(t);
         }
       })
       .catch((e) => toast.error("Kunde inte ladda scener", { description: String(e) }));
@@ -74,8 +85,12 @@ export function SceneGrid({ householdCode, activeSceneId }: Props) {
   }, [householdCode]);
 
   const refresh = async () => {
-    const s = await fetchScenes(householdCode);
+    const [s, t] = await Promise.all([
+      fetchScenes(householdCode),
+      fetchTriggers(householdCode),
+    ]);
     setScenes(s);
+    setTriggers(t);
   };
 
   const runScene = async (s: Scene) => {
@@ -205,12 +220,22 @@ export function SceneGrid({ householdCode, activeSceneId }: Props) {
               <h3 className="text-sm font-semibold truncate mb-2" title={s.name}>
                 {s.name}
               </h3>
-              <div className="flex items-center gap-1 text-[10px] text-muted-foreground mb-3">
+              <div className="flex items-center gap-1 text-[10px] text-muted-foreground mb-3 min-h-[14px]">
                 {s.lights_on === true && (
                   <Lightbulb className="h-3 w-3 text-amber-400" />
                 )}
                 {s.marantz_input && (
                   <span className="truncate">{s.marantz_input}</span>
+                )}
+                {triggers.some((t) => t.scene_id === s.id && t.enabled) && (
+                  <Badge
+                    variant="secondary"
+                    className="ml-auto h-4 px-1 text-[9px] gap-0.5"
+                    title="Den här scenen har automatiska triggers"
+                  >
+                    <Zap className="h-2.5 w-2.5 text-amber-400" />
+                    {triggers.filter((t) => t.scene_id === s.id && t.enabled).length}
+                  </Badge>
                 )}
               </div>
               <div className="flex gap-1">
@@ -246,6 +271,15 @@ export function SceneGrid({ householdCode, activeSceneId }: Props) {
                   title="Tuna lampor för denna scen"
                 >
                   <Lightbulb className="h-3.5 w-3.5 text-amber-400" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-8 w-8 p-0"
+                  onClick={() => setTuningTriggers(s)}
+                  title="Automatiska triggers för denna scen"
+                >
+                  <Zap className="h-3.5 w-3.5 text-amber-400" />
                 </Button>
                 <Button
                   size="sm"
@@ -399,6 +433,21 @@ export function SceneGrid({ householdCode, activeSceneId }: Props) {
           householdCode={householdCode}
           sceneId={tuningLights.id}
           sceneName={tuningLights.name}
+        />
+      )}
+
+      {/* Triggers dialog */}
+      {tuningTriggers && (
+        <SceneTriggersDialog
+          open={!!tuningTriggers}
+          onOpenChange={(o) => {
+            if (!o) {
+              setTuningTriggers(null);
+              refresh();
+            }
+          }}
+          householdCode={householdCode}
+          scene={tuningTriggers}
         />
       )}
     </>
