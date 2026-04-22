@@ -327,11 +327,11 @@ export function parseStatus(raw: unknown): ProjectorStatus {
     out.pic_mode = (map[pm] ?? pm) as PicMode;
   }
 
-  const laser = num(r.laser_level ?? r.laser_output);
+  const laser = num(r.laser_level ?? r.laser_output ?? r.light_output_val);
   if (laser !== undefined)
     out.laser_output = Math.round(laser > 100 ? laser / 10 : laser);
 
-  const dyn = str(r.dynamic_control);
+  const dyn = str(r.dynamic_control ?? r.light_output_dyn);
   if (dyn) out.dynamic_control = dyn as DynamicControl;
 
   const input = str(r.input);
