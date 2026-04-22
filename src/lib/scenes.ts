@@ -39,6 +39,29 @@ export interface AppSettings {
   poll_interval_seconds: number;
 }
 
+export type LightType = "dimmer" | "cct" | "rgb" | "rgbcct";
+
+export interface Light {
+  id: string;
+  household_code: string;
+  position: number;
+  name: string;
+  tuya_device_id: string;
+  light_type: LightType;
+  enabled: boolean;
+}
+
+export interface SceneLight {
+  id: string;
+  scene_id: string;
+  light_id: string;
+  in_scene: boolean;
+  on_state: boolean;
+  brightness: number | null;
+  kelvin: number | null;
+  color_hex: string | null;
+}
+
 // ---------- Scenes ----------
 
 export async function fetchScenes(householdCode: string): Promise<Scene[]> {
