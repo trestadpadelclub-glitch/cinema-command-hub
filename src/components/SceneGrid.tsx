@@ -359,10 +359,13 @@ export function SceneGrid({ householdCode, activeSceneId }: Props) {
             </div>
           )}
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setEditing(null)}>
+            <Button variant="ghost" onClick={() => setEditing(null)} disabled={saving}>
               Avbryt
             </Button>
-            <Button onClick={saveEdit}>Spara</Button>
+            <Button onClick={saveEdit} disabled={saving}>
+              {saving && <Loader2 className="h-4 w-4 animate-spin mr-1.5" />}
+              Spara
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
