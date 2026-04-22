@@ -114,6 +114,8 @@ export type Action =
   | "dynamic_control"
   | "laser_output"
   | "reality_creation"
+  | "real_cre"
+  | "reality_creation_val"
   | "brightness"
   | "contrast"
   | "color"
