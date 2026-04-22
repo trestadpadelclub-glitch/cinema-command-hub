@@ -170,6 +170,45 @@ function statusUrl(): string {
   return getBridgeUrl() + "/status";
 }
 
+/**
+ * Derive the lights endpoint from the projector bridge URL.
+ * `<base>/api/projector` -> `<base>/api/lights`
+ * If the URL doesn't end with `/api/projector`, fall back to replacing the
+ * last path segment, or appending `/api/lights`.
+ */
+function lightsUrl(): string {
+  const base = getBridgeUrl();
+  if (/\/api\/projector$/i.test(base)) {
+    return base.replace(/\/api\/projector$/i, "/api/lights");
+  }
+  // Replace last segment if it looks like a path; otherwise append.
+  if (/\/[^/]+$/.test(base)) {
+    return base.replace(/\/[^/]+$/, "/api/lights");
+  }
+  return base.replace(/\/+$/, "") + "/api/lights";
+}
+
+async function postJson(url: string, body: unknown, command: SingleCommand): Promise<CommandResult> {
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const text = await res.text();
+    let data: unknown = text;
+    try { data = text ? JSON.parse(text) : undefined; } catch { /* keep raw */ }
+    return { ok: res.ok, status: res.status, data, command };
+  } catch (err) {
+    return {
+      ok: false,
+      status: 0,
+      error: err instanceof Error ? err.message : String(err),
+      command,
+    };
+  }
+}
+
 // --- low level ---
 
 export async function sendCommand(cmd: SingleCommand): Promise<CommandResult> {
