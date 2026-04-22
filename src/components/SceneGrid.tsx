@@ -56,6 +56,7 @@ export function SceneGrid({ householdCode, activeSceneId }: Props) {
   const [busy, setBusy] = useState<string | null>(null);
   const [editing, setEditing] = useState<Scene | null>(null);
   const [tuning, setTuning] = useState<Scene | null>(null);
+  const [tuningLights, setTuningLights] = useState<Scene | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -79,12 +80,45 @@ export function SceneGrid({ householdCode, activeSceneId }: Props) {
 
   const runScene = async (s: Scene) => {
     setBusy(s.id);
+    // Hämta per-lampa-inställningar för denna scen
+    let sceneLights: SceneLightCommand[] | undefined;
+    try {
+      const [allLights, sceneRows] = await Promise.all([
+        fetchLights(householdCode),
+        fetchSceneLights(s.id),
+      ]);
+      const lightById = new Map(allLights.map((l) => [l.id, l]));
+      sceneLights = sceneRows
+        .filter((r) => r.in_scene)
+        .map((r) => {
+          const l = lightById.get(r.light_id);
+          if (!l) return null;
+          const cmd: SceneLightCommand = {
+            device_id: l.tuya_device_id,
+            name: l.name,
+            type: l.light_type,
+            on: r.on_state,
+          };
+          if (r.brightness !== null) cmd.brightness = r.brightness;
+          if ((l.light_type === "cct" || l.light_type === "rgbcct") && r.kelvin !== null)
+            cmd.kelvin = r.kelvin;
+          if ((l.light_type === "rgb" || l.light_type === "rgbcct") && r.color_hex)
+            cmd.color = r.color_hex;
+          return cmd;
+        })
+        .filter((c): c is SceneLightCommand => c !== null);
+      if (sceneLights.length === 0) sceneLights = undefined;
+    } catch (e) {
+      console.warn("Kunde inte hämta scene-lights", e);
+    }
+
     const results = await sendScene({
       scenePayload: s.scene_payload || String(s.scene_number),
       projectorSettings: s.projector_settings,
       marantzInput: s.marantz_input,
       marantzVolume: s.marantz_volume,
       lightsOn: s.lights_on,
+      sceneLights,
     });
     setBusy(null);
     const failed = results.find((r) => !r.ok);
