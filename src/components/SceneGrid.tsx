@@ -435,6 +435,21 @@ export function SceneGrid({ householdCode, activeSceneId }: Props) {
           sceneName={tuningLights.name}
         />
       )}
+
+      {/* Triggers dialog */}
+      {tuningTriggers && (
+        <SceneTriggersDialog
+          open={!!tuningTriggers}
+          onOpenChange={(o) => {
+            if (!o) {
+              setTuningTriggers(null);
+              refresh();
+            }
+          }}
+          householdCode={householdCode}
+          scene={tuningTriggers}
+        />
+      )}
     </>
   );
 }
