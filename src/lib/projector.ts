@@ -344,6 +344,9 @@ export function parseStatus(raw: unknown): ProjectorStatus {
 
 /**
  * Apply multiple settings sequentially — bridge accepts ONE action per call.
+ * Reality Creation is split into two commands:
+ *   - `real_cre` : "on" | "off"  (0 -> off, >0 -> on)
+ *   - `reality_creation_val` : integer level
  * Returns array of per-command results.
  */
 export async function applySettings(
@@ -357,7 +360,28 @@ export async function applySettings(
     results.push(res);
     if (!res.ok) break; // stop on first failure
   }
+  // Reality Creation: send on/off + level
+  if (settings.reality_creation !== undefined && settings.reality_creation !== null) {
+    const level = Math.round(settings.reality_creation);
+    const onOff = await sendRealityCreation(level);
+    results.push(...onOff);
+  }
   return results;
+}
+
+/**
+ * Reality Creation needs two commands:
+ *   - `real_cre` "on" | "off"
+ *   - `reality_creation_val` <integer>
+ */
+export async function sendRealityCreation(level: number): Promise<CommandResult[]> {
+  const lvl = Math.max(0, Math.min(100, Math.round(level)));
+  const out: CommandResult[] = [];
+  out.push(await sendCommand({ action: "real_cre" as Action, value: lvl > 0 ? "on" : "off" }));
+  if (lvl > 0) {
+    out.push(await sendCommand({ action: "reality_creation_val" as Action, value: lvl }));
+  }
+  return out;
 }
 
 // ----- Quick presets -----
