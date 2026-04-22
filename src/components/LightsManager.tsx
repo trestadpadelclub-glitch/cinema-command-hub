@@ -154,7 +154,23 @@ export function LightsManager({ householdCode }: Props) {
               </div>
               <Switch
                 checked={l.enabled}
-                onCheckedChange={(v) => updateLight(l.id, { enabled: v }).then(refresh)}
+                onCheckedChange={(v) => {
+                  // Optimistic update så reglaget snäpper direkt
+                  setLights((prev) =>
+                    prev.map((x) => (x.id === l.id ? { ...x, enabled: v } : x)),
+                  );
+                  updateLight(l.id, { enabled: v })
+                    .then(refresh)
+                    .catch((e) => {
+                      toast.error("Kunde inte uppdatera lampan", {
+                        description: String(e),
+                      });
+                      // Rulla tillbaka vid fel
+                      setLights((prev) =>
+                        prev.map((x) => (x.id === l.id ? { ...x, enabled: !v } : x)),
+                      );
+                    });
+                }}
               />
               <Button size="sm" variant="ghost" onClick={() => setEditing(l)}>
                 Redigera
