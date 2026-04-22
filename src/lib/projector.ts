@@ -258,7 +258,8 @@ export async function getStatus(): Promise<CommandResult> {
 }
 
 // Map of which ProjectorSettings keys correspond to which bridge action.
-// All listed keys map 1:1 to the action name.
+// All listed keys map 1:1 to the action name, EXCEPT reality_creation
+// which is split into two commands (real_cre on/off + reality_creation_val level).
 const SETTINGS_ACTIONS: Action[] = [
   "pic_mode",
   "laser_output",
@@ -266,7 +267,7 @@ const SETTINGS_ACTIONS: Action[] = [
   "contrast",
   "color",
   "sharpness",
-  "reality_creation",
+  // reality_creation handled separately below
   "hdr_enhancer",
   "dynamic_control",
   "motionflow",
