@@ -39,6 +39,29 @@ export interface AppSettings {
   poll_interval_seconds: number;
 }
 
+export type LightType = "dimmer" | "cct" | "rgb" | "rgbcct";
+
+export interface Light {
+  id: string;
+  household_code: string;
+  position: number;
+  name: string;
+  tuya_device_id: string;
+  light_type: LightType;
+  enabled: boolean;
+}
+
+export interface SceneLight {
+  id: string;
+  scene_id: string;
+  light_id: string;
+  in_scene: boolean;
+  on_state: boolean;
+  brightness: number | null;
+  kelvin: number | null;
+  color_hex: string | null;
+}
+
 // ---------- Scenes ----------
 
 export async function fetchScenes(householdCode: string): Promise<Scene[]> {
@@ -89,6 +112,64 @@ export async function upsertInput(
 
 export async function deleteInput(id: string) {
   const { error } = await supabase.from("marantz_inputs").delete().eq("id", id);
+  if (error) throw error;
+}
+
+// ---------- Lights ----------
+
+export async function fetchLights(householdCode: string): Promise<Light[]> {
+  const { data, error } = await supabase
+    .from("lights")
+    .select("*")
+    .eq("household_code", householdCode)
+    .order("position");
+  if (error) throw error;
+  return (data ?? []) as unknown as Light[];
+}
+
+export async function createLight(
+  householdCode: string,
+  input: Omit<Light, "id" | "household_code">,
+) {
+  const { error } = await supabase
+    .from("lights")
+    .insert({ household_code: householdCode, ...input } as never);
+  if (error) throw error;
+}
+
+export async function updateLight(
+  id: string,
+  patch: Partial<Omit<Light, "id" | "household_code">>,
+) {
+  const { error } = await supabase
+    .from("lights")
+    .update(patch as never)
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function deleteLight(id: string) {
+  const { error } = await supabase.from("lights").delete().eq("id", id);
+  if (error) throw error;
+}
+
+// ---------- Scene lights ----------
+
+export async function fetchSceneLights(sceneId: string): Promise<SceneLight[]> {
+  const { data, error } = await supabase
+    .from("scene_lights")
+    .select("*")
+    .eq("scene_id", sceneId);
+  if (error) throw error;
+  return (data ?? []) as unknown as SceneLight[];
+}
+
+export async function upsertSceneLight(
+  row: Omit<SceneLight, "id"> & { id?: string },
+) {
+  const { error } = await supabase
+    .from("scene_lights")
+    .upsert(row as never, { onConflict: "scene_id,light_id" });
   if (error) throw error;
 }
 

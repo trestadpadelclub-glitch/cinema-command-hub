@@ -10,6 +10,7 @@ import { AiAssistant } from "@/components/AiAssistant";
 import { ExpertCalibration } from "@/components/ExpertCalibration";
 import { SceneGrid } from "@/components/SceneGrid";
 import { MarantzPanel } from "@/components/MarantzPanel";
+import { LightsManager } from "@/components/LightsManager";
 import { AutomationSettings } from "@/components/AutomationSettings";
 import { PollingControl } from "@/components/PollingControl";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -252,6 +253,9 @@ function Index() {
               <div className="space-y-6">
                 <Section title="Marantz Cinema 50">
                   <MarantzPanel householdCode={household} activeInput={activeInput} />
+                </Section>
+                <Section title="Lights — dina lampor">
+                  <LightsManager householdCode={household} />
                 </Section>
                 <Section title="Sony XW5000ES — Manual Controls">
                   <ManualControls settings={settings} onChange={setSettings} />

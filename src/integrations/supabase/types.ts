@@ -89,6 +89,42 @@ export type Database = {
         }
         Relationships: []
       }
+      lights: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          household_code: string
+          id: string
+          light_type: string
+          name: string
+          position: number
+          tuya_device_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          household_code: string
+          id?: string
+          light_type?: string
+          name: string
+          position: number
+          tuya_device_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          household_code?: string
+          id?: string
+          light_type?: string
+          name?: string
+          position?: number
+          tuya_device_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       marantz_inputs: {
         Row: {
           created_at: string
@@ -118,6 +154,57 @@ export type Database = {
           position?: number
         }
         Relationships: []
+      }
+      scene_lights: {
+        Row: {
+          brightness: number | null
+          color_hex: string | null
+          id: string
+          in_scene: boolean
+          kelvin: number | null
+          light_id: string
+          on_state: boolean
+          scene_id: string
+          updated_at: string
+        }
+        Insert: {
+          brightness?: number | null
+          color_hex?: string | null
+          id?: string
+          in_scene?: boolean
+          kelvin?: number | null
+          light_id: string
+          on_state?: boolean
+          scene_id: string
+          updated_at?: string
+        }
+        Update: {
+          brightness?: number | null
+          color_hex?: string | null
+          id?: string
+          in_scene?: boolean
+          kelvin?: number | null
+          light_id?: string
+          on_state?: boolean
+          scene_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scene_lights_light_id_fkey"
+            columns: ["light_id"]
+            isOneToOne: false
+            referencedRelation: "lights"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scene_lights_scene_id_fkey"
+            columns: ["scene_id"]
+            isOneToOne: false
+            referencedRelation: "scenes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       scenes: {
         Row: {
