@@ -51,6 +51,24 @@ const ICON_MAP: Record<string, typeof Tv> = {
 
 const ICON_OPTIONS = ["tv", "disc", "cast", "satellite", "radio"];
 
+// Standardiserade Marantz-input-koder (skickas som SI<CODE>)
+const MARANTZ_INPUT_CODES: { code: string; label: string }[] = [
+  { code: "CBL/SAT", label: "CBL/SAT" },
+  { code: "DVD", label: "DVD" },
+  { code: "BD", label: "Blu-ray (BD)" },
+  { code: "GAME", label: "Game" },
+  { code: "AUX1", label: "AUX1" },
+  { code: "AUX2", label: "AUX2" },
+  { code: "MPLAY", label: "Media Player (MPLAY)" },
+  { code: "TV", label: "TV Audio" },
+  { code: "TUNER", label: "Tuner" },
+  { code: "PHONO", label: "Phono" },
+  { code: "CD", label: "CD" },
+  { code: "NET", label: "NET (Streaming)" },
+  { code: "BT", label: "Bluetooth" },
+  { code: "8K", label: "8K" },
+];
+
 interface Props {
   householdCode: string;
   /** Aktuell input enligt status — markeras som aktiv. */
@@ -236,11 +254,18 @@ function InputEditor({
         </div>
         <div className="space-y-1">
           <Label>Marantz input-kod</Label>
-          <Input
-            value={code}
-            onChange={(e) => setCode(e.target.value.toUpperCase())}
-            placeholder="MPLAY / BD / GAME / CBL / NET …"
-          />
+          <Select value={code} onValueChange={setCode}>
+            <SelectTrigger>
+              <SelectValue placeholder="Välj input…" />
+            </SelectTrigger>
+            <SelectContent>
+              {MARANTZ_INPUT_CODES.map((opt) => (
+                <SelectItem key={opt.code} value={opt.code}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <p className="text-xs text-muted-foreground">
             Skickas som <code className="text-primary/80">SI{code || "<KOD>"}</code> till receivern.
           </p>
