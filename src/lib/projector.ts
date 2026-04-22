@@ -168,8 +168,9 @@ export function setBridgeUrl(url: string) {
 }
 
 function statusUrl(): string {
-  // /api/projector  ->  /api/projector/status
-  return getBridgeUrl() + "/status";
+  // Plain GET to the configured Bridge URL (no /status suffix).
+  // The bridge's get_status() returns a full JSON snapshot when called with GET and no params.
+  return getBridgeUrl();
 }
 
 /**
@@ -337,6 +338,36 @@ export function parseStatus(raw: unknown): ProjectorStatus {
 
   const hdr = str(r.hdr_enhancer);
   if (hdr) out.hdr_enhancer = hdr as HdrEnhancer;
+
+  // Motionflow — bridge sends `motion_flow` or `motionflow`
+  const mf = str(r.motion_flow ?? r.motionflow);
+  if (mf) {
+    const mfMap: Record<string, Motionflow> = {
+      truecinema: "true_cinema",
+      "true-cinema": "true_cinema",
+      smoothlow: "smooth_low",
+      smoothhigh: "smooth_high",
+    };
+    out.motionflow = (mfMap[mf.toLowerCase()] ?? mf) as Motionflow;
+  }
+
+  // Gamma — bridge sends `gamma_correct` or `gamma_correction`
+  const gamma = str(r.gamma_correct ?? r.gamma_correction);
+  if (gamma) out.gamma_correction = gamma as Gamma;
+
+  // Color temperature
+  const ct = str(r.color_temp ?? r.color_temperature);
+  if (ct) out.color_temp = ct.toLowerCase() as ColorTemp;
+
+  // Reality Creation — bridge can send `reality_creation`, `reality_creation_val`,
+  // and/or `real_cre` (on/off). If real_cre is "off", force level to 0.
+  const realCre = str(r.real_cre);
+  const rcVal = num(r.reality_creation_val ?? r.reality_creation);
+  if (realCre && realCre.toLowerCase() === "off") {
+    out.reality_creation = 0;
+  } else if (rcVal !== undefined) {
+    out.reality_creation = Math.max(0, Math.min(100, Math.round(rcVal)));
+  }
 
   const blank = str(r.blank);
   if (blank) out.blank = blank.toLowerCase() as BlankState;
