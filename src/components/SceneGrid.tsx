@@ -138,18 +138,32 @@ export function SceneGrid({ householdCode, activeSceneId }: Props) {
     setScenes((prev) => prev.map((x) => (x.id === s.id ? { ...x, enabled: val } : x)));
   };
 
+  const [saving, setSaving] = useState(false);
   const saveEdit = async () => {
-    if (!editing) return;
-    await updateScene(editing.id, {
-      name: editing.name,
-      lights_on: editing.lights_on,
-      marantz_input: editing.marantz_input,
-      marantz_volume: editing.marantz_volume,
-      scene_payload: editing.scene_payload,
-    });
-    toast.success("Scen sparad");
-    setEditing(null);
-    refresh();
+    if (!editing || saving) return;
+    setSaving(true);
+    try {
+      await updateScene(editing.id, {
+        name: editing.name,
+        lights_on: editing.lights_on,
+        marantz_input: editing.marantz_input,
+        marantz_volume: editing.marantz_volume,
+        scene_payload: editing.scene_payload,
+      });
+      toast.success("Scen sparad");
+      setEditing(null);
+      refresh();
+    } catch (e) {
+      const msg = String(e instanceof Error ? e.message : e);
+      const isFetchFail = msg.includes("Failed to fetch") || msg.includes("NetworkError");
+      toast.error("Kunde inte spara scenen", {
+        description: isFetchFail
+          ? "Nätverksfel mot databasen. Stäng av eventuell ad-blocker / privacy-extension för denna sida och försök igen."
+          : msg,
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const saveTuning = async (settings: ProjectorSettings) => {
@@ -345,10 +359,13 @@ export function SceneGrid({ householdCode, activeSceneId }: Props) {
             </div>
           )}
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setEditing(null)}>
+            <Button variant="ghost" onClick={() => setEditing(null)} disabled={saving}>
               Avbryt
             </Button>
-            <Button onClick={saveEdit}>Spara</Button>
+            <Button onClick={saveEdit} disabled={saving}>
+              {saving && <Loader2 className="h-4 w-4 animate-spin mr-1.5" />}
+              Spara
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
