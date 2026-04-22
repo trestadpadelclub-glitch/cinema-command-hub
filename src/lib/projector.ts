@@ -551,22 +551,31 @@ export function analyzeInstruction(
 // med {action, value} (samt valfria extra-fält som payload).
 // =====================================================================
 
+export interface SceneLightCommand {
+  device_id: string;
+  name?: string;
+  type: "dimmer" | "cct" | "rgb" | "rgbcct";
+  on: boolean;
+  brightness?: number;
+  kelvin?: number;
+  color?: string;
+}
+
 export interface SceneCommandPayload {
-  scenePayload: string; // t.ex. "1"
+  scenePayload: string;
   projectorSettings?: ProjectorSettings;
   marantzInput?: string | null;
   marantzVolume?: number | null;
   lightsOn?: boolean | null;
+  sceneLights?: SceneLightCommand[];
 }
 
 /** Skicka en scen — först {action:"scene", value:N}, sen ev. extra parametrar. */
 export async function sendScene(p: SceneCommandPayload): Promise<CommandResult[]> {
   const results: CommandResult[] = [];
-  // 1. själva scen-kommandot
   results.push(
     await sendCommand({ action: "scene" as Action, value: p.scenePayload }),
   );
-  // 2. ljus
   if (p.lightsOn === true || p.lightsOn === false) {
     results.push(
       await sendCommand({
@@ -575,18 +584,45 @@ export async function sendScene(p: SceneCommandPayload): Promise<CommandResult[]
       }),
     );
   }
-  // 3. marantz input
+  // Bulk per-lampa
+  if (p.sceneLights && p.sceneLights.length > 0) {
+    const url = getBridgeUrl();
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "scene_lights",
+          value: { lights: p.sceneLights },
+        }),
+      });
+      const text = await res.text();
+      let data: unknown = text;
+      try { data = text ? JSON.parse(text) : undefined; } catch { /* keep */ }
+      results.push({
+        ok: res.ok,
+        status: res.status,
+        data,
+        command: { action: "scene_lights" as Action, value: p.sceneLights.length },
+      });
+    } catch (err) {
+      results.push({
+        ok: false,
+        status: 0,
+        error: err instanceof Error ? err.message : String(err),
+        command: { action: "scene_lights" as Action, value: p.sceneLights.length },
+      });
+    }
+  }
   if (p.marantzInput) {
     results.push(
       await sendCommand({ action: "marantz" as Action, value: `SI${p.marantzInput}` }),
     );
   }
-  // 4. marantz volym
   if (typeof p.marantzVolume === "number") {
     const v = String(p.marantzVolume).padStart(2, "0");
     results.push(await sendCommand({ action: "marantz" as Action, value: `MV${v}` }));
   }
-  // 5. övriga projektor-inställningar (om angivna)
   if (p.projectorSettings && Object.keys(p.projectorSettings).length > 0) {
     const more = await applySettings(p.projectorSettings);
     results.push(...more);
