@@ -20,11 +20,18 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { ManualControls } from "@/components/ManualControls";
+import { SceneLightsDialog } from "@/components/SceneLightsDialog";
 import { toast } from "sonner";
-import { sendScene, type ProjectorSettings } from "@/lib/projector";
+import {
+  sendScene,
+  type ProjectorSettings,
+  type SceneLightCommand,
+} from "@/lib/projector";
 import {
   fetchScenes,
   fetchInputs,
+  fetchLights,
+  fetchSceneLights,
   updateScene,
   type Scene,
   type MarantzInput,
