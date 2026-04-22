@@ -55,7 +55,10 @@ export async function updateScene(
   id: string,
   patch: Partial<Omit<Scene, "id" | "household_code" | "updated_at">>,
 ) {
-  const { error } = await supabase.from("scenes").update(patch).eq("id", id);
+  const { error } = await supabase
+    .from("scenes")
+    .update(patch as never)
+    .eq("id", id);
   if (error) throw error;
 }
 
