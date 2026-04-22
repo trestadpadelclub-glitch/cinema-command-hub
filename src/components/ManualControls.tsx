@@ -11,6 +11,7 @@ import {
 import { Info, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Menu, RotateCcw, EyeOff, Eye } from "lucide-react";
 import {
   sendCommand,
+  sendRealityCreation,
   PIC_MODE_LABELS,
   MOTIONFLOW_LABELS,
   COLOR_TEMP_LABELS,
@@ -335,11 +336,25 @@ export function ManualControls({ settings, onChange }: Props) {
         <SliderRow
           label="Reality Creation"
           info={SECTION_INFO.reality_creation}
+          hint="0 = av · 1–100 i steg om 1 (skickas som real_cre on/off + reality_creation_val)"
           value={settings.reality_creation ?? 20}
           min={0}
           max={100}
-          step={5}
-          onChange={(v) => update("reality_creation", v, { reality_creation: v })}
+          step={1}
+          onChange={(v) => {
+            const lvl = Math.round(v);
+            onChange({ ...settings, reality_creation: lvl });
+            clearTimeout(debounceRef.current["reality_creation"]);
+            debounceRef.current["reality_creation"] = setTimeout(async () => {
+              const results = await sendRealityCreation(lvl);
+              const failed = results.find((r) => !r.ok);
+              if (failed) {
+                toast.error("Bridge-fel", {
+                  description: failed.error || `Status ${failed.status}`,
+                });
+              }
+            }, 250);
+          }}
         />
 
         <Card className="p-5">

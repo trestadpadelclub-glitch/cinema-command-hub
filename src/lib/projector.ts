@@ -114,6 +114,8 @@ export type Action =
   | "dynamic_control"
   | "laser_output"
   | "reality_creation"
+  | "real_cre"
+  | "reality_creation_val"
   | "brightness"
   | "contrast"
   | "color"
@@ -170,6 +172,45 @@ function statusUrl(): string {
   return getBridgeUrl() + "/status";
 }
 
+/**
+ * Derive the lights endpoint from the projector bridge URL.
+ * `<base>/api/projector` -> `<base>/api/lights`
+ * If the URL doesn't end with `/api/projector`, fall back to replacing the
+ * last path segment, or appending `/api/lights`.
+ */
+function lightsUrl(): string {
+  const base = getBridgeUrl();
+  if (/\/api\/projector$/i.test(base)) {
+    return base.replace(/\/api\/projector$/i, "/api/lights");
+  }
+  // Replace last segment if it looks like a path; otherwise append.
+  if (/\/[^/]+$/.test(base)) {
+    return base.replace(/\/[^/]+$/, "/api/lights");
+  }
+  return base.replace(/\/+$/, "") + "/api/lights";
+}
+
+async function postJson(url: string, body: unknown, command: SingleCommand): Promise<CommandResult> {
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const text = await res.text();
+    let data: unknown = text;
+    try { data = text ? JSON.parse(text) : undefined; } catch { /* keep raw */ }
+    return { ok: res.ok, status: res.status, data, command };
+  } catch (err) {
+    return {
+      ok: false,
+      status: 0,
+      error: err instanceof Error ? err.message : String(err),
+      command,
+    };
+  }
+}
+
 // --- low level ---
 
 export async function sendCommand(cmd: SingleCommand): Promise<CommandResult> {
@@ -219,7 +260,8 @@ export async function getStatus(): Promise<CommandResult> {
 }
 
 // Map of which ProjectorSettings keys correspond to which bridge action.
-// All listed keys map 1:1 to the action name.
+// All listed keys map 1:1 to the action name, EXCEPT reality_creation
+// which is split into two commands (real_cre on/off + reality_creation_val level).
 const SETTINGS_ACTIONS: Action[] = [
   "pic_mode",
   "laser_output",
@@ -227,7 +269,7 @@ const SETTINGS_ACTIONS: Action[] = [
   "contrast",
   "color",
   "sharpness",
-  "reality_creation",
+  // reality_creation handled separately below
   "hdr_enhancer",
   "dynamic_control",
   "motionflow",
@@ -304,6 +346,9 @@ export function parseStatus(raw: unknown): ProjectorStatus {
 
 /**
  * Apply multiple settings sequentially — bridge accepts ONE action per call.
+ * Reality Creation is split into two commands:
+ *   - `real_cre` : "on" | "off"  (0 -> off, >0 -> on)
+ *   - `reality_creation_val` : integer level
  * Returns array of per-command results.
  */
 export async function applySettings(
@@ -317,7 +362,28 @@ export async function applySettings(
     results.push(res);
     if (!res.ok) break; // stop on first failure
   }
+  // Reality Creation: send on/off + level
+  if (settings.reality_creation !== undefined && settings.reality_creation !== null) {
+    const level = Math.round(settings.reality_creation);
+    const onOff = await sendRealityCreation(level);
+    results.push(...onOff);
+  }
   return results;
+}
+
+/**
+ * Reality Creation needs two commands:
+ *   - `real_cre` "on" | "off"
+ *   - `reality_creation_val` <integer>
+ */
+export async function sendRealityCreation(level: number): Promise<CommandResult[]> {
+  const lvl = Math.max(0, Math.min(100, Math.round(level)));
+  const out: CommandResult[] = [];
+  out.push(await sendCommand({ action: "real_cre" as Action, value: lvl > 0 ? "on" : "off" }));
+  if (lvl > 0) {
+    out.push(await sendCommand({ action: "reality_creation_val" as Action, value: lvl }));
+  }
+  return out;
 }
 
 // ----- Quick presets -----
@@ -578,41 +644,22 @@ export async function sendScene(p: SceneCommandPayload): Promise<CommandResult[]
   );
   if (p.lightsOn === true || p.lightsOn === false) {
     results.push(
-      await sendCommand({
-        action: "lights" as Action,
-        value: p.lightsOn ? "on" : "off",
-      }),
+      await postJson(
+        lightsUrl(),
+        { action: "lights", value: p.lightsOn ? "on" : "off" },
+        { action: "lights" as Action, value: p.lightsOn ? "on" : "off" },
+      ),
     );
   }
-  // Bulk per-lampa
+  // Bulk per-lampa → POST /api/lights
   if (p.sceneLights && p.sceneLights.length > 0) {
-    const url = getBridgeUrl();
-    try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "scene_lights",
-          value: { lights: p.sceneLights },
-        }),
-      });
-      const text = await res.text();
-      let data: unknown = text;
-      try { data = text ? JSON.parse(text) : undefined; } catch { /* keep */ }
-      results.push({
-        ok: res.ok,
-        status: res.status,
-        data,
-        command: { action: "scene_lights" as Action, value: p.sceneLights.length },
-      });
-    } catch (err) {
-      results.push({
-        ok: false,
-        status: 0,
-        error: err instanceof Error ? err.message : String(err),
-        command: { action: "scene_lights" as Action, value: p.sceneLights.length },
-      });
-    }
+    results.push(
+      await postJson(
+        lightsUrl(),
+        { action: "scene_lights", value: { lights: p.sceneLights } },
+        { action: "scene_lights" as Action, value: p.sceneLights.length },
+      ),
+    );
   }
   if (p.marantzInput) {
     results.push(
@@ -635,8 +682,12 @@ export async function sendMarantz(value: string): Promise<CommandResult> {
   return sendCommand({ action: "marantz" as Action, value });
 }
 
-/** Toggle / explicit set lights. */
+/** Toggle / explicit set lights — POST /api/lights {action:"lights", value}. */
 export async function sendLights(value: "toggle" | "on" | "off"): Promise<CommandResult> {
-  return sendCommand({ action: "lights" as Action, value });
+  return postJson(
+    lightsUrl(),
+    { action: "lights", value },
+    { action: "lights" as Action, value },
+  );
 }
 
