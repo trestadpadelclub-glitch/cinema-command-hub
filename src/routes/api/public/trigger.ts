@@ -1,0 +1,168 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
+
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Max-Age": "86400",
+} as const;
+
+const VALID_TRIGGERS = new Set([
+  "chromecast_on",
+  "chromecast_off",
+  "marantz_on",
+  "marantz_off",
+  "formuler_on",
+  "formuler_off",
+  "movie_playing",
+  "movie_paused",
+  "movie_stopped",
+]);
+
+interface TriggerRequest {
+  household_code: string;
+  trigger_key: string;
+}
+
+/**
+ * Public endpoint för Python-bryggan att rapportera händelser till.
+ *
+ * POST /api/public/trigger
+ * Body: { household_code: "abc", trigger_key: "chromecast_on" }
+ *
+ * Svar (200): {
+ *   matched: true,
+ *   scene: { id, name, scene_number, scene_payload, projector_settings, marantz_input, marantz_volume, lights_on },
+ *   filters: { run_projector, run_marantz, run_lights },
+ *   scene_lights: [ { device_id, name, type, on, brightness?, kelvin?, color? } ]
+ * }
+ *
+ * Svar (200): { matched: false } när ingen trigger är mappad.
+ *
+ * Bryggan är ansvarig för att exekvera kommandona lokalt mot hårdvaran.
+ */
+export const Route = createFileRoute("/api/public/trigger")({
+  server: {
+    handlers: {
+      OPTIONS: async () =>
+        new Response(null, { status: 204, headers: CORS_HEADERS }),
+
+      POST: async ({ request }) => {
+        let body: TriggerRequest;
+        try {
+          body = (await request.json()) as TriggerRequest;
+        } catch {
+          return json({ error: "Invalid JSON" }, 400);
+        }
+
+        const householdCode = String(body.household_code || "").trim();
+        const triggerKey = String(body.trigger_key || "").trim();
+
+        if (!householdCode || householdCode.length > 64) {
+          return json({ error: "Invalid household_code" }, 400);
+        }
+        if (!VALID_TRIGGERS.has(triggerKey)) {
+          return json({ error: "Invalid trigger_key" }, 400);
+        }
+
+        // Slå upp trigger-mappning
+        const { data: trigger, error: trigErr } = await supabaseAdmin
+          .from("scene_triggers")
+          .select("*")
+          .eq("household_code", householdCode)
+          .eq("trigger_key", triggerKey)
+          .eq("enabled", true)
+          .maybeSingle();
+
+        if (trigErr) {
+          console.error("Trigger lookup failed", trigErr);
+          return json({ error: "Database error" }, 500);
+        }
+
+        if (!trigger) {
+          return json({ matched: false, reason: "no_mapping" }, 200);
+        }
+
+        // Hämta scenen
+        const { data: scene, error: sceneErr } = await supabaseAdmin
+          .from("scenes")
+          .select("*")
+          .eq("id", trigger.scene_id)
+          .maybeSingle();
+
+        if (sceneErr || !scene) {
+          console.error("Scene lookup failed", sceneErr);
+          return json({ matched: false, reason: "scene_missing" }, 200);
+        }
+
+        if (!scene.enabled) {
+          return json({ matched: false, reason: "scene_disabled" }, 200);
+        }
+
+        // Hämta lampor om triggern ska köra dem
+        let sceneLights: Array<Record<string, unknown>> = [];
+        if (trigger.run_lights) {
+          const [{ data: lights }, { data: sceneLightRows }] = await Promise.all([
+            supabaseAdmin.from("lights").select("*").eq("household_code", householdCode),
+            supabaseAdmin.from("scene_lights").select("*").eq("scene_id", scene.id),
+          ]);
+          const lightById = new Map((lights ?? []).map((l) => [l.id, l]));
+          sceneLights = (sceneLightRows ?? [])
+            .filter((r) => r.in_scene)
+            .map((r) => {
+              const l = lightById.get(r.light_id);
+              if (!l) return null;
+              const cmd: Record<string, unknown> = {
+                device_id: l.tuya_device_id,
+                name: l.name,
+                type: l.light_type,
+                on: r.on_state,
+              };
+              if (r.brightness !== null) cmd.brightness = r.brightness;
+              if ((l.light_type === "cct" || l.light_type === "rgbcct") && r.kelvin !== null)
+                cmd.kelvin = r.kelvin;
+              if ((l.light_type === "rgb" || l.light_type === "rgbcct") && r.color_hex)
+                cmd.color = r.color_hex;
+              return cmd;
+            })
+            .filter((c): c is Record<string, unknown> => c !== null);
+        }
+
+        return json(
+          {
+            matched: true,
+            trigger_key: triggerKey,
+            filters: {
+              run_projector: trigger.run_projector,
+              run_marantz: trigger.run_marantz,
+              run_lights: trigger.run_lights,
+            },
+            scene: {
+              id: scene.id,
+              name: scene.name,
+              scene_number: scene.scene_number,
+              scene_payload: scene.scene_payload,
+              projector_settings: trigger.run_projector ? scene.projector_settings : {},
+              marantz_input: trigger.run_marantz ? scene.marantz_input : null,
+              marantz_volume: trigger.run_marantz ? scene.marantz_volume : null,
+              lights_on: trigger.run_lights ? scene.lights_on : null,
+            },
+            scene_lights: sceneLights,
+          },
+          200,
+        );
+      },
+    },
+  },
+});
+
+function json(payload: unknown, status: number): Response {
+  return new Response(JSON.stringify(payload), {
+    status,
+    headers: {
+      "Content-Type": "application/json",
+      ...CORS_HEADERS,
+    },
+  });
+}
