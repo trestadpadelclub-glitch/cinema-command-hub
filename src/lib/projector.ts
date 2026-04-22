@@ -168,9 +168,8 @@ export function setBridgeUrl(url: string) {
 }
 
 function statusUrl(): string {
-  // Plain GET to the configured Bridge URL (no /status suffix).
-  // The bridge's get_status() returns a full JSON snapshot when called with GET and no params.
-  return getBridgeUrl();
+  // Bridge endpoint: /api/projector  ->  /api/projector/status
+  return getBridgeUrl() + "/status";
 }
 
 /**
