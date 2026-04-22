@@ -280,6 +280,9 @@ function Index() {
             <Section title="Ljus-automation">
               <AutomationSettings householdCode={household} />
             </Section>
+            <Section title="Scen-triggers (auto-körning)">
+              <TriggerTester householdCode={household} />
+            </Section>
           </TabsContent>
 
           {/* CALIBRATION */}
