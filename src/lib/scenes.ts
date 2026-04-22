@@ -115,6 +115,64 @@ export async function deleteInput(id: string) {
   if (error) throw error;
 }
 
+// ---------- Lights ----------
+
+export async function fetchLights(householdCode: string): Promise<Light[]> {
+  const { data, error } = await supabase
+    .from("lights")
+    .select("*")
+    .eq("household_code", householdCode)
+    .order("position");
+  if (error) throw error;
+  return (data ?? []) as unknown as Light[];
+}
+
+export async function createLight(
+  householdCode: string,
+  input: Omit<Light, "id" | "household_code">,
+) {
+  const { error } = await supabase
+    .from("lights")
+    .insert({ household_code: householdCode, ...input } as never);
+  if (error) throw error;
+}
+
+export async function updateLight(
+  id: string,
+  patch: Partial<Omit<Light, "id" | "household_code">>,
+) {
+  const { error } = await supabase
+    .from("lights")
+    .update(patch as never)
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function deleteLight(id: string) {
+  const { error } = await supabase.from("lights").delete().eq("id", id);
+  if (error) throw error;
+}
+
+// ---------- Scene lights ----------
+
+export async function fetchSceneLights(sceneId: string): Promise<SceneLight[]> {
+  const { data, error } = await supabase
+    .from("scene_lights")
+    .select("*")
+    .eq("scene_id", sceneId);
+  if (error) throw error;
+  return (data ?? []) as unknown as SceneLight[];
+}
+
+export async function upsertSceneLight(
+  row: Omit<SceneLight, "id"> & { id?: string },
+) {
+  const { error } = await supabase
+    .from("scene_lights")
+    .upsert(row as never, { onConflict: "scene_id,light_id" });
+  if (error) throw error;
+}
+
 // ---------- Automation events ----------
 
 export async function fetchEvents(householdCode: string): Promise<AutomationEvent[]> {
