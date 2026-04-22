@@ -682,8 +682,12 @@ export async function sendMarantz(value: string): Promise<CommandResult> {
   return sendCommand({ action: "marantz" as Action, value });
 }
 
-/** Toggle / explicit set lights. */
+/** Toggle / explicit set lights — POST /api/lights {action:"lights", value}. */
 export async function sendLights(value: "toggle" | "on" | "off"): Promise<CommandResult> {
-  return sendCommand({ action: "lights" as Action, value });
+  return postJson(
+    lightsUrl(),
+    { action: "lights", value },
+    { action: "lights" as Action, value },
+  );
 }
 
