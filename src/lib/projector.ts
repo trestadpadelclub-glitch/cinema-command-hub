@@ -127,7 +127,8 @@ export type Action =
   | "range"
   | "scene"
   | "marantz"
-  | "lights";
+  | "lights"
+  | "scene_lights";
 
 
 export interface SingleCommand {
