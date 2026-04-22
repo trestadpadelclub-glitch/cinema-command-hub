@@ -61,14 +61,21 @@ export function SceneGrid({ householdCode, activeSceneId }: Props) {
   const [editing, setEditing] = useState<Scene | null>(null);
   const [tuning, setTuning] = useState<Scene | null>(null);
   const [tuningLights, setTuningLights] = useState<Scene | null>(null);
+  const [tuningTriggers, setTuningTriggers] = useState<Scene | null>(null);
+  const [triggers, setTriggers] = useState<SceneTrigger[]>([]);
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([fetchScenes(householdCode), fetchInputs(householdCode)])
-      .then(([s, i]) => {
+    Promise.all([
+      fetchScenes(householdCode),
+      fetchInputs(householdCode),
+      fetchTriggers(householdCode),
+    ])
+      .then(([s, i, t]) => {
         if (!cancelled) {
           setScenes(s);
           setInputs(i);
+          setTriggers(t);
         }
       })
       .catch((e) => toast.error("Kunde inte ladda scener", { description: String(e) }));
@@ -78,8 +85,12 @@ export function SceneGrid({ householdCode, activeSceneId }: Props) {
   }, [householdCode]);
 
   const refresh = async () => {
-    const s = await fetchScenes(householdCode);
+    const [s, t] = await Promise.all([
+      fetchScenes(householdCode),
+      fetchTriggers(householdCode),
+    ]);
     setScenes(s);
+    setTriggers(t);
   };
 
   const runScene = async (s: Scene) => {
