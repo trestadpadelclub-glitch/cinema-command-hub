@@ -298,7 +298,7 @@ const SETTINGS_ACTIONS: Action[] = [
  * - picture_mode bridge variants like "cinema_film1" are normalized to "cinema_film_1"
  * - unknown / null values are skipped
  */
-export interface ProjectorStatus extends ProjectorSettings {
+export interface ProjectorStatus extends Omit<ProjectorSettings, "power"> {
   power?: "on" | "off" | string;
 }
 
