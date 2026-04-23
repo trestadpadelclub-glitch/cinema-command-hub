@@ -108,17 +108,21 @@ export function SceneGrid({ householdCode, activeSceneId }: Props) {
         .map((r) => {
           const l = lightById.get(r.light_id);
           if (!l) return null;
+          // Tolka brightness=0 som "släck" istället för "tänd på 0%"
+          const treatAsOff = r.on_state && r.brightness === 0;
           const cmd: SceneLightCommand = {
             device_id: l.tuya_device_id,
             name: l.name,
             type: l.light_type,
-            on: r.on_state,
+            on: treatAsOff ? false : r.on_state,
           };
-          if (r.brightness !== null) cmd.brightness = r.brightness;
-          if ((l.light_type === "cct" || l.light_type === "rgbcct") && r.kelvin !== null)
-            cmd.kelvin = r.kelvin;
-          if ((l.light_type === "rgb" || l.light_type === "rgbcct") && r.color_hex)
-            cmd.color = r.color_hex;
+          if (!treatAsOff) {
+            if (r.brightness !== null) cmd.brightness = r.brightness;
+            if ((l.light_type === "cct" || l.light_type === "rgbcct") && r.kelvin !== null)
+              cmd.kelvin = r.kelvin;
+            if ((l.light_type === "rgb" || l.light_type === "rgbcct") && r.color_hex)
+              cmd.color = r.color_hex;
+          }
           return cmd;
         })
         .filter((c): c is SceneLightCommand => c !== null);
