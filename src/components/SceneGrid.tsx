@@ -474,7 +474,7 @@ function SceneTuner({
         Reglagen skickar live till projektorn (förhandsgranskning). Klicka Spara för att skriva
         värdena till scenen.
       </p>
-      <ManualControls settings={draft} onChange={setDraft} />
+      <ManualControls settings={draft} onChange={setDraft} showPowerAction />
       <div className="flex justify-end gap-2 sticky bottom-0 bg-background pt-2">
         <Button variant="ghost" onClick={onCancel}>
           Avbryt

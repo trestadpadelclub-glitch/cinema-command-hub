@@ -33,6 +33,8 @@ import { useRef, type ReactNode } from "react";
 interface Props {
   settings: ProjectorSettings;
   onChange: (s: ProjectorSettings) => void;
+  /** Visa "Power Action"-väljare överst (för scen-tuning). */
+  showPowerAction?: boolean;
 }
 
 const HDR_LEVELS: HdrEnhancer[] = ["off", "low", "middle", "high"];
@@ -247,7 +249,7 @@ function OptionButton({
 
 // ---------- Main component ----------
 
-export function ManualControls({ settings, onChange }: Props) {
+export function ManualControls({ settings, onChange, showPowerAction }: Props) {
   const debounceRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   const send = (action: Action, value: string | number) => {
@@ -274,6 +276,40 @@ export function ManualControls({ settings, onChange }: Props) {
   return (
     <TooltipProvider delayDuration={150}>
       <div className="space-y-4">
+        {showPowerAction && (
+          <Card className="p-5">
+            <SectionLabel info="Vad ska scenen göra med projektorns ström? 'Rör inte' = scenen lämnar power-state ifred. 'Slå på' / 'Stäng av' skickar power-kommando innan övriga inställningar.">
+              Power Action (när scen körs)
+            </SectionLabel>
+            <div className="grid grid-cols-3 gap-2">
+              <OptionButton
+                active={settings.power === undefined}
+                onClick={() => {
+                  const { power: _drop, ...rest } = settings;
+                  void _drop;
+                  onChange(rest);
+                }}
+                info="Scenen rör inte projektorns ström."
+              >
+                Rör inte
+              </OptionButton>
+              <OptionButton
+                active={settings.power === "on"}
+                onClick={() => onChange({ ...settings, power: "on" })}
+                info="Scenen slår på projektorn (skickas före övriga inställningar)."
+              >
+                Slå på
+              </OptionButton>
+              <OptionButton
+                active={settings.power === "off"}
+                onClick={() => onChange({ ...settings, power: "off" })}
+                info="Scenen stänger av projektorn. Övriga inställningar hoppas då över."
+              >
+                Stäng av
+              </OptionButton>
+            </div>
+          </Card>
+        )}
         <Card className="p-5">
           <SectionLabel info={SECTION_INFO.pic_mode}>Picture Mode</SectionLabel>
           <div className="grid grid-cols-3 gap-2">
