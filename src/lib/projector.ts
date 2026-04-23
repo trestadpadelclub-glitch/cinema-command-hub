@@ -90,7 +90,11 @@ export const COLOR_TEMP_LABELS: Record<ColorTemp, string> = {
   custom5: "Custom 5",
 };
 
+export type PowerAction = "on" | "off";
+
 export interface ProjectorSettings {
+  /** Power-action att skicka när scen körs. Saknas = rör inte. */
+  power?: PowerAction;
   pic_mode?: PicMode;
   laser_output?: number; // 0-100 (bridge multiplies by 10)
   brightness?: number; // 0-100
@@ -402,6 +406,12 @@ export async function applySettings(
   settings: ProjectorSettings,
 ): Promise<CommandResult[]> {
   const results: CommandResult[] = [];
+  // Power FIRST — om scenen säger "off" så är det ingen idé att skicka övriga inställningar
+  if (settings.power === "on" || settings.power === "off") {
+    const res = await sendCommand({ action: "power" as Action, value: settings.power });
+    results.push(res);
+    if (!res.ok || settings.power === "off") return results;
+  }
   for (const action of SETTINGS_ACTIONS) {
     const value = settings[action as keyof ProjectorSettings];
     if (value === undefined || value === null) continue;
