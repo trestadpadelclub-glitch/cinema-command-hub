@@ -141,10 +141,18 @@ export async function updateLight(
   id: string,
   patch: Partial<Omit<Light, "id" | "household_code">>,
 ) {
+  // Hämta aktuell rad och gör en upsert (POST) istället för PATCH.
+  // Vissa nätverk/extensions blockerar PATCH-requests till Supabase.
+  const { data: current, error: fetchErr } = await supabase
+    .from("lights")
+    .select("*")
+    .eq("id", id)
+    .single();
+  if (fetchErr) throw fetchErr;
+  const merged = { ...current, ...patch, updated_at: new Date().toISOString() };
   const { error } = await supabase
     .from("lights")
-    .update(patch as never)
-    .eq("id", id);
+    .upsert(merged as never, { onConflict: "id" });
   if (error) throw error;
 }
 
