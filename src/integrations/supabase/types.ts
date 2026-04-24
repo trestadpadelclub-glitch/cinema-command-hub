@@ -253,6 +253,7 @@ export type Database = {
           id: string
           lights_on: boolean | null
           marantz_input: string | null
+          marantz_power: string | null
           marantz_volume: number | null
           name: string
           projector_settings: Json
@@ -267,6 +268,7 @@ export type Database = {
           id?: string
           lights_on?: boolean | null
           marantz_input?: string | null
+          marantz_power?: string | null
           marantz_volume?: number | null
           name: string
           projector_settings?: Json
@@ -281,6 +283,7 @@ export type Database = {
           id?: string
           lights_on?: boolean | null
           marantz_input?: string | null
+          marantz_power?: string | null
           marantz_volume?: number | null
           name?: string
           projector_settings?: Json
