@@ -293,6 +293,44 @@ export type Database = {
         }
         Relationships: []
       }
+      trigger_events: {
+        Row: {
+          created_at: string
+          household_code: string
+          id: string
+          payload: Json
+          scene_id: string
+          scene_name: string
+          trigger_key: string
+        }
+        Insert: {
+          created_at?: string
+          household_code: string
+          id?: string
+          payload?: Json
+          scene_id: string
+          scene_name: string
+          trigger_key: string
+        }
+        Update: {
+          created_at?: string
+          household_code?: string
+          id?: string
+          payload?: Json
+          scene_id?: string
+          scene_name?: string
+          trigger_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trigger_events_scene_id_fkey"
+            columns: ["scene_id"]
+            isOneToOne: false
+            referencedRelation: "scenes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
