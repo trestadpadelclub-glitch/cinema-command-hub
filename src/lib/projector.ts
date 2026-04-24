@@ -749,9 +749,13 @@ export async function sendScene(p: SceneCommandPayload): Promise<CommandResult[]
   return results;
 }
 
-/** Marantz remote control — vol/mute/input osv. */
+/** Marantz remote control — vol/mute/input osv. POST /api/marantz */
 export async function sendMarantz(value: string): Promise<CommandResult> {
-  return sendCommand({ action: "marantz" as Action, value });
+  return postJson(
+    marantzUrl(),
+    { action: "marantz", value },
+    { action: "marantz" as Action, value },
+  );
 }
 
 /** Toggle / explicit set lights — POST /api/lights {action:"lights", value}. */
