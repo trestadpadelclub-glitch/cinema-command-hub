@@ -134,6 +134,7 @@ export function SceneGrid({ householdCode, activeSceneId }: Props) {
     const results = await sendScene({
       scenePayload: s.scene_payload || String(s.scene_number),
       projectorSettings: s.projector_settings,
+      marantzPower: s.marantz_power,
       marantzInput: s.marantz_input,
       marantzVolume: s.marantz_volume,
       lightsOn: s.lights_on,
