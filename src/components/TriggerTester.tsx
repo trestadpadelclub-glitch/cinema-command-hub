@@ -51,46 +51,50 @@ export function TriggerTester({ householdCode }: Props) {
     }
     setBusy(trigger.id);
 
-    // Hämta lampinställningar bara om triggern ska köra lampor
+    // Kör scenen identiskt med "Kör"-knappen i SceneGrid — ignorera
+    // run_projector/run_marantz/run_lights-flaggor så att Testa beter sig
+    // exakt som ett manuellt klick på Kör.
     let sceneLights: SceneLightCommand[] | undefined;
-    if (trigger.run_lights) {
-      try {
-        const [allLights, sceneRows] = await Promise.all([
-          fetchLights(householdCode),
-          fetchSceneLights(scene.id),
-        ]);
-        const lightById = new Map(allLights.map((l) => [l.id, l]));
-        sceneLights = sceneRows
-          .filter((r) => r.in_scene)
-          .map((r) => {
-            const l = lightById.get(r.light_id);
-            if (!l) return null;
-            const cmd: SceneLightCommand = {
-              device_id: l.tuya_device_id,
-              name: l.name,
-              type: l.light_type,
-              on: r.on_state,
-            };
+    try {
+      const [allLights, sceneRows] = await Promise.all([
+        fetchLights(householdCode),
+        fetchSceneLights(scene.id),
+      ]);
+      const lightById = new Map(allLights.map((l) => [l.id, l]));
+      sceneLights = sceneRows
+        .filter((r) => r.in_scene)
+        .map((r) => {
+          const l = lightById.get(r.light_id);
+          if (!l) return null;
+          const treatAsOff = r.on_state && r.brightness === 0;
+          const cmd: SceneLightCommand = {
+            device_id: l.tuya_device_id,
+            name: l.name,
+            type: l.light_type,
+            on: treatAsOff ? false : r.on_state,
+          };
+          if (!treatAsOff) {
             if (r.brightness !== null) cmd.brightness = r.brightness;
             if ((l.light_type === "cct" || l.light_type === "rgbcct") && r.kelvin !== null)
               cmd.kelvin = r.kelvin;
             if ((l.light_type === "rgb" || l.light_type === "rgbcct") && r.color_hex)
               cmd.color = r.color_hex;
-            return cmd;
-          })
-          .filter((c): c is SceneLightCommand => c !== null);
-        if (sceneLights.length === 0) sceneLights = undefined;
-      } catch (e) {
-        console.warn("Kunde inte hämta scene-lights", e);
-      }
+          }
+          return cmd;
+        })
+        .filter((c): c is SceneLightCommand => c !== null);
+      if (sceneLights.length === 0) sceneLights = undefined;
+    } catch (e) {
+      console.warn("Kunde inte hämta scene-lights", e);
     }
 
     const results = await sendScene({
       scenePayload: scene.scene_payload || String(scene.scene_number),
-      projectorSettings: trigger.run_projector ? scene.projector_settings : {},
-      marantzInput: trigger.run_marantz ? scene.marantz_input : null,
-      marantzVolume: trigger.run_marantz ? scene.marantz_volume : null,
-      lightsOn: trigger.run_lights ? scene.lights_on : null,
+      projectorSettings: scene.projector_settings,
+      marantzPower: scene.marantz_power,
+      marantzInput: scene.marantz_input,
+      marantzVolume: scene.marantz_volume,
+      lightsOn: scene.lights_on,
       sceneLights,
     });
     setBusy(null);

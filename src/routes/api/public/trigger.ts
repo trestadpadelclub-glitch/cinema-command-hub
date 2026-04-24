@@ -100,9 +100,9 @@ export const Route = createFileRoute("/api/public/trigger")({
           return json({ matched: false, reason: "scene_disabled" }, 200);
         }
 
-        // Hämta lampor om triggern ska köra dem
+        // Hämta lampor — alltid (triggern speglar Kör-knappen exakt)
         let sceneLights: Array<Record<string, unknown>> = [];
-        if (trigger.run_lights) {
+        {
           const [{ data: lights }, { data: sceneLightRows }] = await Promise.all([
             supabaseAdmin.from("lights").select("*").eq("household_code", householdCode),
             supabaseAdmin.from("scene_lights").select("*").eq("scene_id", scene.id),
@@ -113,17 +113,20 @@ export const Route = createFileRoute("/api/public/trigger")({
             .map((r) => {
               const l = lightById.get(r.light_id);
               if (!l) return null;
+              const treatAsOff = r.on_state && r.brightness === 0;
               const cmd: Record<string, unknown> = {
                 device_id: l.tuya_device_id,
                 name: l.name,
                 type: l.light_type,
-                on: r.on_state,
+                on: treatAsOff ? false : r.on_state,
               };
-              if (r.brightness !== null) cmd.brightness = r.brightness;
-              if ((l.light_type === "cct" || l.light_type === "rgbcct") && r.kelvin !== null)
-                cmd.kelvin = r.kelvin;
-              if ((l.light_type === "rgb" || l.light_type === "rgbcct") && r.color_hex)
-                cmd.color = r.color_hex;
+              if (!treatAsOff) {
+                if (r.brightness !== null) cmd.brightness = r.brightness;
+                if ((l.light_type === "cct" || l.light_type === "rgbcct") && r.kelvin !== null)
+                  cmd.kelvin = r.kelvin;
+                if ((l.light_type === "rgb" || l.light_type === "rgbcct") && r.color_hex)
+                  cmd.color = r.color_hex;
+              }
               return cmd;
             })
             .filter((c): c is Record<string, unknown> => c !== null);
@@ -131,6 +134,8 @@ export const Route = createFileRoute("/api/public/trigger")({
 
         // Bygg en färdig kommandosekvens som bryggan kör i ordning.
         // Spegelbild av runScene() i SceneGrid + sendScene() i src/lib/projector.ts.
+        // Filter-flaggor (run_projector/run_marantz/run_lights) ignoreras —
+        // triggern ska göra exakt samma sak som ett klick på "Kör".
         type Cmd =
           | { endpoint: "/api/projector"; body: { action: "scene"; value: string } }
           | { endpoint: "/api/lights"; body: { action: "lights"; value: "on" | "off" } }
@@ -143,16 +148,14 @@ export const Route = createFileRoute("/api/public/trigger")({
 
         const commands: Cmd[] = [];
 
-        // 1. Scene payload till projektor (alltid)
-        if (trigger.run_projector) {
-          commands.push({
-            endpoint: "/api/projector",
-            body: { action: "scene", value: scene.scene_payload || String(scene.scene_number) },
-          });
-        }
+        // 1. Scene payload till projektor
+        commands.push({
+          endpoint: "/api/projector",
+          body: { action: "scene", value: scene.scene_payload || String(scene.scene_number) },
+        });
 
         // 2. lights on/off
-        if (trigger.run_lights && (scene.lights_on === true || scene.lights_on === false)) {
+        if (scene.lights_on === true || scene.lights_on === false) {
           commands.push({
             endpoint: "/api/lights",
             body: { action: "lights", value: scene.lights_on ? "on" : "off" },
@@ -160,7 +163,7 @@ export const Route = createFileRoute("/api/public/trigger")({
         }
 
         // 3. Per-lampa
-        if (trigger.run_lights && sceneLights.length > 0) {
+        if (sceneLights.length > 0) {
           commands.push({
             endpoint: "/api/lights",
             body: { action: "scene_lights", value: { lights: sceneLights } },
@@ -169,7 +172,7 @@ export const Route = createFileRoute("/api/public/trigger")({
 
         // 4. Marantz power FIRST — om "off" så skippa input/volym
         let marantzOff = false;
-        if (trigger.run_marantz && (scene.marantz_power === "on" || scene.marantz_power === "off")) {
+        if (scene.marantz_power === "on" || scene.marantz_power === "off") {
           commands.push({
             endpoint: "/api/marantz",
             body: { action: "marantz", value: scene.marantz_power === "on" ? "PWON" : "PWSTANDBY" },
@@ -178,7 +181,7 @@ export const Route = createFileRoute("/api/public/trigger")({
         }
 
         // 5. Marantz input
-        if (trigger.run_marantz && !marantzOff && scene.marantz_input) {
+        if (!marantzOff && scene.marantz_input) {
           commands.push({
             endpoint: "/api/marantz",
             body: { action: "marantz", value: `SI${scene.marantz_input}` },
@@ -186,7 +189,7 @@ export const Route = createFileRoute("/api/public/trigger")({
         }
 
         // 6. Marantz volume
-        if (trigger.run_marantz && !marantzOff && typeof scene.marantz_volume === "number") {
+        if (!marantzOff && typeof scene.marantz_volume === "number") {
           const v = String(scene.marantz_volume).padStart(2, "0");
           commands.push({
             endpoint: "/api/marantz",
@@ -196,7 +199,6 @@ export const Route = createFileRoute("/api/public/trigger")({
 
         // 7. Projector tuning settings
         if (
-          trigger.run_projector &&
           scene.projector_settings &&
           typeof scene.projector_settings === "object" &&
           Object.keys(scene.projector_settings as Record<string, unknown>).length > 0
@@ -206,26 +208,20 @@ export const Route = createFileRoute("/api/public/trigger")({
             body: scene.projector_settings as Record<string, unknown>,
           });
         }
-
         return json(
           {
             matched: true,
             trigger_key: triggerKey,
-            filters: {
-              run_projector: trigger.run_projector,
-              run_marantz: trigger.run_marantz,
-              run_lights: trigger.run_lights,
-            },
             scene: {
               id: scene.id,
               name: scene.name,
               scene_number: scene.scene_number,
               scene_payload: scene.scene_payload,
-              projector_settings: trigger.run_projector ? scene.projector_settings : {},
-              marantz_power: trigger.run_marantz ? scene.marantz_power : null,
-              marantz_input: trigger.run_marantz ? scene.marantz_input : null,
-              marantz_volume: trigger.run_marantz ? scene.marantz_volume : null,
-              lights_on: trigger.run_lights ? scene.lights_on : null,
+              projector_settings: scene.projector_settings,
+              marantz_power: scene.marantz_power,
+              marantz_input: scene.marantz_input,
+              marantz_volume: scene.marantz_volume,
+              lights_on: scene.lights_on,
             },
             scene_lights: sceneLights,
             commands,
