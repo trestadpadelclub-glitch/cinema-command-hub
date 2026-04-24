@@ -801,3 +801,12 @@ export async function sendLights(value: "toggle" | "on" | "off"): Promise<Comman
   );
 }
 
+/** Kör en färdig kommandosekvens från /api/public/trigger mot samma bridge-endpoints som UI-knapparna. */
+export async function runBridgeCommands(commands: BridgeEndpointCommand[]): Promise<CommandResult[]> {
+  const results: CommandResult[] = [];
+  for (const cmd of commands) {
+    results.push(await postJson(endpointUrl(cmd.endpoint), cmd.body, summarizeCommand(cmd.body)));
+  }
+  return results;
+}
+
