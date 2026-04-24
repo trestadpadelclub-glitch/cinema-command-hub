@@ -328,6 +328,27 @@ export function SceneGrid({ householdCode, activeSceneId }: Props) {
                 />
               </div>
               <div className="space-y-1">
+                <Label>Marantz Power</Label>
+                <Select
+                  value={editing.marantz_power ?? "none"}
+                  onValueChange={(v) =>
+                    setEditing({
+                      ...editing,
+                      marantz_power: v === "none" ? null : (v as "on" | "off"),
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">— rör inte —</SelectItem>
+                    <SelectItem value="on">Slå på</SelectItem>
+                    <SelectItem value="off">Stäng av</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
                 <Label>Marantz Input</Label>
                 <Select
                   value={editing.marantz_input ?? "none"}
