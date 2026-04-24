@@ -10,6 +10,7 @@ import { AiAssistant } from "@/components/AiAssistant";
 import { ExpertCalibration } from "@/components/ExpertCalibration";
 import { SceneGrid } from "@/components/SceneGrid";
 import { MarantzPanel } from "@/components/MarantzPanel";
+import { MarantzRemote } from "@/components/MarantzRemote";
 import { LightsManager } from "@/components/LightsManager";
 import { AutomationSettings } from "@/components/AutomationSettings";
 import { TriggerTester } from "@/components/TriggerTester";
@@ -238,6 +239,7 @@ function Index() {
           <TabsList className="mb-6">
             <TabsTrigger value="scenes">Scenes</TabsTrigger>
             <TabsTrigger value="devices">Devices</TabsTrigger>
+            <TabsTrigger value="marantz">Marantz Remote</TabsTrigger>
             <TabsTrigger value="automation">Automation</TabsTrigger>
             <TabsTrigger value="calibration">Expert Calibration</TabsTrigger>
           </TabsList>
@@ -274,6 +276,13 @@ function Index() {
           </TabsContent>
 
           {/* AUTOMATION */}
+          {/* MARANTZ REMOTE */}
+          <TabsContent value="marantz" className="mt-0">
+            <Section title="Marantz Cinema 50 — Fjärrkontroll">
+              <MarantzRemote householdCode={household} />
+            </Section>
+          </TabsContent>
+
           <TabsContent value="automation" className="mt-0 space-y-6">
             <Section title="Polling & Anslutning">
               <PollingControl

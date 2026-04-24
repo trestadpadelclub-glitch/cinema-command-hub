@@ -1,0 +1,359 @@
+import { useEffect, useState } from "react";
+import {
+  Power,
+  Volume2,
+  VolumeX,
+  Plus,
+  Minus,
+  Loader2,
+} from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { sendMarantz } from "@/lib/projector";
+import { fetchInputs, type MarantzInput } from "@/lib/scenes";
+import { toast } from "sonner";
+
+interface Props {
+  householdCode: string;
+}
+
+const SMART_SELECTS = [1, 2, 3, 4] as const;
+
+const SOUND_MODES: { code: string; label: string }[] = [
+  { code: "MOVIE", label: "Movie" },
+  { code: "MUSIC", label: "Music" },
+  { code: "GAME", label: "Game" },
+  { code: "DIRECT", label: "Direct" },
+  { code: "PURE DIRECT", label: "Pure Direct" },
+  { code: "STEREO", label: "Stereo" },
+  { code: "AUTO", label: "Auto" },
+  { code: "MCH STEREO", label: "Multi Ch Stereo" },
+  { code: "DOLBY DIGITAL", label: "Dolby Digital" },
+  { code: "DTS SURROUND", label: "DTS Surround" },
+];
+
+const DIRAC_SLOTS: { value: string; label: string }[] = [
+  { value: "OFF", label: "Off" },
+  { value: "1", label: "Slot 1" },
+  { value: "2", label: "Slot 2" },
+  { value: "3", label: "Slot 3" },
+];
+
+const SPEAKER_PRESETS = [1, 2] as const;
+
+export function MarantzRemote({ householdCode }: Props) {
+  const [inputs, setInputs] = useState<MarantzInput[]>([]);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  // Lokal UI-state — bridge skickar inte tillbaka allt detta i status-pollen.
+  const [selectedInput, setSelectedInput] = useState<string>("");
+  const [smartSelect, setSmartSelect] = useState<string>("");
+  const [soundMode, setSoundMode] = useState<string>("");
+  const [diracSlot, setDiracSlot] = useState<string>("");
+  const [speakerPreset, setSpeakerPreset] = useState<string>("");
+  const [muted, setMuted] = useState(false);
+
+  useEffect(() => {
+    fetchInputs(householdCode).then(setInputs);
+  }, [householdCode]);
+
+  const send = async (cmd: string, label: string, key: string) => {
+    setBusy(key);
+    const res = await sendMarantz(cmd);
+    setBusy(null);
+    if (!res.ok) {
+      toast.error(`Marantz ${label} misslyckades`, {
+        description: res.error || `Status ${res.status}`,
+      });
+      return false;
+    }
+    toast.success(`${label} skickat`);
+    return true;
+  };
+
+  const handlePower = (state: "on" | "off") =>
+    send(state === "on" ? "PWON" : "PWSTANDBY", `Power ${state.toUpperCase()}`, `pw-${state}`);
+
+  const handleInput = (code: string) => {
+    setSelectedInput(code);
+    send(`SI${code}`, `Input ${code}`, `input`);
+  };
+
+  const handleSmart = (n: string) => {
+    setSmartSelect(n);
+    send(`MSSMART${n}`, `Smart Select ${n}`, `smart`);
+  };
+
+  const handleSoundMode = (code: string) => {
+    setSoundMode(code);
+    send(`MS${code}`, `Sound Mode ${code}`, `sm`);
+  };
+
+  const handleDirac = (slot: string) => {
+    setDiracSlot(slot);
+    const cmd = slot === "OFF" ? "PSDIRAC OFF" : `PSDIRAC SLOT ${slot}`;
+    send(cmd, `Dirac ${slot}`, `dirac`);
+  };
+
+  const handleSpeaker = (n: string) => {
+    setSpeakerPreset(n);
+    send(`SPPR ${n}`, `Speaker Preset ${n}`, `spk`);
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Power */}
+      <Card className="p-4">
+        <Label className="text-xs uppercase tracking-wider text-muted-foreground mb-3 block">
+          Power
+        </Label>
+        <div className="grid grid-cols-2 gap-2">
+          <Button
+            size="lg"
+            variant="default"
+            className="h-14 bg-emerald-600/90 hover:bg-emerald-600 text-white"
+            onClick={() => handlePower("on")}
+            disabled={busy === "pw-on"}
+          >
+            {busy === "pw-on" ? (
+              <Loader2 className="h-5 w-5 mr-1.5 animate-spin" />
+            ) : (
+              <Power className="h-5 w-5 mr-1.5" />
+            )}
+            ON
+          </Button>
+          <Button
+            size="lg"
+            variant="destructive"
+            className="h-14"
+            onClick={() => handlePower("off")}
+            disabled={busy === "pw-off"}
+          >
+            {busy === "pw-off" ? (
+              <Loader2 className="h-5 w-5 mr-1.5 animate-spin" />
+            ) : (
+              <Power className="h-5 w-5 mr-1.5" />
+            )}
+            OFF / Standby
+          </Button>
+        </div>
+      </Card>
+
+      {/* Volume */}
+      <Card className="p-4">
+        <Label className="text-xs uppercase tracking-wider text-muted-foreground mb-3 block">
+          Volume
+        </Label>
+        <div className="grid grid-cols-3 gap-2">
+          <Button
+            size="lg"
+            variant="secondary"
+            className="h-16 text-lg"
+            onClick={() => send("MVDOWN", "Vol-", "vol-")}
+            disabled={busy === "vol-"}
+          >
+            <Minus className="h-6 w-6" />
+          </Button>
+          <Button
+            size="lg"
+            variant={muted ? "destructive" : "secondary"}
+            className="h-16 text-lg"
+            onClick={async () => {
+              const next = !muted;
+              const ok = await send(
+                `MU${next ? "ON" : "OFF"}`,
+                `Mute ${next ? "ON" : "OFF"}`,
+                "mute",
+              );
+              if (ok) setMuted(next);
+            }}
+            disabled={busy === "mute"}
+          >
+            {muted ? <VolumeX className="h-6 w-6" /> : <Volume2 className="h-6 w-6" />}
+          </Button>
+          <Button
+            size="lg"
+            variant="secondary"
+            className="h-16 text-lg"
+            onClick={() => send("MVUP", "Vol+", "vol+")}
+            disabled={busy === "vol+"}
+          >
+            <Plus className="h-6 w-6" />
+          </Button>
+        </div>
+      </Card>
+
+      {/* Input source dropdown */}
+      <Card className="p-4">
+        <Label className="text-xs uppercase tracking-wider text-muted-foreground mb-3 block">
+          Input Source
+        </Label>
+        <Select value={selectedInput} onValueChange={handleInput}>
+          <SelectTrigger className="h-12">
+            <SelectValue placeholder="Välj källa…" />
+          </SelectTrigger>
+          <SelectContent>
+            {inputs.length === 0 && (
+              <SelectItem value="__none" disabled>
+                Inga källor — lägg till i Devices-fliken
+              </SelectItem>
+            )}
+            {inputs.map((i) => (
+              <SelectItem key={i.id} value={i.marantz_code}>
+                {i.label}{" "}
+                <span className="text-muted-foreground text-xs ml-1">
+                  ({i.marantz_code})
+                </span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </Card>
+
+      {/* Smart Select */}
+      <Card className="p-4">
+        <Label className="text-xs uppercase tracking-wider text-muted-foreground mb-3 block">
+          Smart Select
+        </Label>
+        <RadioGroup
+          value={smartSelect}
+          onValueChange={handleSmart}
+          className="grid grid-cols-4 gap-2"
+        >
+          {SMART_SELECTS.map((n) => {
+            const val = String(n);
+            const active = smartSelect === val;
+            return (
+              <label
+                key={n}
+                htmlFor={`smart-${n}`}
+                className={`flex flex-col items-center justify-center gap-1.5 h-16 rounded-md border cursor-pointer transition-colors ${
+                  active
+                    ? "border-primary bg-primary/15 shadow-[var(--cinema-glow)]"
+                    : "border-border bg-secondary/40 hover:bg-secondary"
+                }`}
+              >
+                <RadioGroupItem id={`smart-${n}`} value={val} className="sr-only" />
+                <span className="text-xs uppercase tracking-wider text-muted-foreground">
+                  Smart
+                </span>
+                <span className="text-lg font-semibold">{n}</span>
+              </label>
+            );
+          })}
+        </RadioGroup>
+      </Card>
+
+      {/* Sound Mode */}
+      <Card className="p-4">
+        <Label className="text-xs uppercase tracking-wider text-muted-foreground mb-3 block">
+          Sound Mode
+        </Label>
+        <RadioGroup
+          value={soundMode}
+          onValueChange={handleSoundMode}
+          className="grid grid-cols-2 sm:grid-cols-3 gap-2"
+        >
+          {SOUND_MODES.map((m) => {
+            const active = soundMode === m.code;
+            return (
+              <label
+                key={m.code}
+                htmlFor={`sm-${m.code}`}
+                className={`flex items-center gap-2 px-3 h-11 rounded-md border cursor-pointer transition-colors ${
+                  active
+                    ? "border-primary bg-primary/15"
+                    : "border-border bg-secondary/40 hover:bg-secondary"
+                }`}
+              >
+                <RadioGroupItem id={`sm-${m.code}`} value={m.code} />
+                <span className="text-sm">{m.label}</span>
+              </label>
+            );
+          })}
+        </RadioGroup>
+      </Card>
+
+      {/* Dirac Live slot */}
+      <Card className="p-4">
+        <Label className="text-xs uppercase tracking-wider text-muted-foreground mb-3 block">
+          Dirac Live
+        </Label>
+        <RadioGroup
+          value={diracSlot}
+          onValueChange={handleDirac}
+          className="grid grid-cols-4 gap-2"
+        >
+          {DIRAC_SLOTS.map((s) => {
+            const active = diracSlot === s.value;
+            return (
+              <label
+                key={s.value}
+                htmlFor={`dirac-${s.value}`}
+                className={`flex items-center justify-center gap-2 h-12 rounded-md border cursor-pointer transition-colors ${
+                  active
+                    ? "border-primary bg-primary/15"
+                    : "border-border bg-secondary/40 hover:bg-secondary"
+                }`}
+              >
+                <RadioGroupItem id={`dirac-${s.value}`} value={s.value} />
+                <span className="text-sm">{s.label}</span>
+              </label>
+            );
+          })}
+        </RadioGroup>
+        <p className="text-xs text-muted-foreground mt-2">
+          Skickar <code className="text-primary/80">PSDIRAC SLOT 1/2/3</code> eller{" "}
+          <code className="text-primary/80">PSDIRAC OFF</code>.
+        </p>
+      </Card>
+
+      {/* Speaker preset */}
+      <Card className="p-4">
+        <Label className="text-xs uppercase tracking-wider text-muted-foreground mb-3 block">
+          Speaker Preset
+        </Label>
+        <RadioGroup
+          value={speakerPreset}
+          onValueChange={handleSpeaker}
+          className="grid grid-cols-2 gap-2"
+        >
+          {SPEAKER_PRESETS.map((n) => {
+            const val = String(n);
+            const active = speakerPreset === val;
+            return (
+              <label
+                key={n}
+                htmlFor={`spk-${n}`}
+                className={`flex flex-col items-center justify-center gap-1 h-16 rounded-md border cursor-pointer transition-colors ${
+                  active
+                    ? "border-primary bg-primary/15 shadow-[var(--cinema-glow)]"
+                    : "border-border bg-secondary/40 hover:bg-secondary"
+                }`}
+              >
+                <RadioGroupItem id={`spk-${n}`} value={val} className="sr-only" />
+                <span className="text-xs uppercase tracking-wider text-muted-foreground">
+                  Högtalare
+                </span>
+                <span className="text-lg font-semibold">Preset {n}</span>
+              </label>
+            );
+          })}
+        </RadioGroup>
+        <p className="text-xs text-muted-foreground mt-2">
+          Skickar <code className="text-primary/80">SPPR 1</code> /{" "}
+          <code className="text-primary/80">SPPR 2</code>.
+        </p>
+      </Card>
+    </div>
+  );
+}
