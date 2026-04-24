@@ -78,18 +78,11 @@ export async function updateScene(
   id: string,
   patch: Partial<Omit<Scene, "id" | "household_code" | "updated_at">>,
 ) {
-  // Hämta aktuell rad och gör en upsert (POST) istället för PATCH.
-  // Vissa nätverk/extensions blockerar PATCH-requests till Supabase.
-  const { data: current, error: fetchErr } = await supabase
-    .from("scenes")
-    .select("*")
-    .eq("id", id)
-    .single();
-  if (fetchErr) throw fetchErr;
-  const merged = { ...current, ...patch, updated_at: new Date().toISOString() };
+  const payload = { ...patch, updated_at: new Date().toISOString() };
   const { error } = await supabase
     .from("scenes")
-    .upsert(merged as never, { onConflict: "id" });
+    .update(payload as never)
+    .eq("id", id);
   if (error) throw error;
 }
 
