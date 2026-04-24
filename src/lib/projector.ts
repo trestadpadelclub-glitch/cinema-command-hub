@@ -702,6 +702,7 @@ export interface SceneLightCommand {
 export interface SceneCommandPayload {
   scenePayload: string;
   projectorSettings?: ProjectorSettings;
+  marantzPower?: "on" | "off" | null;
   marantzInput?: string | null;
   marantzVolume?: number | null;
   lightsOn?: boolean | null;
@@ -723,7 +724,6 @@ export async function sendScene(p: SceneCommandPayload): Promise<CommandResult[]
       ),
     );
   }
-  // Bulk per-lampa → POST /api/lights
   if (p.sceneLights && p.sceneLights.length > 0) {
     results.push(
       await postJson(
@@ -732,6 +732,18 @@ export async function sendScene(p: SceneCommandPayload): Promise<CommandResult[]
         { action: "scene_lights" as Action, value: p.sceneLights.length },
       ),
     );
+  }
+  // Marantz power FIRST — om "off" så skippa input/volym
+  if (p.marantzPower === "on" || p.marantzPower === "off") {
+    results.push(await sendMarantz(p.marantzPower === "on" ? "PWON" : "PWSTANDBY"));
+    if (p.marantzPower === "off") {
+      // Skippa input/volym när vi just stängt av
+      if (p.projectorSettings && Object.keys(p.projectorSettings).length > 0) {
+        const more = await applySettings(p.projectorSettings);
+        results.push(...more);
+      }
+      return results;
+    }
   }
   if (p.marantzInput) {
     results.push(await sendMarantz(`SI${p.marantzInput}`));
