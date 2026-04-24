@@ -734,13 +734,11 @@ export async function sendScene(p: SceneCommandPayload): Promise<CommandResult[]
     );
   }
   if (p.marantzInput) {
-    results.push(
-      await sendCommand({ action: "marantz" as Action, value: `SI${p.marantzInput}` }),
-    );
+    results.push(await sendMarantz(`SI${p.marantzInput}`));
   }
   if (typeof p.marantzVolume === "number") {
     const v = String(p.marantzVolume).padStart(2, "0");
-    results.push(await sendCommand({ action: "marantz" as Action, value: `MV${v}` }));
+    results.push(await sendMarantz(`MV${v}`));
   }
   if (p.projectorSettings && Object.keys(p.projectorSettings).length > 0) {
     const more = await applySettings(p.projectorSettings);
