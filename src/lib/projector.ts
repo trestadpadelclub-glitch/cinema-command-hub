@@ -150,6 +150,13 @@ export interface CommandResult {
   command?: SingleCommand;
 }
 
+export type BridgeEndpoint = "/api/projector" | "/api/lights" | "/api/marantz";
+
+export interface BridgeEndpointCommand {
+  endpoint: BridgeEndpoint;
+  body: Record<string, unknown>;
+}
+
 // --- bridge URL persistence ---
 
 function sanitizeBridgeUrl(raw: string): string {
@@ -207,6 +214,23 @@ function marantzUrl(): string {
     return base.replace(/\/[^/]+$/, "/api/marantz");
   }
   return base.replace(/\/+$/, "") + "/api/marantz";
+}
+
+function endpointUrl(endpoint: BridgeEndpoint): string {
+  if (endpoint === "/api/lights") return lightsUrl();
+  if (endpoint === "/api/marantz") return marantzUrl();
+  return getBridgeUrl();
+}
+
+function summarizeCommand(body: Record<string, unknown>): SingleCommand {
+  const action = typeof body.action === "string" ? (body.action as Action) : ("scene" as Action);
+  const rawValue = body.value;
+  if (typeof rawValue === "string" || typeof rawValue === "number") return { action, value: rawValue };
+  if (rawValue && typeof rawValue === "object" && "lights" in rawValue) {
+    const lights = (rawValue as { lights?: unknown }).lights;
+    return { action, value: Array.isArray(lights) ? lights.length : 0 };
+  }
+  return { action, value: "" };
 }
 
 async function postJson(url: string, body: unknown, command: SingleCommand): Promise<CommandResult> {
