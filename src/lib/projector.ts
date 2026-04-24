@@ -194,6 +194,21 @@ function lightsUrl(): string {
   return base.replace(/\/+$/, "") + "/api/lights";
 }
 
+/**
+ * Derive the marantz endpoint from the projector bridge URL.
+ * `<base>/api/projector` -> `<base>/api/marantz`
+ */
+function marantzUrl(): string {
+  const base = getBridgeUrl();
+  if (/\/api\/projector$/i.test(base)) {
+    return base.replace(/\/api\/projector$/i, "/api/marantz");
+  }
+  if (/\/[^/]+$/.test(base)) {
+    return base.replace(/\/[^/]+$/, "/api/marantz");
+  }
+  return base.replace(/\/+$/, "") + "/api/marantz";
+}
+
 async function postJson(url: string, body: unknown, command: SingleCommand): Promise<CommandResult> {
   try {
     const res = await fetch(url, {
