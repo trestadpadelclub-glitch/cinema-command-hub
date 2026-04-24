@@ -129,6 +129,84 @@ export const Route = createFileRoute("/api/public/trigger")({
             .filter((c): c is Record<string, unknown> => c !== null);
         }
 
+        // Bygg en färdig kommandosekvens som bryggan kör i ordning.
+        // Spegelbild av runScene() i SceneGrid + sendScene() i src/lib/projector.ts.
+        type Cmd =
+          | { endpoint: "/api/projector"; body: { action: "scene"; value: string } }
+          | { endpoint: "/api/lights"; body: { action: "lights"; value: "on" | "off" } }
+          | {
+              endpoint: "/api/lights";
+              body: { action: "scene_lights"; value: { lights: Array<Record<string, unknown>> } };
+            }
+          | { endpoint: "/api/marantz"; body: { action: "marantz"; value: string } }
+          | { endpoint: "/api/projector"; body: Record<string, unknown> };
+
+        const commands: Cmd[] = [];
+
+        // 1. Scene payload till projektor (alltid)
+        if (trigger.run_projector) {
+          commands.push({
+            endpoint: "/api/projector",
+            body: { action: "scene", value: scene.scene_payload || String(scene.scene_number) },
+          });
+        }
+
+        // 2. lights on/off
+        if (trigger.run_lights && (scene.lights_on === true || scene.lights_on === false)) {
+          commands.push({
+            endpoint: "/api/lights",
+            body: { action: "lights", value: scene.lights_on ? "on" : "off" },
+          });
+        }
+
+        // 3. Per-lampa
+        if (trigger.run_lights && sceneLights.length > 0) {
+          commands.push({
+            endpoint: "/api/lights",
+            body: { action: "scene_lights", value: { lights: sceneLights } },
+          });
+        }
+
+        // 4. Marantz power FIRST — om "off" så skippa input/volym
+        let marantzOff = false;
+        if (trigger.run_marantz && (scene.marantz_power === "on" || scene.marantz_power === "off")) {
+          commands.push({
+            endpoint: "/api/marantz",
+            body: { action: "marantz", value: scene.marantz_power === "on" ? "PWON" : "PWSTANDBY" },
+          });
+          if (scene.marantz_power === "off") marantzOff = true;
+        }
+
+        // 5. Marantz input
+        if (trigger.run_marantz && !marantzOff && scene.marantz_input) {
+          commands.push({
+            endpoint: "/api/marantz",
+            body: { action: "marantz", value: `SI${scene.marantz_input}` },
+          });
+        }
+
+        // 6. Marantz volume
+        if (trigger.run_marantz && !marantzOff && typeof scene.marantz_volume === "number") {
+          const v = String(scene.marantz_volume).padStart(2, "0");
+          commands.push({
+            endpoint: "/api/marantz",
+            body: { action: "marantz", value: `MV${v}` },
+          });
+        }
+
+        // 7. Projector tuning settings
+        if (
+          trigger.run_projector &&
+          scene.projector_settings &&
+          typeof scene.projector_settings === "object" &&
+          Object.keys(scene.projector_settings as Record<string, unknown>).length > 0
+        ) {
+          commands.push({
+            endpoint: "/api/projector",
+            body: scene.projector_settings as Record<string, unknown>,
+          });
+        }
+
         return json(
           {
             matched: true,
@@ -144,11 +222,13 @@ export const Route = createFileRoute("/api/public/trigger")({
               scene_number: scene.scene_number,
               scene_payload: scene.scene_payload,
               projector_settings: trigger.run_projector ? scene.projector_settings : {},
+              marantz_power: trigger.run_marantz ? scene.marantz_power : null,
               marantz_input: trigger.run_marantz ? scene.marantz_input : null,
               marantz_volume: trigger.run_marantz ? scene.marantz_volume : null,
               lights_on: trigger.run_lights ? scene.lights_on : null,
             },
             scene_lights: sceneLights,
+            commands,
           },
           200,
         );
