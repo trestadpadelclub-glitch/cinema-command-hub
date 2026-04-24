@@ -8,6 +8,7 @@ export interface Scene {
   name: string;
   enabled: boolean;
   projector_settings: ProjectorSettings;
+  marantz_power: "on" | "off" | null;
   marantz_input: string | null;
   marantz_volume: number | null;
   lights_on: boolean | null;

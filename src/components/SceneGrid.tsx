@@ -134,6 +134,7 @@ export function SceneGrid({ householdCode, activeSceneId }: Props) {
     const results = await sendScene({
       scenePayload: s.scene_payload || String(s.scene_number),
       projectorSettings: s.projector_settings,
+      marantzPower: s.marantz_power,
       marantzInput: s.marantz_input,
       marantzVolume: s.marantz_volume,
       lightsOn: s.lights_on,
@@ -165,6 +166,7 @@ export function SceneGrid({ householdCode, activeSceneId }: Props) {
       await updateScene(editing.id, {
         name: editing.name,
         lights_on: editing.lights_on,
+        marantz_power: editing.marantz_power,
         marantz_input: editing.marantz_input,
         marantz_volume: editing.marantz_volume,
         scene_payload: editing.scene_payload,
@@ -324,6 +326,27 @@ export function SceneGrid({ householdCode, activeSceneId }: Props) {
                   }
                   placeholder={String(editing.scene_number)}
                 />
+              </div>
+              <div className="space-y-1">
+                <Label>Marantz Power</Label>
+                <Select
+                  value={editing.marantz_power ?? "none"}
+                  onValueChange={(v) =>
+                    setEditing({
+                      ...editing,
+                      marantz_power: v === "none" ? null : (v as "on" | "off"),
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">— rör inte —</SelectItem>
+                    <SelectItem value="on">Slå på</SelectItem>
+                    <SelectItem value="off">Stäng av</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1">
                 <Label>Marantz Input</Label>
