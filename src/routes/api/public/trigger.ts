@@ -215,7 +215,7 @@ export const Route = createFileRoute("/api/public/trigger")({
           scene_id: scene.id,
           scene_name: scene.name,
           payload: { commands },
-        });
+        } as never);
         if (eventErr) console.error("Trigger event insert failed", eventErr);
 
         return json(
