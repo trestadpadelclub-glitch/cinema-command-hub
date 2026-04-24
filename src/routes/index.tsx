@@ -239,6 +239,7 @@ function Index() {
           <TabsList className="mb-6">
             <TabsTrigger value="scenes">Scenes</TabsTrigger>
             <TabsTrigger value="devices">Devices</TabsTrigger>
+            <TabsTrigger value="marantz">Marantz Remote</TabsTrigger>
             <TabsTrigger value="automation">Automation</TabsTrigger>
             <TabsTrigger value="calibration">Expert Calibration</TabsTrigger>
           </TabsList>
