@@ -208,6 +208,16 @@ export const Route = createFileRoute("/api/public/trigger")({
             body: scene.projector_settings as Record<string, unknown>,
           });
         }
+
+        const { error: eventErr } = await supabaseAdmin.from("trigger_events").insert({
+          household_code: householdCode,
+          trigger_key: triggerKey,
+          scene_id: scene.id,
+          scene_name: scene.name,
+          payload: { commands },
+        });
+        if (eventErr) console.error("Trigger event insert failed", eventErr);
+
         return json(
           {
             matched: true,
