@@ -21,11 +21,14 @@ import {
   applySettings,
   getStatus,
   parseStatus,
+  runBridgeCommands,
   sendLights,
+  type BridgeEndpointCommand,
   type ProjectorSettings,
 } from "@/lib/projector";
 import { useHousehold } from "@/hooks/useHousehold";
 import { fetchAppSettings } from "@/lib/scenes";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/")({
@@ -54,6 +57,10 @@ const DEFAULT_SETTINGS: ProjectorSettings = {
   motionflow: "off",
   gamma_correction: "2.2",
 };
+
+interface TriggerEventPayload {
+  commands?: BridgeEndpointCommand[];
+}
 
 function Index() {
   const { code: household, ready } = useHousehold();
