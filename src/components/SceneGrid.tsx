@@ -166,6 +166,7 @@ export function SceneGrid({ householdCode, activeSceneId }: Props) {
       await updateScene(editing.id, {
         name: editing.name,
         lights_on: editing.lights_on,
+        marantz_power: editing.marantz_power,
         marantz_input: editing.marantz_input,
         marantz_volume: editing.marantz_volume,
         scene_payload: editing.scene_payload,
