@@ -78,11 +78,22 @@ export async function updateScene(
   id: string,
   patch: Partial<Omit<Scene, "id" | "household_code" | "updated_at">>,
 ) {
-  const payload = { ...patch, updated_at: new Date().toISOString() };
+  // Vissa nätverk/ad-blockers blockerar PATCH mot Supabase REST.
+  // Hämta hela raden, mergea patchen och kör upsert (POST) istället.
+  const { data: current, error: fetchErr } = await supabase
+    .from("scenes")
+    .select("*")
+    .eq("id", id)
+    .single();
+  if (fetchErr) throw fetchErr;
+  const merged = {
+    ...current,
+    ...patch,
+    updated_at: new Date().toISOString(),
+  };
   const { error } = await supabase
     .from("scenes")
-    .update(payload as never)
-    .eq("id", id);
+    .upsert(merged as never, { onConflict: "id" });
   if (error) throw error;
 }
 
