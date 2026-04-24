@@ -134,6 +134,40 @@ function Index() {
     };
   }, [pollEnabled, pollIntervalS]);
 
+  useEffect(() => {
+    if (!household) return;
+    const channel = supabase
+      .channel(`trigger-events-${household}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "trigger_events",
+          filter: `household_code=eq.${household}`,
+        },
+        async ({ new: event }) => {
+          const payload = event.payload as TriggerEventPayload;
+          if (!Array.isArray(payload.commands)) return;
+          const results = await runBridgeCommands(payload.commands);
+          const failed = results.find((r) => !r.ok);
+          if (failed) {
+            toast.error(`Trigger "${event.trigger_key}" misslyckades delvis`, {
+              description: failed.error || `Status ${failed.status}`,
+            });
+          } else {
+            toast.success(`Scen "${event.scene_name}" aktiverad`, {
+              description: `${results.length} kommandon skickade`,
+            });
+          }
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [household]);
+
   const refetchPollSettings = async () => {
     if (!household) return;
     const s = await fetchAppSettings(household);
