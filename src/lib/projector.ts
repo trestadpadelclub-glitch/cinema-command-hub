@@ -194,6 +194,21 @@ function lightsUrl(): string {
   return base.replace(/\/+$/, "") + "/api/lights";
 }
 
+/**
+ * Derive the marantz endpoint from the projector bridge URL.
+ * `<base>/api/projector` -> `<base>/api/marantz`
+ */
+function marantzUrl(): string {
+  const base = getBridgeUrl();
+  if (/\/api\/projector$/i.test(base)) {
+    return base.replace(/\/api\/projector$/i, "/api/marantz");
+  }
+  if (/\/[^/]+$/.test(base)) {
+    return base.replace(/\/[^/]+$/, "/api/marantz");
+  }
+  return base.replace(/\/+$/, "") + "/api/marantz";
+}
+
 async function postJson(url: string, body: unknown, command: SingleCommand): Promise<CommandResult> {
   try {
     const res = await fetch(url, {
@@ -719,13 +734,11 @@ export async function sendScene(p: SceneCommandPayload): Promise<CommandResult[]
     );
   }
   if (p.marantzInput) {
-    results.push(
-      await sendCommand({ action: "marantz" as Action, value: `SI${p.marantzInput}` }),
-    );
+    results.push(await sendMarantz(`SI${p.marantzInput}`));
   }
   if (typeof p.marantzVolume === "number") {
     const v = String(p.marantzVolume).padStart(2, "0");
-    results.push(await sendCommand({ action: "marantz" as Action, value: `MV${v}` }));
+    results.push(await sendMarantz(`MV${v}`));
   }
   if (p.projectorSettings && Object.keys(p.projectorSettings).length > 0) {
     const more = await applySettings(p.projectorSettings);
@@ -734,9 +747,13 @@ export async function sendScene(p: SceneCommandPayload): Promise<CommandResult[]
   return results;
 }
 
-/** Marantz remote control — vol/mute/input osv. */
+/** Marantz remote control — vol/mute/input osv. POST /api/marantz */
 export async function sendMarantz(value: string): Promise<CommandResult> {
-  return sendCommand({ action: "marantz" as Action, value });
+  return postJson(
+    marantzUrl(),
+    { action: "marantz", value },
+    { action: "marantz" as Action, value },
+  );
 }
 
 /** Toggle / explicit set lights — POST /api/lights {action:"lights", value}. */
