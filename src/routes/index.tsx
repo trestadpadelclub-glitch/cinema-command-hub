@@ -249,19 +249,6 @@ function Index() {
           </div>
           <div className="flex items-center gap-2">
             <Button
-              size="lg"
-              onClick={handleManualLights}
-              disabled={lightsBusy}
-              className="bg-amber-500/90 hover:bg-amber-500 text-amber-950 font-semibold shadow-[0_0_20px_oklch(0.78_0.18_75/0.4)]"
-            >
-              {lightsBusy ? (
-                <Loader2 className="h-5 w-5 mr-1.5 animate-spin" />
-              ) : (
-                <Lightbulb className="h-5 w-5 mr-1.5" />
-              )}
-              Light Push
-            </Button>
-            <Button
               variant="secondary"
               size="sm"
               onClick={handleRefresh}
