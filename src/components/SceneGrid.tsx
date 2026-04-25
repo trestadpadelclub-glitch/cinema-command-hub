@@ -133,43 +133,6 @@ export function SceneGrid({ householdCode, activeSceneId }: Props) {
     setScenes((prev) => prev.map((x) => (x.id === s.id ? { ...x, enabled: val } : x)));
   };
 
-  const [saving, setSaving] = useState(false);
-  const saveEdit = async () => {
-    if (!editing || saving) return;
-    setSaving(true);
-    try {
-      await updateScene(editing.id, {
-        name: editing.name,
-        lights_on: editing.lights_on,
-        marantz_power: editing.marantz_power,
-        marantz_input: editing.marantz_input,
-        marantz_volume: editing.marantz_volume,
-        scene_payload: editing.scene_payload,
-      });
-      toast.success("Scen sparad");
-      setEditing(null);
-      refresh();
-    } catch (e) {
-      const msg = String(e instanceof Error ? e.message : e);
-      const isFetchFail = msg.includes("Failed to fetch") || msg.includes("NetworkError");
-      toast.error("Kunde inte spara scenen", {
-        description: isFetchFail
-          ? "Nätverksfel mot databasen. Stäng av eventuell ad-blocker / privacy-extension för denna sida och försök igen."
-          : msg,
-      });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const saveTuning = async (settings: ProjectorSettings) => {
-    if (!tuning) return;
-    await updateScene(tuning.id, { projector_settings: settings });
-    toast.success(`Tuning sparad för "${tuning.name}"`);
-    setTuning(null);
-    refresh();
-  };
-
   return (
     <>
       <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
