@@ -691,6 +691,8 @@ export function ExpertCalibration() {
         </header>
 
         <div className="space-y-3">
+          <RecipeDiffView json={json} baseline={liveBaseline} />
+
           <Label htmlFor="expert-json" className="text-xs uppercase tracking-wider text-muted-foreground">
             JSON Payload
           </Label>
