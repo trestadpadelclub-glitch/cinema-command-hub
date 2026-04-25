@@ -258,7 +258,6 @@ export const Route = createFileRoute("/api/public/trigger")({
             }
           }
         }
-        }
 
         const { error: eventErr } = await supabaseAdmin.from("trigger_events").insert({
           household_code: householdCode,
