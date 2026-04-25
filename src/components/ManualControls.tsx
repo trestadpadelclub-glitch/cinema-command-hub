@@ -421,13 +421,15 @@ export function ManualControls({ settings, onChange, showPowerAction }: Props) {
         </Card>
 
         <Card className="p-5">
-          <SectionLabel info={SECTION_INFO.motionflow}>Motionflow</SectionLabel>
+          <SectionLabel info={`${SECTION_INFO.motionflow} ${XW5000ES_ADCP_NOTE}`}>
+            Motionflow
+          </SectionLabel>
           <div className="grid grid-cols-3 gap-2">
             {MOTIONFLOW_OPTS.map((m) => (
               <OptionButton
                 key={m}
                 active={(settings.motionflow ?? "off") === m}
-                onClick={() => update("motionflow", m, { motionflow: m })}
+                onClick={() => onChange({ ...settings, motionflow: m })}
                 info={MOTIONFLOW_INFO[m]}
               >
                 {MOTIONFLOW_LABELS[m]}
@@ -479,13 +481,13 @@ export function ManualControls({ settings, onChange, showPowerAction }: Props) {
 
         <SliderRow
           label="Sharpness"
-          info={SECTION_INFO.sharpness}
-          hint="0 = naturlig · höga värden ger ringingar"
+          info={`${SECTION_INFO.sharpness} ${XW5000ES_ADCP_NOTE}`}
+          hint="0 = naturlig · sparas i scenen men skickas inte via ADCP"
           value={settings.sharpness ?? 0}
           min={0}
           max={100}
           step={1}
-          onChange={(v) => update("sharpness", v, { sharpness: v })}
+          onChange={(v) => onChange({ ...settings, sharpness: v })}
         />
 
         <Card className="p-5">
