@@ -330,69 +330,56 @@ export function ManualControls({ settings, onChange, showPowerAction }: Props) {
 
         <SliderRow
           label="Laser Output"
-          info={SECTION_INFO.laser_output}
+          info={`${SECTION_INFO.laser_output} ${XW5000ES_ADCP_NOTE}`}
           value={settings.laser_output ?? 75}
           min={0}
           max={100}
           step={1}
           suffix="%"
-          onChange={(v) => update("laser_output", v, { laser_output: v })}
+          onChange={(v) => onChange({ ...settings, laser_output: v })}
         />
 
         <SliderRow
           label="Brightness"
-          info={SECTION_INFO.brightness}
-          hint="50 = neutral · 51-52 lyfter skuggor (Black Crush)"
+          info={`${SECTION_INFO.brightness} ${XW5000ES_ADCP_NOTE}`}
+          hint="50 = neutral · sparas i scenen men skickas inte via ADCP"
           value={settings.brightness ?? 50}
           min={0}
           max={100}
           step={1}
-          onChange={(v) => update("brightness", v, { brightness: v })}
+          onChange={(v) => onChange({ ...settings, brightness: v })}
         />
 
         <SliderRow
           label="Contrast"
-          info={SECTION_INFO.contrast}
+          info={`${SECTION_INFO.contrast} ${XW5000ES_ADCP_NOTE}`}
           value={settings.contrast ?? 90}
           min={0}
           max={100}
           step={1}
-          onChange={(v) => update("contrast", v, { contrast: v })}
+          onChange={(v) => onChange({ ...settings, contrast: v })}
         />
 
         <SliderRow
           label="Color"
-          info={SECTION_INFO.color}
-          hint="50 = neutral mättnad"
+          info={`${SECTION_INFO.color} ${XW5000ES_ADCP_NOTE}`}
+          hint="50 = neutral mättnad · sparas i scenen men skickas inte via ADCP"
           value={settings.color ?? 50}
           min={0}
           max={100}
           step={1}
-          onChange={(v) => update("color", v, { color: v })}
+          onChange={(v) => onChange({ ...settings, color: v })}
         />
 
         <SliderRow
           label="Reality Creation"
-          info={SECTION_INFO.reality_creation}
-          hint="0 = av · 1–100 i steg om 1 (skickas som real_cre on/off + reality_creation_val)"
+          info={`${SECTION_INFO.reality_creation} ${XW5000ES_ADCP_NOTE}`}
+          hint="0 = av · sparas i scenen men skickas inte via ADCP"
           value={settings.reality_creation ?? 20}
           min={0}
           max={100}
           step={1}
-          onChange={(v) => {
-            const lvl = Math.round(v);
-            onChange({ ...settings, reality_creation: lvl });
-            clearTimeout(debounceRef.current["reality_creation"]);
-            debounceRef.current["reality_creation"] = setTimeout(async () => {
-              const results = await sendRealityCreation(lvl);
-              const failed = results.find((r) => !r.ok);
-              if (failed) {
-                toast.error("Bridge-fel", {
-                  description: failed.error || `Status ${failed.status}`,
-                });
-              }
-            }, 250);
-          }}
+          onChange={(v) => onChange({ ...settings, reality_creation: Math.round(v) })}
         />
 
         <Card className="p-5">
