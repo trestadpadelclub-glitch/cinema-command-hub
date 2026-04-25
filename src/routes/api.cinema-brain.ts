@@ -2,17 +2,19 @@ import { createFileRoute } from "@tanstack/react-router";
 
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
-const SCHEMA_HINT = `Return ONLY a JSON object with these allowed keys (omit any you don't want to set):
-- pic_mode: "cinema_film_1" | "cinema_film_2" | "reference" | "tv" | "bright_cinema"
+const SCHEMA_HINT = `Return ONLY a JSON object with these allowed keys (ALL keys are required — never omit any):
+- pic_mode: "cinema_film_1" | "cinema_film_2" | "reference" | "tv" | "bright_cinema" | "bright_tv" | "game" | "user1" | "user2" | "user3"
 - laser_output: integer 0-100
 - brightness: integer 0-100
 - contrast: integer 0-100
 - color: integer 0-100
+- sharpness: integer 0-100
 - reality_creation: integer 0-100
 - hdr_enhancer: "off" | "low" | "middle" | "high"
 - dynamic_control: "off" | "limited" | "middle" | "full"
 - motionflow: "off" | "true_cinema" | "smooth_low" | "smooth_high" | "impulse" | "combination"
 - gamma_correction: "off" | "1.8" | "2.0" | "2.1" | "2.2" | "2.4" | "2.6"
+- color_temp: "d93" | "d75" | "d65" | "d55" | "custom1" | "custom2" | "custom3" | "custom4" | "custom5"
 
 Each key/value will be sent to the Sony bridge as { command: "<key> <value>" }.`;
 
@@ -32,12 +34,18 @@ const SETTINGS_TOOL = {
             "reference",
             "tv",
             "bright_cinema",
+            "bright_tv",
+            "game",
+            "user1",
+            "user2",
+            "user3",
           ],
         },
         laser_output: { type: "integer", minimum: 0, maximum: 100 },
         brightness: { type: "integer", minimum: 0, maximum: 100 },
         contrast: { type: "integer", minimum: 0, maximum: 100 },
         color: { type: "integer", minimum: 0, maximum: 100 },
+        sharpness: { type: "integer", minimum: 0, maximum: 100 },
         reality_creation: { type: "integer", minimum: 0, maximum: 100 },
         hdr_enhancer: {
           type: "string",
@@ -62,6 +70,20 @@ const SETTINGS_TOOL = {
           type: "string",
           enum: ["off", "1.8", "2.0", "2.1", "2.2", "2.4", "2.6"],
         },
+        color_temp: {
+          type: "string",
+          enum: [
+            "d93",
+            "d75",
+            "d65",
+            "d55",
+            "custom1",
+            "custom2",
+            "custom3",
+            "custom4",
+            "custom5",
+          ],
+        },
       },
       required: [
         "pic_mode",
@@ -69,11 +91,13 @@ const SETTINGS_TOOL = {
         "brightness",
         "contrast",
         "color",
+        "sharpness",
         "reality_creation",
         "hdr_enhancer",
         "dynamic_control",
         "motionflow",
         "gamma_correction",
+        "color_temp",
       ],
       additionalProperties: false,
     },

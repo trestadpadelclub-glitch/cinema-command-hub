@@ -141,6 +141,7 @@ export function ExpertCalibration() {
   const [chatInput, setChatInput] = useState("");
   const [refining, setRefining] = useState(false);
   const [savingToKb, setSavingToKb] = useState(false);
+  const [liveBaseline, setLiveBaseline] = useState<Record<string, unknown> | null>(null);
 
   useEffect(() => {
     localStorage.setItem(PRESETS_KEY, JSON.stringify(presets));
@@ -273,11 +274,13 @@ export function ExpertCalibration() {
         const { power: _p, ...rest } = parsed;
         if (Object.keys(rest).length > 0) {
           liveSettings = rest as Record<string, unknown>;
+          setLiveBaseline(liveSettings);
           toast.info("Aktuella projektor-inställningar hämtade", {
             description: `${Object.keys(rest).length} fält lästa från projektorn`,
           });
         }
       } else {
+        setLiveBaseline(null);
         toast.warning("Kunde inte läsa projektorns aktuella läge", {
           description: "AI fortsätter utan live-baseline",
         });
@@ -688,6 +691,8 @@ export function ExpertCalibration() {
         </header>
 
         <div className="space-y-3">
+          <RecipeDiffView json={json} baseline={liveBaseline} />
+
           <Label htmlFor="expert-json" className="text-xs uppercase tracking-wider text-muted-foreground">
             JSON Payload
           </Label>
@@ -967,3 +972,101 @@ function PriorityCard({
 
 void sendCommand;
 export type { Action };
+
+const RECIPE_FIELDS: Array<{ key: string; label: string }> = [
+  { key: "pic_mode", label: "Picture Mode" },
+  { key: "color_temp", label: "Color Temperature" },
+  { key: "gamma_correction", label: "Gamma" },
+  { key: "laser_output", label: "Laser Output" },
+  { key: "brightness", label: "Brightness" },
+  { key: "contrast", label: "Contrast" },
+  { key: "color", label: "Color" },
+  { key: "sharpness", label: "Sharpness" },
+  { key: "reality_creation", label: "Reality Creation" },
+  { key: "hdr_enhancer", label: "HDR Enhancer" },
+  { key: "dynamic_control", label: "Dynamic Control" },
+  { key: "motionflow", label: "Motionflow" },
+];
+
+function RecipeDiffView({
+  json,
+  baseline,
+}: {
+  json: string;
+  baseline: Record<string, unknown> | null;
+}) {
+  let parsed: Record<string, unknown> | null = null;
+  try {
+    if (json.trim()) {
+      const obj = JSON.parse(json);
+      if (obj && typeof obj === "object" && !Array.isArray(obj)) {
+        parsed = obj as Record<string, unknown>;
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+  if (!parsed) return null;
+
+  const fmt = (v: unknown) =>
+    v === undefined || v === null || v === "" ? "—" : String(v);
+
+  return (
+    <div className="rounded-lg border border-border/60 bg-background/40 p-3">
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-xs uppercase tracking-wider text-muted-foreground">
+          Recipe (changes shown in italic)
+        </p>
+        {baseline ? (
+          <span className="text-[10px] text-muted-foreground">
+            vs live baseline
+          </span>
+        ) : (
+          <span className="text-[10px] text-muted-foreground italic">
+            no live baseline — diff disabled
+          </span>
+        )}
+      </div>
+      <div className="grid gap-1 sm:grid-cols-2">
+        {RECIPE_FIELDS.map(({ key, label }) => {
+          if (!(key in parsed!)) return null;
+          const newVal = parsed![key];
+          const oldVal = baseline ? baseline[key] : undefined;
+          const changed =
+            baseline !== null &&
+            oldVal !== undefined &&
+            String(oldVal) !== String(newVal);
+          return (
+            <div
+              key={key}
+              className="flex items-baseline justify-between gap-2 px-2 py-1 rounded text-xs"
+            >
+              <span className="text-muted-foreground">{label}</span>
+              <span
+                className={
+                  changed
+                    ? "italic font-semibold text-primary"
+                    : "font-mono text-foreground"
+                }
+                title={
+                  changed ? `was: ${fmt(oldVal)} → now: ${fmt(newVal)}` : undefined
+                }
+              >
+                {changed ? (
+                  <>
+                    <span className="line-through opacity-60 mr-1 not-italic font-normal">
+                      {fmt(oldVal)}
+                    </span>
+                    {fmt(newVal)}
+                  </>
+                ) : (
+                  fmt(newVal)
+                )}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
