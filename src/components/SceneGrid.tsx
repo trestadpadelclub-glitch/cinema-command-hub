@@ -1,11 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  Lightbulb,
-  Play,
-  Pencil,
-  Loader2,
-  Zap,
-} from "lucide-react";
+import { Lightbulb, Play, Pencil, Loader2, Zap } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -14,10 +8,7 @@ import { SceneEditorDialog } from "@/components/SceneEditorDialog";
 import { SceneTriggersDialog } from "@/components/SceneTriggersDialog";
 import { fetchTriggers, type SceneTrigger } from "@/lib/triggers";
 import { toast } from "sonner";
-import {
-  sendScene,
-  type SceneLightCommand,
-} from "@/lib/projector";
+import { sendScene, type SceneLightCommand } from "@/lib/projector";
 import {
   fetchScenes,
   fetchInputs,
@@ -43,10 +34,7 @@ export function SceneGrid({ householdCode, activeSceneId }: Props) {
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([
-      fetchScenes(householdCode),
-      fetchTriggers(householdCode),
-    ])
+    Promise.all([fetchScenes(householdCode), fetchTriggers(householdCode)])
       .then(([s, t]) => {
         if (!cancelled) {
           setScenes(s);
@@ -60,10 +48,7 @@ export function SceneGrid({ householdCode, activeSceneId }: Props) {
   }, [householdCode]);
 
   const refresh = async () => {
-    const [s, t] = await Promise.all([
-      fetchScenes(householdCode),
-      fetchTriggers(householdCode),
-    ]);
+    const [s, t] = await Promise.all([fetchScenes(householdCode), fetchTriggers(householdCode)]);
     setScenes(s);
     setTriggers(t);
   };
@@ -165,12 +150,8 @@ export function SceneGrid({ householdCode, activeSceneId }: Props) {
                 {s.name}
               </h3>
               <div className="flex items-center gap-1 text-[10px] text-muted-foreground mb-3 min-h-[14px]">
-                {s.lights_on === true && (
-                  <Lightbulb className="h-3 w-3 text-amber-400" />
-                )}
-                {s.marantz_input && (
-                  <span className="truncate">{s.marantz_input}</span>
-                )}
+                {s.lights_on === true && <Lightbulb className="h-3 w-3 text-amber-400" />}
+                {s.marantz_input && <span className="truncate">{s.marantz_input}</span>}
                 {triggers.some((t) => t.scene_id === s.id && t.enabled) && (
                   <Badge
                     variant="secondary"

@@ -1,12 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  Lightbulb,
-  Loader2,
-  Monitor,
-  Volume2,
-  Clock,
-  Save,
-} from "lucide-react";
+import { Lightbulb, Loader2, Monitor, Volume2, Clock, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -61,13 +54,7 @@ interface LightRow {
 
 const LIGHT_DEFAULTS = { brightness: 80, kelvin: 3000, color_hex: "#ffaa55" };
 
-export function SceneEditorDialog({
-  open,
-  onOpenChange,
-  householdCode,
-  scene,
-  onSaved,
-}: Props) {
+export function SceneEditorDialog({ open, onOpenChange, householdCode, scene, onSaved }: Props) {
   const [tab, setTab] = useState("picture");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -82,15 +69,9 @@ export function SceneEditorDialog({
   );
 
   // Sound
-  const [marantzPower, setMarantzPower] = useState<"on" | "off" | null>(
-    scene.marantz_power,
-  );
-  const [marantzInput, setMarantzInput] = useState<string | null>(
-    scene.marantz_input,
-  );
-  const [marantzVolume, setMarantzVolume] = useState<number | null>(
-    scene.marantz_volume,
-  );
+  const [marantzPower, setMarantzPower] = useState<"on" | "off" | null>(scene.marantz_power);
+  const [marantzInput, setMarantzInput] = useState<string | null>(scene.marantz_input);
+  const [marantzVolume, setMarantzVolume] = useState<number | null>(scene.marantz_volume);
   const [inputs, setInputs] = useState<MarantzInput[]>([]);
 
   // Lights
@@ -117,9 +98,7 @@ export function SceneEditorDialog({
     ])
       .then(([ins, lights, sceneLights]) => {
         setInputs(ins);
-        const map = new Map<string, SceneLight>(
-          sceneLights.map((s) => [s.light_id, s]),
-        );
+        const map = new Map<string, SceneLight>(sceneLights.map((s) => [s.light_id, s]));
         setLightRows(
           lights
             .filter((l) => l.enabled)
@@ -136,16 +115,12 @@ export function SceneEditorDialog({
             }),
         );
       })
-      .catch((e) =>
-        toast.error("Kunde inte ladda scen-data", { description: String(e) }),
-      )
+      .catch((e) => toast.error("Kunde inte ladda scen-data", { description: String(e) }))
       .finally(() => setLoading(false));
   }, [open, scene, householdCode]);
 
   const updateLightRow = (id: string, patch: Partial<LightRow>) =>
-    setLightRows((prev) =>
-      prev.map((r) => (r.light.id === id ? { ...r, ...patch } : r)),
-    );
+    setLightRows((prev) => prev.map((r) => (r.light.id === id ? { ...r, ...patch } : r)));
 
   const handleSave = async () => {
     if (saving) return;
@@ -177,8 +152,7 @@ export function SceneEditorDialog({
       onOpenChange(false);
     } catch (e) {
       const msg = String(e instanceof Error ? e.message : e);
-      const isFetchFail =
-        msg.includes("Failed to fetch") || msg.includes("NetworkError");
+      const isFetchFail = msg.includes("Failed to fetch") || msg.includes("NetworkError");
       toast.error("Kunde inte spara", {
         description: isFetchFail
           ? "Nätverksfel mot databasen. Stäng av eventuell ad-blocker / privacy-extension för denna sida och försök igen."
@@ -230,10 +204,7 @@ export function SceneEditorDialog({
             </TabsList>
 
             {/* ----------- BILD ----------- */}
-            <TabsContent
-              value="picture"
-              className="flex-1 overflow-y-auto pr-1 space-y-4 mt-4"
-            >
+            <TabsContent value="picture" className="flex-1 overflow-y-auto pr-1 space-y-4 mt-4">
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1">
                   <Label>Namn</Label>
@@ -250,8 +221,8 @@ export function SceneEditorDialog({
               </div>
               <div className="rounded-lg border p-3">
                 <p className="text-xs text-muted-foreground mb-3">
-                  Reglagen skickar live till projektorn. Klicka <strong>Spara</strong> nedan
-                  för att skriva värdena till scenen.
+                  Reglagen skickar live till projektorn. Klicka <strong>Spara</strong> nedan för att
+                  skriva värdena till scenen.
                 </p>
                 <ManualControls
                   settings={projectorSettings}
@@ -262,17 +233,12 @@ export function SceneEditorDialog({
             </TabsContent>
 
             {/* ----------- LJUD ----------- */}
-            <TabsContent
-              value="sound"
-              className="flex-1 overflow-y-auto pr-1 space-y-4 mt-4"
-            >
+            <TabsContent value="sound" className="flex-1 overflow-y-auto pr-1 space-y-4 mt-4">
               <div className="space-y-1">
                 <Label>Marantz Power</Label>
                 <Select
                   value={marantzPower ?? "none"}
-                  onValueChange={(v) =>
-                    setMarantzPower(v === "none" ? null : (v as "on" | "off"))
-                  }
+                  onValueChange={(v) => setMarantzPower(v === "none" ? null : (v as "on" | "off"))}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -311,31 +277,22 @@ export function SceneEditorDialog({
                   max={98}
                   value={marantzVolume ?? ""}
                   onChange={(e) =>
-                    setMarantzVolume(
-                      e.target.value === "" ? null : Number(e.target.value),
-                    )
+                    setMarantzVolume(e.target.value === "" ? null : Number(e.target.value))
                   }
                 />
               </div>
             </TabsContent>
 
             {/* ----------- LJUS ----------- */}
-            <TabsContent
-              value="lights"
-              className="flex-1 overflow-y-auto pr-1 space-y-3 mt-4"
-            >
+            <TabsContent value="lights" className="flex-1 overflow-y-auto pr-1 space-y-3 mt-4">
               <div className="flex items-center justify-between rounded-lg border p-3">
                 <div className="flex items-center gap-2">
                   <Lightbulb className="h-4 w-4 text-amber-400" />
                   <Label>Master-ljus när scen körs</Label>
                 </div>
                 <Select
-                  value={
-                    lightsOn === null ? "none" : lightsOn ? "on" : "off"
-                  }
-                  onValueChange={(v) =>
-                    setLightsOn(v === "none" ? null : v === "on")
-                  }
+                  value={lightsOn === null ? "none" : lightsOn ? "on" : "off"}
+                  onValueChange={(v) => setLightsOn(v === "none" ? null : v === "on")}
                 >
                   <SelectTrigger className="w-32">
                     <SelectValue />
@@ -350,8 +307,7 @@ export function SceneEditorDialog({
 
               {lightRows.length === 0 ? (
                 <p className="text-sm text-muted-foreground py-6 text-center">
-                  Inga lampor inlagda. Lägg till dem under{" "}
-                  <strong>Devices → Lights</strong>.
+                  Inga lampor inlagda. Lägg till dem under <strong>Devices → Lights</strong>.
                 </p>
               ) : (
                 lightRows.map((r) => {
@@ -369,14 +325,10 @@ export function SceneEditorDialog({
                         <div className="flex items-center gap-2 min-w-0">
                           <Switch
                             checked={r.in_scene}
-                            onCheckedChange={(v) =>
-                              updateLightRow(r.light.id, { in_scene: v })
-                            }
+                            onCheckedChange={(v) => updateLightRow(r.light.id, { in_scene: v })}
                           />
                           <div className="min-w-0">
-                            <div className="font-medium text-sm truncate">
-                              {r.light.name}
-                            </div>
+                            <div className="font-medium text-sm truncate">{r.light.name}</div>
                             <div className="text-[10px] text-muted-foreground font-mono">
                               {r.light.light_type}
                             </div>
@@ -387,9 +339,7 @@ export function SceneEditorDialog({
                           <Switch
                             checked={r.on_state}
                             disabled={!r.in_scene}
-                            onCheckedChange={(v) =>
-                              updateLightRow(r.light.id, { on_state: v })
-                            }
+                            onCheckedChange={(v) => updateLightRow(r.light.id, { on_state: v })}
                           />
                         </div>
                       </div>
@@ -406,9 +356,7 @@ export function SceneEditorDialog({
                               min={0}
                               max={100}
                               step={1}
-                              onValueChange={([v]) =>
-                                updateLightRow(r.light.id, { brightness: v })
-                              }
+                              onValueChange={([v]) => updateLightRow(r.light.id, { brightness: v })}
                             />
                           </div>
                           {showKelvin && (
@@ -422,9 +370,7 @@ export function SceneEditorDialog({
                                 min={2700}
                                 max={6500}
                                 step={50}
-                                onValueChange={([v]) =>
-                                  updateLightRow(r.light.id, { kelvin: v })
-                                }
+                                onValueChange={([v]) => updateLightRow(r.light.id, { kelvin: v })}
                               />
                             </div>
                           )}
@@ -463,17 +409,14 @@ export function SceneEditorDialog({
             </TabsContent>
 
             {/* ----------- TIMING (placeholder för Steg 3) ----------- */}
-            <TabsContent
-              value="timing"
-              className="flex-1 overflow-y-auto pr-1 space-y-4 mt-4"
-            >
+            <TabsContent value="timing" className="flex-1 overflow-y-auto pr-1 space-y-4 mt-4">
               <div className="rounded-lg border border-dashed border-primary/40 bg-primary/5 p-6 text-center">
                 <Clock className="h-8 w-8 mx-auto mb-3 text-primary/70" />
                 <h4 className="font-semibold mb-1">Timing kommer i nästa steg</h4>
                 <p className="text-xs text-muted-foreground max-w-md mx-auto">
-                  Här kommer du kunna ställa in delay per enhet (projektor, Marantz,
-                  ljus) samt delay + fade per enskild lampa. Databasen är redan
-                  förberedd — gränssnittet kopplas in i Steg 3.
+                  Här kommer du kunna ställa in delay per enhet (projektor, Marantz, ljus) samt
+                  delay + fade per enskild lampa. Databasen är redan förberedd — gränssnittet
+                  kopplas in i Steg 3.
                 </p>
               </div>
             </TabsContent>
