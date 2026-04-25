@@ -11,7 +11,6 @@ import {
 import { Info, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Menu, RotateCcw, EyeOff, Eye } from "lucide-react";
 import {
   sendCommand,
-  sendRealityCreation,
   PIC_MODE_LABELS,
   MOTIONFLOW_LABELS,
   COLOR_TEMP_LABELS,
@@ -105,6 +104,9 @@ const SECTION_INFO: Record<string, string> = {
     "Släck bilden tillfälligt utan att stänga av projektorn. Lasern står kvar i standby-läge.",
   remote: "Virtuell fjärrkontroll — navigera projektorns OSD-meny.",
 };
+
+const XW5000ES_ADCP_NOTE =
+  "Visas som scen-/referensvärde i appen. Din XW5000ES accepterar inte denna justering stabilt via ADCP, så inget kommando skickas.";
 
 const PIC_MODE_INFO: Record<PicMode, string> = {
   cinema_film_1:
