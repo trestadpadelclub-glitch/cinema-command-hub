@@ -13,6 +13,9 @@ export interface Scene {
   marantz_volume: number | null;
   lights_on: boolean | null;
   scene_payload: string | null;
+  projector_delay_ms: number;
+  marantz_delay_ms: number;
+  lights_delay_ms: number;
   updated_at: string;
 }
 
@@ -52,6 +55,8 @@ export interface SceneLight {
   brightness: number | null;
   kelvin: number | null;
   color_hex: string | null;
+  delay_ms: number;
+  fade_ms: number;
 }
 
 // ---------- Scenes ----------

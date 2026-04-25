@@ -50,6 +50,8 @@ interface LightRow {
   brightness: number;
   kelvin: number;
   color_hex: string;
+  delay_ms: number;
+  fade_ms: number;
 }
 
 const LIGHT_DEFAULTS = { brightness: 80, kelvin: 3000, color_hex: "#ffaa55" };
@@ -78,6 +80,11 @@ export function SceneEditorDialog({ open, onOpenChange, householdCode, scene, on
   const [lightsOn, setLightsOn] = useState<boolean | null>(scene.lights_on);
   const [lightRows, setLightRows] = useState<LightRow[]>([]);
 
+  // Timing — per device
+  const [projectorDelayMs, setProjectorDelayMs] = useState(scene.projector_delay_ms);
+  const [marantzDelayMs, setMarantzDelayMs] = useState(scene.marantz_delay_ms);
+  const [lightsDelayMs, setLightsDelayMs] = useState(scene.lights_delay_ms);
+
   // Reset state whenever dialog opens with a (potentially new) scene
   useEffect(() => {
     if (!open) return;
@@ -88,6 +95,9 @@ export function SceneEditorDialog({ open, onOpenChange, householdCode, scene, on
     setMarantzInput(scene.marantz_input);
     setMarantzVolume(scene.marantz_volume);
     setLightsOn(scene.lights_on);
+    setProjectorDelayMs(scene.projector_delay_ms);
+    setMarantzDelayMs(scene.marantz_delay_ms);
+    setLightsDelayMs(scene.lights_delay_ms);
     setTab("picture");
 
     setLoading(true);
@@ -111,6 +121,8 @@ export function SceneEditorDialog({ open, onOpenChange, householdCode, scene, on
                 brightness: s?.brightness ?? LIGHT_DEFAULTS.brightness,
                 kelvin: s?.kelvin ?? LIGHT_DEFAULTS.kelvin,
                 color_hex: s?.color_hex ?? LIGHT_DEFAULTS.color_hex,
+                delay_ms: s?.delay_ms ?? 0,
+                fade_ms: s?.fade_ms ?? 0,
               };
             }),
         );
@@ -134,6 +146,9 @@ export function SceneEditorDialog({ open, onOpenChange, householdCode, scene, on
         marantz_input: marantzInput,
         marantz_volume: marantzVolume,
         lights_on: lightsOn,
+        projector_delay_ms: projectorDelayMs,
+        marantz_delay_ms: marantzDelayMs,
+        lights_delay_ms: lightsDelayMs,
       });
       // Spara per-lampa
       for (const r of lightRows) {
@@ -145,6 +160,8 @@ export function SceneEditorDialog({ open, onOpenChange, householdCode, scene, on
           brightness: r.brightness,
           kelvin: r.kelvin,
           color_hex: r.color_hex,
+          delay_ms: r.delay_ms,
+          fade_ms: r.fade_ms,
         });
       }
       toast.success(`"${name}" sparad`);
@@ -408,16 +425,92 @@ export function SceneEditorDialog({ open, onOpenChange, householdCode, scene, on
               )}
             </TabsContent>
 
-            {/* ----------- TIMING (placeholder för Steg 3) ----------- */}
+            {/* ----------- TIMING ----------- */}
             <TabsContent value="timing" className="flex-1 overflow-y-auto pr-1 space-y-4 mt-4">
-              <div className="rounded-lg border border-dashed border-primary/40 bg-primary/5 p-6 text-center">
-                <Clock className="h-8 w-8 mx-auto mb-3 text-primary/70" />
-                <h4 className="font-semibold mb-1">Timing kommer i nästa steg</h4>
-                <p className="text-xs text-muted-foreground max-w-md mx-auto">
-                  Här kommer du kunna ställa in delay per enhet (projektor, Marantz, ljus) samt
-                  delay + fade per enskild lampa. Databasen är redan förberedd — gränssnittet
-                  kopplas in i Steg 3.
-                </p>
+              <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-xs text-muted-foreground">
+                Delay = hur många millisekunder appen väntar innan kommandot skickas till respektive
+                enhet, räknat från att scenen startas. Fade (på lampor) = hur lång övergångstid
+                bryggan ska använda när ljusnivån ändras.
+              </div>
+
+              <div className="space-y-3">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Enheter
+                </h4>
+                <DeviceDelayRow
+                  icon={<Monitor className="h-4 w-4" />}
+                  label="Projektor"
+                  value={projectorDelayMs}
+                  onChange={setProjectorDelayMs}
+                />
+                <DeviceDelayRow
+                  icon={<Volume2 className="h-4 w-4" />}
+                  label="Marantz"
+                  value={marantzDelayMs}
+                  onChange={setMarantzDelayMs}
+                />
+                <DeviceDelayRow
+                  icon={<Lightbulb className="h-4 w-4 text-amber-400" />}
+                  label="Ljus (master)"
+                  value={lightsDelayMs}
+                  onChange={setLightsDelayMs}
+                />
+              </div>
+
+              <div className="space-y-3">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Per lampa
+                </h4>
+                {lightRows.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-4 text-center">
+                    Inga lampor inlagda.
+                  </p>
+                ) : (
+                  lightRows
+                    .filter((r) => r.in_scene)
+                    .map((r) => (
+                      <div key={r.light.id} className="rounded-lg border p-3 space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Lightbulb className="h-4 w-4 text-amber-400" />
+                          <span className="font-medium text-sm">{r.light.name}</span>
+                        </div>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-xs">
+                              <Label>Delay</Label>
+                              <span className="font-mono">{r.delay_ms} ms</span>
+                            </div>
+                            <Slider
+                              value={[r.delay_ms]}
+                              min={0}
+                              max={5000}
+                              step={50}
+                              onValueChange={([v]) => updateLightRow(r.light.id, { delay_ms: v })}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-xs">
+                              <Label>Fade</Label>
+                              <span className="font-mono">{r.fade_ms} ms</span>
+                            </div>
+                            <Slider
+                              value={[r.fade_ms]}
+                              min={0}
+                              max={5000}
+                              step={100}
+                              onValueChange={([v]) => updateLightRow(r.light.id, { fade_ms: v })}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                )}
+                {lightRows.length > 0 && lightRows.every((r) => !r.in_scene) && (
+                  <p className="text-xs text-muted-foreground italic text-center py-2">
+                    Aktivera lampor under <strong>Ljus</strong>-tabben för att kunna sätta
+                    delay/fade per lampa.
+                  </p>
+                )}
               </div>
             </TabsContent>
           </Tabs>
@@ -438,5 +531,30 @@ export function SceneEditorDialog({ open, onOpenChange, householdCode, scene, on
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function DeviceDelayRow({
+  icon,
+  label,
+  value,
+  onChange,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <div className="rounded-lg border p-3 space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          {icon}
+          <span className="font-medium text-sm">{label}</span>
+        </div>
+        <span className="font-mono text-xs text-muted-foreground">{value} ms</span>
+      </div>
+      <Slider value={[value]} min={0} max={5000} step={50} onValueChange={([v]) => onChange(v)} />
+    </div>
   );
 }
