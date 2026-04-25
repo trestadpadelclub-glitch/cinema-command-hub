@@ -67,7 +67,7 @@ function Index() {
   const [power, setPower] = useState<"on" | "off" | "unknown">("unknown");
   const [activeInput, setActiveInput] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [lightsBusy, setLightsBusy] = useState(false);
+  
   const [pollIntervalS, setPollIntervalS] = useState(5);
   const [pollEnabled, setPollEnabled] = useState(true);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
