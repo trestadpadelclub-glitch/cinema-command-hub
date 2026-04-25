@@ -3,32 +3,19 @@ import {
   Lightbulb,
   Play,
   Pencil,
-  Settings2,
-  Power,
   Loader2,
   Zap,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { ManualControls } from "@/components/ManualControls";
-import { SceneLightsDialog } from "@/components/SceneLightsDialog";
+import { SceneEditorDialog } from "@/components/SceneEditorDialog";
 import { SceneTriggersDialog } from "@/components/SceneTriggersDialog";
 import { fetchTriggers, type SceneTrigger } from "@/lib/triggers";
 import { toast } from "sonner";
 import {
   sendScene,
-  type ProjectorSettings,
   type SceneLightCommand,
 } from "@/lib/projector";
 import {
@@ -40,13 +27,6 @@ import {
   type Scene,
   type MarantzInput,
 } from "@/lib/scenes";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 interface Props {
   householdCode: string;
