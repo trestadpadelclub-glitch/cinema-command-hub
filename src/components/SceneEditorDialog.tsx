@@ -428,9 +428,9 @@ export function SceneEditorDialog({ open, onOpenChange, householdCode, scene, on
             {/* ----------- TIMING ----------- */}
             <TabsContent value="timing" className="flex-1 overflow-y-auto pr-1 space-y-4 mt-4">
               <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-xs text-muted-foreground">
-                Delay = hur många millisekunder appen väntar innan kommandot skickas
-                till respektive enhet, räknat från att scenen startas. Fade (på lampor) =
-                hur lång övergångstid bryggan ska använda när ljusnivån ändras.
+                Delay = hur många millisekunder appen väntar innan kommandot skickas till respektive
+                enhet, räknat från att scenen startas. Fade (på lampor) = hur lång övergångstid
+                bryggan ska använda när ljusnivån ändras.
               </div>
 
               <div className="space-y-3">
@@ -469,10 +469,7 @@ export function SceneEditorDialog({ open, onOpenChange, householdCode, scene, on
                   lightRows
                     .filter((r) => r.in_scene)
                     .map((r) => (
-                      <div
-                        key={r.light.id}
-                        className="rounded-lg border p-3 space-y-3"
-                      >
+                      <div key={r.light.id} className="rounded-lg border p-3 space-y-3">
                         <div className="flex items-center gap-2">
                           <Lightbulb className="h-4 w-4 text-amber-400" />
                           <span className="font-medium text-sm">{r.light.name}</span>
@@ -488,9 +485,7 @@ export function SceneEditorDialog({ open, onOpenChange, householdCode, scene, on
                               min={0}
                               max={5000}
                               step={50}
-                              onValueChange={([v]) =>
-                                updateLightRow(r.light.id, { delay_ms: v })
-                              }
+                              onValueChange={([v]) => updateLightRow(r.light.id, { delay_ms: v })}
                             />
                           </div>
                           <div className="space-y-1">
@@ -503,9 +498,7 @@ export function SceneEditorDialog({ open, onOpenChange, householdCode, scene, on
                               min={0}
                               max={5000}
                               step={100}
-                              onValueChange={([v]) =>
-                                updateLightRow(r.light.id, { fade_ms: v })
-                              }
+                              onValueChange={([v]) => updateLightRow(r.light.id, { fade_ms: v })}
                             />
                           </div>
                         </div>
@@ -514,8 +507,8 @@ export function SceneEditorDialog({ open, onOpenChange, householdCode, scene, on
                 )}
                 {lightRows.length > 0 && lightRows.every((r) => !r.in_scene) && (
                   <p className="text-xs text-muted-foreground italic text-center py-2">
-                    Aktivera lampor under <strong>Ljus</strong>-tabben för att kunna
-                    sätta delay/fade per lampa.
+                    Aktivera lampor under <strong>Ljus</strong>-tabben för att kunna sätta
+                    delay/fade per lampa.
                   </p>
                 )}
               </div>
@@ -561,13 +554,7 @@ function DeviceDelayRow({
         </div>
         <span className="font-mono text-xs text-muted-foreground">{value} ms</span>
       </div>
-      <Slider
-        value={[value]}
-        min={0}
-        max={5000}
-        step={50}
-        onValueChange={([v]) => onChange(v)}
-      />
+      <Slider value={[value]} min={0} max={5000} step={50} onValueChange={([v]) => onChange(v)} />
     </div>
   );
 }
