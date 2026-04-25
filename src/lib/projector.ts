@@ -318,12 +318,14 @@ export async function getStatus(): Promise<CommandResult> {
 // which is split into two commands (real_cre on/off + reality_creation_val level).
 const SETTINGS_ACTIONS: Action[] = [
   "pic_mode",
-  // XW5000ES ADCP test: these UI sliders are not stable as SET commands:
-  // laser_output, brightness, contrast, color, sharpness.
-  // reality_creation handled separately below
+  "laser_output",
+  "brightness",
+  "contrast",
+  "color",
+  "sharpness",
   "hdr_enhancer",
   "dynamic_control",
-  // motionflow is not exposed reliably via ADCP on XW5000ES.
+  "motionflow",
   "gamma_correction",
   "color_temp",
 ];
@@ -458,7 +460,10 @@ export async function applySettings(
     results.push(res);
     if (!res.ok) break; // stop on first failure
   }
-  // Reality Creation is intentionally not sent for XW5000ES ADCP: tested SET/GET is unsupported.
+  if (settings.reality_creation !== undefined && settings.reality_creation !== null) {
+    const rcResults = await sendRealityCreation(settings.reality_creation);
+    results.push(...rcResults);
+  }
   return results;
 }
 

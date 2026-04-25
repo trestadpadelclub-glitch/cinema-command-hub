@@ -106,7 +106,7 @@ const SECTION_INFO: Record<string, string> = {
 };
 
 const XW5000ES_ADCP_NOTE =
-  "Visas som scen-/referensvärde i appen. Din XW5000ES accepterar inte denna justering stabilt via ADCP, så inget kommando skickas.";
+  "Skickas via korrigerad ADCP numeric-syntax i bridge v9.";
 
 const PIC_MODE_INFO: Record<PicMode, string> = {
   cinema_film_1:
@@ -336,18 +336,18 @@ export function ManualControls({ settings, onChange, showPowerAction }: Props) {
           max={100}
           step={1}
           suffix="%"
-          onChange={(v) => onChange({ ...settings, laser_output: v })}
+          onChange={(v) => update("laser_output", v, { laser_output: v })}
         />
 
         <SliderRow
           label="Brightness"
           info={`${SECTION_INFO.brightness} ${XW5000ES_ADCP_NOTE}`}
-          hint="50 = neutral · sparas i scenen men skickas inte via ADCP"
+          hint="50 = neutral · skickas via bridge v9"
           value={settings.brightness ?? 50}
           min={0}
           max={100}
           step={1}
-          onChange={(v) => onChange({ ...settings, brightness: v })}
+          onChange={(v) => update("brightness", v, { brightness: v })}
         />
 
         <SliderRow
@@ -357,29 +357,29 @@ export function ManualControls({ settings, onChange, showPowerAction }: Props) {
           min={0}
           max={100}
           step={1}
-          onChange={(v) => onChange({ ...settings, contrast: v })}
+          onChange={(v) => update("contrast", v, { contrast: v })}
         />
 
         <SliderRow
           label="Color"
           info={`${SECTION_INFO.color} ${XW5000ES_ADCP_NOTE}`}
-          hint="50 = neutral mättnad · sparas i scenen men skickas inte via ADCP"
+          hint="50 = neutral mättnad · skickas via bridge v9"
           value={settings.color ?? 50}
           min={0}
           max={100}
           step={1}
-          onChange={(v) => onChange({ ...settings, color: v })}
+          onChange={(v) => update("color", v, { color: v })}
         />
 
         <SliderRow
           label="Reality Creation"
           info={`${SECTION_INFO.reality_creation} ${XW5000ES_ADCP_NOTE}`}
-          hint="0 = av · sparas i scenen men skickas inte via ADCP"
+          hint="0 = av · skickas som real_cre/real_cre_reso via bridge v9"
           value={settings.reality_creation ?? 20}
           min={0}
           max={100}
           step={1}
-          onChange={(v) => onChange({ ...settings, reality_creation: Math.round(v) })}
+          onChange={(v) => update("reality_creation", Math.round(v), { reality_creation: Math.round(v) })}
         />
 
         <Card className="p-5">
@@ -429,7 +429,7 @@ export function ManualControls({ settings, onChange, showPowerAction }: Props) {
               <OptionButton
                 key={m}
                 active={(settings.motionflow ?? "off") === m}
-                onClick={() => onChange({ ...settings, motionflow: m })}
+                onClick={() => update("motionflow", m, { motionflow: m })}
                 info={MOTIONFLOW_INFO[m]}
               >
                 {MOTIONFLOW_LABELS[m]}
@@ -482,12 +482,12 @@ export function ManualControls({ settings, onChange, showPowerAction }: Props) {
         <SliderRow
           label="Sharpness"
           info={`${SECTION_INFO.sharpness} ${XW5000ES_ADCP_NOTE}`}
-          hint="0 = naturlig · sparas i scenen men skickas inte via ADCP"
+          hint="0 = naturlig · skickas via bridge v9"
           value={settings.sharpness ?? 0}
           min={0}
           max={100}
           step={1}
-          onChange={(v) => onChange({ ...settings, sharpness: v })}
+          onChange={(v) => update("sharpness", v, { sharpness: v })}
         />
 
         <Card className="p-5">
