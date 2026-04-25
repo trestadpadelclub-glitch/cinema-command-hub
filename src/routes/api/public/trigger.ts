@@ -259,13 +259,16 @@ export const Route = createFileRoute("/api/public/trigger")({
           }
         }
 
-        const { error: eventErr } = await supabaseAdmin.from("trigger_events").insert({
+        const eventRow = {
           household_code: householdCode,
           trigger_key: triggerKey,
           scene_id: scene.id,
           scene_name: scene.name,
           payload: { commands },
-        } as never);
+        };
+        const { error: eventErr } = await supabaseAdmin
+          .from("trigger_events")
+          .insert(eventRow as never);
         if (eventErr) console.error("Trigger event insert failed", eventErr);
 
         return json(
