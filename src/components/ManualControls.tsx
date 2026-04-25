@@ -121,9 +121,9 @@ const PIC_MODE_INFO: Record<PicMode, string> = {
     "Maxljust TV-profil för dagsljus / mycket omgivande ljus. Sämre svärta men bilden 'orkar' synas.",
   game:
     "Optimerad för minsta input lag. Mindre bildbehandling — använd när responstid är viktigare än bildkvalitet.",
-  user1: "Egen sparad profil #1. Använd för en personligt kalibrerad inställning.",
+  user1: "Egen sparad profil. Använd för en personligt kalibrerad inställning.",
   user2: "Egen sparad profil #2.",
-  user3: "Egen sparad profil #3.",
+  user3: "IMAX Enhanced-profil för IMAX-mastrat innehåll.",
 };
 
 const HDR_INFO: Record<HdrEnhancer, string> = {
