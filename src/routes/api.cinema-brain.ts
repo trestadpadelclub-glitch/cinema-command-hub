@@ -87,6 +87,7 @@ export const Route = createFileRoute("/api/cinema-brain")({
           masterInstructions?: string;
           scenario?: Record<string, unknown>;
           currentSettings?: Record<string, unknown>;
+          liveSettings?: Record<string, unknown> | null;
           chatHistory?: ChatTurn[];
           finalSettings?: Record<string, unknown>;
         };
