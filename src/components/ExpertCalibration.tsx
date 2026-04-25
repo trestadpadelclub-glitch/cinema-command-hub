@@ -141,6 +141,7 @@ export function ExpertCalibration() {
   const [chatInput, setChatInput] = useState("");
   const [refining, setRefining] = useState(false);
   const [savingToKb, setSavingToKb] = useState(false);
+  const [liveBaseline, setLiveBaseline] = useState<Record<string, unknown> | null>(null);
 
   useEffect(() => {
     localStorage.setItem(PRESETS_KEY, JSON.stringify(presets));
