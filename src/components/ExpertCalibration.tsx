@@ -227,7 +227,10 @@ export function ExpertCalibration() {
     toast.success("Historik rensad");
   };
 
-  const callBrain = async (chatHistory: ChatMessage[]) => {
+  const callBrain = async (
+    chatHistory: ChatMessage[],
+    liveSettings?: Record<string, unknown>,
+  ) => {
     let currentSettings: Record<string, unknown> = {};
     try {
       if (json.trim()) currentSettings = JSON.parse(json);
@@ -242,6 +245,7 @@ export function ExpertCalibration() {
         masterInstructions: getMasterInstructions(),
         scenario,
         currentSettings,
+        liveSettings: liveSettings ?? null,
         chatHistory: chatHistory.map((m) => ({
           role: m.role,
           content: m.content,
@@ -260,7 +264,26 @@ export function ExpertCalibration() {
   const handleAnalyze = async () => {
     setAnalyzing(true);
     try {
-      const settings = await callBrain([]);
+      // Step 1: Fetch live projector settings to use as baseline input.
+      let liveSettings: Record<string, unknown> | undefined;
+      const statusRes = await getStatus();
+      if (statusRes.ok) {
+        const parsed = parseStatus(statusRes.data);
+        // Strip power; we only care about picture settings here.
+        const { power: _p, ...rest } = parsed;
+        if (Object.keys(rest).length > 0) {
+          liveSettings = rest as Record<string, unknown>;
+          toast.info("Aktuella projektor-inställningar hämtade", {
+            description: `${Object.keys(rest).length} fält lästa från projektorn`,
+          });
+        }
+      } else {
+        toast.warning("Kunde inte läsa projektorns aktuella läge", {
+          description: "AI fortsätter utan live-baseline",
+        });
+      }
+
+      const settings = await callBrain([], liveSettings);
       const pretty = JSON.stringify(settings, null, 2);
       setJson(pretty);
       setChat([
