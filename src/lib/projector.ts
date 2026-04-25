@@ -396,7 +396,10 @@ export function parseStatus(raw: unknown): ProjectorStatus {
   if (sharpness !== undefined) out.sharpness = sharpness;
 
   const hdr = str(r.hdr_enhancer);
-  if (hdr) out.hdr_enhancer = hdr as HdrEnhancer;
+  if (hdr) {
+    const hdrMap: Record<string, HdrEnhancer> = { mid: "middle" };
+    out.hdr_enhancer = (hdrMap[hdr.toLowerCase()] ?? hdr) as HdrEnhancer;
+  }
 
   // Motionflow — bridge sends `motion_flow` or `motionflow`
   const mf = str(r.motion_flow ?? r.motionflow);
