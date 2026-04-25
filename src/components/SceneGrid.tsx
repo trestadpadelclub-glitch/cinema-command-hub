@@ -36,11 +36,8 @@ interface Props {
 
 export function SceneGrid({ householdCode, activeSceneId }: Props) {
   const [scenes, setScenes] = useState<Scene[]>([]);
-  const [inputs, setInputs] = useState<MarantzInput[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [editing, setEditing] = useState<Scene | null>(null);
-  const [tuning, setTuning] = useState<Scene | null>(null);
-  const [tuningLights, setTuningLights] = useState<Scene | null>(null);
   const [tuningTriggers, setTuningTriggers] = useState<Scene | null>(null);
   const [triggers, setTriggers] = useState<SceneTrigger[]>([]);
 
@@ -48,13 +45,11 @@ export function SceneGrid({ householdCode, activeSceneId }: Props) {
     let cancelled = false;
     Promise.all([
       fetchScenes(householdCode),
-      fetchInputs(householdCode),
       fetchTriggers(householdCode),
     ])
-      .then(([s, i, t]) => {
+      .then(([s, t]) => {
         if (!cancelled) {
           setScenes(s);
-          setInputs(i);
           setTriggers(t);
         }
       })
