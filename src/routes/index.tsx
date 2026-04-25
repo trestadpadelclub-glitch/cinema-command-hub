@@ -21,7 +21,7 @@ import {
   getStatus,
   parseStatus,
   runBridgeCommands,
-  sendLights,
+  
   type BridgeEndpointCommand,
   type ProjectorSettings,
 } from "@/lib/projector";
