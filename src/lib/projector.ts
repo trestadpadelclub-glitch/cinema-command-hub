@@ -155,7 +155,11 @@ export type BridgeEndpoint = "/api/projector" | "/api/lights" | "/api/marantz";
 export interface BridgeEndpointCommand {
   endpoint: BridgeEndpoint;
   body: Record<string, unknown>;
+  /** Vänta så här länge INNAN kommandot skickas (ms). Default 0. */
+  delay_ms?: number;
 }
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 // --- bridge URL persistence ---
 
