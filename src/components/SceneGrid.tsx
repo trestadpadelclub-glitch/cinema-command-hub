@@ -203,18 +203,9 @@ export function SceneGrid({ householdCode, activeSceneId }: Props) {
                   variant="ghost"
                   className="h-8 w-8 p-0"
                   onClick={() => setEditing(s)}
-                  title="Byt namn / källa"
+                  title="Redigera scen (bild · ljud · ljus · timing)"
                 >
                   <Pencil className="h-3.5 w-3.5" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-8 w-8 p-0"
-                  onClick={() => setTuningLights(s)}
-                  title="Tuna lampor för denna scen"
-                >
-                  <Lightbulb className="h-3.5 w-3.5 text-amber-400" />
                 </Button>
                 <Button
                   size="sm"
@@ -224,15 +215,6 @@ export function SceneGrid({ householdCode, activeSceneId }: Props) {
                   title="Automatiska triggers för denna scen"
                 >
                   <Zap className="h-3.5 w-3.5 text-amber-400" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-8 w-8 p-0"
-                  onClick={() => setTuning(s)}
-                  title="Tuna projektor-inställningar"
-                >
-                  <Settings2 className="h-3.5 w-3.5" />
                 </Button>
               </div>
             </Card>
