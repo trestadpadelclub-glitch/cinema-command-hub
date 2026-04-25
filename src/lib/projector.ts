@@ -26,9 +26,9 @@ export const PIC_MODE_LABELS: Record<PicMode, string> = {
   bright_cinema: "Bright Cinema",
   bright_tv: "Bright TV",
   game: "Game",
-  user1: "User 1",
+  user1: "User",
   user2: "User 2",
-  user3: "User 3",
+  user3: "IMAX Enhanced",
 };
 
 export type InputSource = "hdmi1" | "hdmi2";
