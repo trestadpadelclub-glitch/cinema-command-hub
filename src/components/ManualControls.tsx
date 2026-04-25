@@ -429,7 +429,7 @@ export function ManualControls({ settings, onChange, showPowerAction }: Props) {
               <OptionButton
                 key={m}
                 active={(settings.motionflow ?? "off") === m}
-                onClick={() => onChange({ ...settings, motionflow: m })}
+                onClick={() => update("motionflow", m, { motionflow: m })}
                 info={MOTIONFLOW_INFO[m]}
               >
                 {MOTIONFLOW_LABELS[m]}
@@ -487,7 +487,7 @@ export function ManualControls({ settings, onChange, showPowerAction }: Props) {
           min={0}
           max={100}
           step={1}
-          onChange={(v) => onChange({ ...settings, sharpness: v })}
+          onChange={(v) => update("sharpness", v, { sharpness: v })}
         />
 
         <Card className="p-5">
