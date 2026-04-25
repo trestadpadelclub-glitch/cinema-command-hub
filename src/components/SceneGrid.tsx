@@ -222,164 +222,14 @@ export function SceneGrid({ householdCode, activeSceneId }: Props) {
         })}
       </div>
 
-      {/* Edit name / lights / input dialog */}
-      <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Redigera scen</DialogTitle>
-          </DialogHeader>
-          {editing && (
-            <div className="space-y-4">
-              <div className="space-y-1">
-                <Label>Namn</Label>
-                <Input
-                  value={editing.name}
-                  onChange={(e) => setEditing({ ...editing, name: e.target.value })}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label>Scen-payload (skickas till backend som value)</Label>
-                <Input
-                  value={editing.scene_payload ?? String(editing.scene_number)}
-                  onChange={(e) =>
-                    setEditing({ ...editing, scene_payload: e.target.value })
-                  }
-                  placeholder={String(editing.scene_number)}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label>Marantz Power</Label>
-                <Select
-                  value={editing.marantz_power ?? "none"}
-                  onValueChange={(v) =>
-                    setEditing({
-                      ...editing,
-                      marantz_power: v === "none" ? null : (v as "on" | "off"),
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">— rör inte —</SelectItem>
-                    <SelectItem value="on">Slå på</SelectItem>
-                    <SelectItem value="off">Stäng av</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <Label>Marantz Input</Label>
-                <Select
-                  value={editing.marantz_input ?? "none"}
-                  onValueChange={(v) =>
-                    setEditing({
-                      ...editing,
-                      marantz_input: v === "none" ? null : v,
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">— rör inte —</SelectItem>
-                    {inputs.map((i) => (
-                      <SelectItem key={i.id} value={i.marantz_code}>
-                        {i.label} ({i.marantz_code})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <Label>Marantz Volym (0-98, tomt = rör inte)</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  max={98}
-                  value={editing.marantz_volume ?? ""}
-                  onChange={(e) =>
-                    setEditing({
-                      ...editing,
-                      marantz_volume: e.target.value === "" ? null : Number(e.target.value),
-                    })
-                  }
-                />
-              </div>
-              <div className="flex items-center justify-between rounded-lg border p-3">
-                <div className="flex items-center gap-2">
-                  <Lightbulb className="h-4 w-4 text-amber-400" />
-                  <Label>Tänd ljus när scen körs</Label>
-                </div>
-                <Select
-                  value={
-                    editing.lights_on === null
-                      ? "none"
-                      : editing.lights_on
-                        ? "on"
-                        : "off"
-                  }
-                  onValueChange={(v) =>
-                    setEditing({
-                      ...editing,
-                      lights_on: v === "none" ? null : v === "on",
-                    })
-                  }
-                >
-                  <SelectTrigger className="w-32">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Rör inte</SelectItem>
-                    <SelectItem value="on">Tänd</SelectItem>
-                    <SelectItem value="off">Släck</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setEditing(null)} disabled={saving}>
-              Avbryt
-            </Button>
-            <Button onClick={saveEdit} disabled={saving}>
-              {saving && <Loader2 className="h-4 w-4 animate-spin mr-1.5" />}
-              Spara
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Tuning dialog */}
-      <Dialog open={!!tuning} onOpenChange={(o) => !o && setTuning(null)}>
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              <span className="flex items-center gap-2">
-                <Settings2 className="h-5 w-5" />
-                Tuna projektor — {tuning?.name}
-              </span>
-            </DialogTitle>
-          </DialogHeader>
-          {tuning && (
-            <SceneTuner
-              initial={tuning.projector_settings}
-              onSave={saveTuning}
-              onCancel={() => setTuning(null)}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Lights tuning dialog */}
-      {tuningLights && (
-        <SceneLightsDialog
-          open={!!tuningLights}
-          onOpenChange={(o) => !o && setTuningLights(null)}
+      {/* Unified scene editor (Bild · Ljud · Ljus · Timing) */}
+      {editing && (
+        <SceneEditorDialog
+          open={!!editing}
+          onOpenChange={(o) => !o && setEditing(null)}
           householdCode={householdCode}
-          sceneId={tuningLights.id}
-          sceneName={tuningLights.name}
+          scene={editing}
+          onSaved={refresh}
         />
       )}
 
@@ -398,35 +248,5 @@ export function SceneGrid({ householdCode, activeSceneId }: Props) {
         />
       )}
     </>
-  );
-}
-
-function SceneTuner({
-  initial,
-  onSave,
-  onCancel,
-}: {
-  initial: ProjectorSettings;
-  onSave: (s: ProjectorSettings) => void;
-  onCancel: () => void;
-}) {
-  const [draft, setDraft] = useState<ProjectorSettings>(initial);
-  return (
-    <div className="space-y-4">
-      <p className="text-xs text-muted-foreground">
-        Reglagen skickar live till projektorn (förhandsgranskning). Klicka Spara för att skriva
-        värdena till scenen.
-      </p>
-      <ManualControls settings={draft} onChange={setDraft} showPowerAction />
-      <div className="flex justify-end gap-2 sticky bottom-0 bg-background pt-2">
-        <Button variant="ghost" onClick={onCancel}>
-          Avbryt
-        </Button>
-        <Button onClick={() => onSave(draft)}>
-          <Power className="h-4 w-4 mr-1.5" />
-          Spara till scen
-        </Button>
-      </div>
-    </div>
   );
 }
