@@ -73,6 +73,8 @@ export function SceneGrid({ householdCode, activeSceneId }: Props) {
             name: l.name,
             type: l.light_type,
             on: treatAsOff ? false : r.on_state,
+            delay_ms: r.delay_ms ?? 0,
+            fade_ms: r.fade_ms ?? 0,
           };
           if (!treatAsOff) {
             if (r.brightness !== null) cmd.brightness = r.brightness;
@@ -97,6 +99,9 @@ export function SceneGrid({ householdCode, activeSceneId }: Props) {
       marantzVolume: s.marantz_volume,
       lightsOn: s.lights_on,
       sceneLights,
+      projectorDelayMs: s.projector_delay_ms,
+      marantzDelayMs: s.marantz_delay_ms,
+      lightsDelayMs: s.lights_delay_ms,
     });
     setBusy(null);
     const failed = results.find((r) => !r.ok);

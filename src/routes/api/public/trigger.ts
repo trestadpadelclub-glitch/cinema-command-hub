@@ -119,6 +119,10 @@ export const Route = createFileRoute("/api/public/trigger")({
                 name: l.name,
                 type: l.light_type,
                 on: treatAsOff ? false : r.on_state,
+                // Per-lampa timing — bryggan ansvarar för delay innan kommandot
+                // skickas och för mjukvarufade till målvärdet.
+                delay_ms: r.delay_ms ?? 0,
+                fade_ms: r.fade_ms ?? 0,
               };
               if (!treatAsOff) {
                 if (r.brightness !== null) cmd.brightness = r.brightness;
@@ -136,17 +140,47 @@ export const Route = createFileRoute("/api/public/trigger")({
         // Spegelbild av runScene() i SceneGrid + sendScene() i src/lib/projector.ts.
         // Filter-flaggor (run_projector/run_marantz/run_lights) ignoreras —
         // triggern ska göra exakt samma sak som ett klick på "Kör".
-        type Cmd =
-          | { endpoint: "/api/projector"; body: { action: "scene"; value: string } }
-          | { endpoint: "/api/lights"; body: { action: "lights"; value: "on" | "off" } }
-          | {
-              endpoint: "/api/lights";
-              body: { action: "scene_lights"; value: { lights: Array<Record<string, unknown>> } };
-            }
-          | { endpoint: "/api/marantz"; body: { action: "marantz"; value: string } }
-          | { endpoint: "/api/projector"; body: Record<string, unknown> };
+        // Varje kommando har ett `delay_ms` — bryggan/klienten väntar
+        // den tiden INNAN kommandot skickas. Per-enhet-delay (projektor,
+        // marantz, ljus) appliceras på det FÖRSTA kommandot för den enheten.
+        type Cmd = {
+          endpoint: "/api/projector" | "/api/lights" | "/api/marantz";
+          body: Record<string, unknown>;
+          delay_ms: number;
+        };
 
         const commands: Cmd[] = [];
+
+        const projectorDelay = scene.projector_delay_ms ?? 0;
+        const marantzDelay = scene.marantz_delay_ms ?? 0;
+        const lightsDelay = scene.lights_delay_ms ?? 0;
+        let projectorDelayUsed = false;
+        let marantzDelayUsed = false;
+        let lightsDelayUsed = false;
+        const pushProjector = (body: Record<string, unknown>) => {
+          commands.push({
+            endpoint: "/api/projector",
+            body,
+            delay_ms: projectorDelayUsed ? 0 : projectorDelay,
+          });
+          projectorDelayUsed = true;
+        };
+        const pushMarantz = (body: Record<string, unknown>) => {
+          commands.push({
+            endpoint: "/api/marantz",
+            body,
+            delay_ms: marantzDelayUsed ? 0 : marantzDelay,
+          });
+          marantzDelayUsed = true;
+        };
+        const pushLights = (body: Record<string, unknown>) => {
+          commands.push({
+            endpoint: "/api/lights",
+            body,
+            delay_ms: lightsDelayUsed ? 0 : lightsDelay,
+          });
+          lightsDelayUsed = true;
+        };
 
         // Hjälp: läs projector_settings (kan vara null)
         const projSettings =
@@ -155,70 +189,45 @@ export const Route = createFileRoute("/api/public/trigger")({
             : {};
         const projPower = projSettings.power;
 
-        // 0. Projektor POWER FIRST (om scenen säger något)
-        //    Speglar applySettings(): power skickas före allt annat på projektorn.
+        // 0. Projektor POWER FIRST
         if (projPower === "on" || projPower === "off") {
-          commands.push({
-            endpoint: "/api/projector",
-            body: { action: "power", value: projPower },
-          });
+          pushProjector({ action: "power", value: projPower });
         }
 
-        // 1. Scene payload till projektor — hoppa över om vi just stängt av
+        // 1. Scene payload till projektor
         if (projPower !== "off") {
-          commands.push({
-            endpoint: "/api/projector",
-            body: { action: "scene", value: scene.scene_payload || String(scene.scene_number) },
-          });
+          pushProjector({ action: "scene", value: scene.scene_payload || String(scene.scene_number) });
         }
 
         // 2. lights on/off
         if (scene.lights_on === true || scene.lights_on === false) {
-          commands.push({
-            endpoint: "/api/lights",
-            body: { action: "lights", value: scene.lights_on ? "on" : "off" },
-          });
+          pushLights({ action: "lights", value: scene.lights_on ? "on" : "off" });
         }
 
-        // 3. Per-lampa
+        // 3. Per-lampa (delay_ms + fade_ms ligger inbakat i varje light-objekt)
         if (sceneLights.length > 0) {
-          commands.push({
-            endpoint: "/api/lights",
-            body: { action: "scene_lights", value: { lights: sceneLights } },
-          });
+          pushLights({ action: "scene_lights", value: { lights: sceneLights } });
         }
 
-        // 4. Marantz power FIRST — om "off" så skippa input/volym
+        // 4. Marantz power FIRST
         let marantzOff = false;
         if (scene.marantz_power === "on" || scene.marantz_power === "off") {
-          commands.push({
-            endpoint: "/api/marantz",
-            body: { action: "marantz", value: scene.marantz_power === "on" ? "PWON" : "PWSTANDBY" },
-          });
+          pushMarantz({ action: "marantz", value: scene.marantz_power === "on" ? "PWON" : "PWSTANDBY" });
           if (scene.marantz_power === "off") marantzOff = true;
         }
 
         // 5. Marantz input
         if (!marantzOff && scene.marantz_input) {
-          commands.push({
-            endpoint: "/api/marantz",
-            body: { action: "marantz", value: `SI${scene.marantz_input}` },
-          });
+          pushMarantz({ action: "marantz", value: `SI${scene.marantz_input}` });
         }
 
         // 6. Marantz volume
         if (!marantzOff && typeof scene.marantz_volume === "number") {
           const v = String(scene.marantz_volume).padStart(2, "0");
-          commands.push({
-            endpoint: "/api/marantz",
-            body: { action: "marantz", value: `MV${v}` },
-          });
+          pushMarantz({ action: "marantz", value: `MV${v}` });
         }
 
-        // 7. Projector tuning settings — expandera till {action,value} per fält.
-        //    Bridge accepterar EN action per anrop, så vi får INTE skicka raw-objektet.
-        //    `power` är redan hanterat först (steg 0) — hoppa över här.
-        //    Reality Creation splittas: real_cre on/off + reality_creation_val (om >0).
+        // 7. Projector tuning settings
         if (projPower !== "off") {
           const SETTING_KEYS = [
             "pic_mode",
@@ -238,23 +247,14 @@ export const Route = createFileRoute("/api/public/trigger")({
           for (const key of SETTING_KEYS) {
             const v = projSettings[key];
             if (v === undefined || v === null) continue;
-            commands.push({
-              endpoint: "/api/projector",
-              body: { action: key, value: v as string | number },
-            });
+            pushProjector({ action: key, value: v as string | number });
           }
           const rc = projSettings.reality_creation;
           if (typeof rc === "number") {
             const lvl = Math.max(0, Math.min(100, Math.round(rc)));
-            commands.push({
-              endpoint: "/api/projector",
-              body: { action: "real_cre", value: lvl > 0 ? "on" : "off" },
-            });
+            pushProjector({ action: "real_cre", value: lvl > 0 ? "on" : "off" });
             if (lvl > 0) {
-              commands.push({
-                endpoint: "/api/projector",
-                body: { action: "reality_creation_val", value: lvl },
-              });
+              pushProjector({ action: "reality_creation_val", value: lvl });
             }
           }
         }
