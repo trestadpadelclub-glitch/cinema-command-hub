@@ -11,12 +11,10 @@ import { toast } from "sonner";
 import { sendScene, type SceneLightCommand } from "@/lib/projector";
 import {
   fetchScenes,
-  fetchInputs,
   fetchLights,
   fetchSceneLights,
   updateScene,
   type Scene,
-  type MarantzInput,
 } from "@/lib/scenes";
 
 interface Props {
