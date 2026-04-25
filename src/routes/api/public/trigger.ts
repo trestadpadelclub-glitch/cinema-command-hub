@@ -215,16 +215,48 @@ export const Route = createFileRoute("/api/public/trigger")({
           });
         }
 
-        // 7. Projector tuning settings
-        if (
-          scene.projector_settings &&
-          typeof scene.projector_settings === "object" &&
-          Object.keys(scene.projector_settings as Record<string, unknown>).length > 0
-        ) {
-          commands.push({
-            endpoint: "/api/projector",
-            body: scene.projector_settings as Record<string, unknown>,
-          });
+        // 7. Projector tuning settings — expandera till {action,value} per fält.
+        //    Bridge accepterar EN action per anrop, så vi får INTE skicka raw-objektet.
+        //    `power` är redan hanterat först (steg 0) — hoppa över här.
+        //    Reality Creation splittas: real_cre on/off + reality_creation_val (om >0).
+        if (projPower !== "off") {
+          const SETTING_KEYS = [
+            "pic_mode",
+            "laser_output",
+            "brightness",
+            "contrast",
+            "color",
+            "sharpness",
+            "hdr_enhancer",
+            "dynamic_control",
+            "motionflow",
+            "gamma_correction",
+            "color_temp",
+            "input",
+            "blank",
+          ] as const;
+          for (const key of SETTING_KEYS) {
+            const v = projSettings[key];
+            if (v === undefined || v === null) continue;
+            commands.push({
+              endpoint: "/api/projector",
+              body: { action: key, value: v as string | number },
+            });
+          }
+          const rc = projSettings.reality_creation;
+          if (typeof rc === "number") {
+            const lvl = Math.max(0, Math.min(100, Math.round(rc)));
+            commands.push({
+              endpoint: "/api/projector",
+              body: { action: "real_cre", value: lvl > 0 ? "on" : "off" },
+            });
+            if (lvl > 0) {
+              commands.push({
+                endpoint: "/api/projector",
+                body: { action: "reality_creation_val", value: lvl },
+              });
+            }
+          }
         }
 
         const { error: eventErr } = await supabaseAdmin.from("trigger_events").insert({
