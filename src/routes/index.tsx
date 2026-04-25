@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { Projector, RotateCw, Lightbulb, Loader2 } from "lucide-react";
+import { Projector, RotateCw, Loader2 } from "lucide-react";
 import { Toaster } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
 import { SettingsDialog } from "@/components/SettingsDialog";
@@ -21,7 +21,7 @@ import {
   getStatus,
   parseStatus,
   runBridgeCommands,
-  sendLights,
+  
   type BridgeEndpointCommand,
   type ProjectorSettings,
 } from "@/lib/projector";
@@ -67,7 +67,7 @@ function Index() {
   const [power, setPower] = useState<"on" | "off" | "unknown">("unknown");
   const [activeInput, setActiveInput] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [lightsBusy, setLightsBusy] = useState(false);
+  
   const [pollIntervalS, setPollIntervalS] = useState(5);
   const [pollEnabled, setPollEnabled] = useState(true);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -184,17 +184,6 @@ function Index() {
     };
   }, []);
 
-  const handleManualLights = async () => {
-    setLightsBusy(true);
-    const res = await sendLights("toggle");
-    setLightsBusy(false);
-    if (res.ok) toast.success("Ljus togglat");
-    else
-      toast.error("Kunde inte styra ljuset", {
-        description: res.error || `Status ${res.status}`,
-      });
-  };
-
   if (!ready || !household) {
     return (
       <div className="min-h-screen bg-[image:var(--gradient-screen)] flex items-center justify-center">
@@ -248,19 +237,6 @@ function Index() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              size="lg"
-              onClick={handleManualLights}
-              disabled={lightsBusy}
-              className="bg-amber-500/90 hover:bg-amber-500 text-amber-950 font-semibold shadow-[0_0_20px_oklch(0.78_0.18_75/0.4)]"
-            >
-              {lightsBusy ? (
-                <Loader2 className="h-5 w-5 mr-1.5 animate-spin" />
-              ) : (
-                <Lightbulb className="h-5 w-5 mr-1.5" />
-              )}
-              Light Push
-            </Button>
             <Button
               variant="secondary"
               size="sm"
