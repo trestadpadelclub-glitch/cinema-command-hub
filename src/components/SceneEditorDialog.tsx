@@ -95,6 +95,9 @@ export function SceneEditorDialog({ open, onOpenChange, householdCode, scene, on
     setMarantzInput(scene.marantz_input);
     setMarantzVolume(scene.marantz_volume);
     setLightsOn(scene.lights_on);
+    setProjectorDelayMs(scene.projector_delay_ms);
+    setMarantzDelayMs(scene.marantz_delay_ms);
+    setLightsDelayMs(scene.lights_delay_ms);
     setTab("picture");
 
     setLoading(true);
@@ -118,6 +121,8 @@ export function SceneEditorDialog({ open, onOpenChange, householdCode, scene, on
                 brightness: s?.brightness ?? LIGHT_DEFAULTS.brightness,
                 kelvin: s?.kelvin ?? LIGHT_DEFAULTS.kelvin,
                 color_hex: s?.color_hex ?? LIGHT_DEFAULTS.color_hex,
+                delay_ms: s?.delay_ms ?? 0,
+                fade_ms: s?.fade_ms ?? 0,
               };
             }),
         );
@@ -141,6 +146,9 @@ export function SceneEditorDialog({ open, onOpenChange, householdCode, scene, on
         marantz_input: marantzInput,
         marantz_volume: marantzVolume,
         lights_on: lightsOn,
+        projector_delay_ms: projectorDelayMs,
+        marantz_delay_ms: marantzDelayMs,
+        lights_delay_ms: lightsDelayMs,
       });
       // Spara per-lampa
       for (const r of lightRows) {
@@ -152,6 +160,8 @@ export function SceneEditorDialog({ open, onOpenChange, householdCode, scene, on
           brightness: r.brightness,
           kelvin: r.kelvin,
           color_hex: r.color_hex,
+          delay_ms: r.delay_ms,
+          fade_ms: r.fade_ms,
         });
       }
       toast.success(`"${name}" sparad`);
