@@ -24,7 +24,6 @@ export interface MarantzInput {
   icon: string;
 }
 
-// AutomationEvent removed — timing now per-scene/per-light
 
 export interface AppSettings {
   household_code: string;
@@ -186,25 +185,7 @@ export async function upsertSceneLight(
   if (error) throw error;
 }
 
-// ---------- Automation events ----------
-
-export async function fetchEvents(householdCode: string): Promise<AutomationEvent[]> {
-  const { data, error } = await supabase
-    .from("automation_events")
-    .select("*")
-    .eq("household_code", householdCode)
-    .order("event_key");
-  if (error) throw error;
-  return (data ?? []) as unknown as AutomationEvent[];
-}
-
-export async function updateEvent(
-  id: string,
-  patch: Partial<Omit<AutomationEvent, "id" | "event_key">>,
-) {
-  const { error } = await supabase.from("automation_events").update(patch).eq("id", id);
-  if (error) throw error;
-}
+// Automation events removed — timing now lives on scenes & scene_lights
 
 // ---------- App settings ----------
 
