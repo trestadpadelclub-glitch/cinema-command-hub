@@ -11,7 +11,6 @@ import {
 import { Info, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Menu, RotateCcw, EyeOff, Eye } from "lucide-react";
 import {
   sendCommand,
-  sendRealityCreation,
   PIC_MODE_LABELS,
   MOTIONFLOW_LABELS,
   COLOR_TEMP_LABELS,
@@ -105,6 +104,9 @@ const SECTION_INFO: Record<string, string> = {
     "Släck bilden tillfälligt utan att stänga av projektorn. Lasern står kvar i standby-läge.",
   remote: "Virtuell fjärrkontroll — navigera projektorns OSD-meny.",
 };
+
+const XW5000ES_ADCP_NOTE =
+  "Visas som scen-/referensvärde i appen. Din XW5000ES accepterar inte denna justering stabilt via ADCP, så inget kommando skickas.";
 
 const PIC_MODE_INFO: Record<PicMode, string> = {
   cinema_film_1:
@@ -328,69 +330,56 @@ export function ManualControls({ settings, onChange, showPowerAction }: Props) {
 
         <SliderRow
           label="Laser Output"
-          info={SECTION_INFO.laser_output}
+          info={`${SECTION_INFO.laser_output} ${XW5000ES_ADCP_NOTE}`}
           value={settings.laser_output ?? 75}
           min={0}
           max={100}
           step={1}
           suffix="%"
-          onChange={(v) => update("laser_output", v, { laser_output: v })}
+          onChange={(v) => onChange({ ...settings, laser_output: v })}
         />
 
         <SliderRow
           label="Brightness"
-          info={SECTION_INFO.brightness}
-          hint="50 = neutral · 51-52 lyfter skuggor (Black Crush)"
+          info={`${SECTION_INFO.brightness} ${XW5000ES_ADCP_NOTE}`}
+          hint="50 = neutral · sparas i scenen men skickas inte via ADCP"
           value={settings.brightness ?? 50}
           min={0}
           max={100}
           step={1}
-          onChange={(v) => update("brightness", v, { brightness: v })}
+          onChange={(v) => onChange({ ...settings, brightness: v })}
         />
 
         <SliderRow
           label="Contrast"
-          info={SECTION_INFO.contrast}
+          info={`${SECTION_INFO.contrast} ${XW5000ES_ADCP_NOTE}`}
           value={settings.contrast ?? 90}
           min={0}
           max={100}
           step={1}
-          onChange={(v) => update("contrast", v, { contrast: v })}
+          onChange={(v) => onChange({ ...settings, contrast: v })}
         />
 
         <SliderRow
           label="Color"
-          info={SECTION_INFO.color}
-          hint="50 = neutral mättnad"
+          info={`${SECTION_INFO.color} ${XW5000ES_ADCP_NOTE}`}
+          hint="50 = neutral mättnad · sparas i scenen men skickas inte via ADCP"
           value={settings.color ?? 50}
           min={0}
           max={100}
           step={1}
-          onChange={(v) => update("color", v, { color: v })}
+          onChange={(v) => onChange({ ...settings, color: v })}
         />
 
         <SliderRow
           label="Reality Creation"
-          info={SECTION_INFO.reality_creation}
-          hint="0 = av · 1–100 i steg om 1 (skickas som real_cre on/off + reality_creation_val)"
+          info={`${SECTION_INFO.reality_creation} ${XW5000ES_ADCP_NOTE}`}
+          hint="0 = av · sparas i scenen men skickas inte via ADCP"
           value={settings.reality_creation ?? 20}
           min={0}
           max={100}
           step={1}
-          onChange={(v) => {
-            const lvl = Math.round(v);
-            onChange({ ...settings, reality_creation: lvl });
-            clearTimeout(debounceRef.current["reality_creation"]);
-            debounceRef.current["reality_creation"] = setTimeout(async () => {
-              const results = await sendRealityCreation(lvl);
-              const failed = results.find((r) => !r.ok);
-              if (failed) {
-                toast.error("Bridge-fel", {
-                  description: failed.error || `Status ${failed.status}`,
-                });
-              }
-            }, 250);
-          }}
+          onChange={(v) => onChange({ ...settings, reality_creation: Math.round(v) })}
         />
 
         <Card className="p-5">
@@ -432,13 +421,15 @@ export function ManualControls({ settings, onChange, showPowerAction }: Props) {
         </Card>
 
         <Card className="p-5">
-          <SectionLabel info={SECTION_INFO.motionflow}>Motionflow</SectionLabel>
+          <SectionLabel info={`${SECTION_INFO.motionflow} ${XW5000ES_ADCP_NOTE}`}>
+            Motionflow
+          </SectionLabel>
           <div className="grid grid-cols-3 gap-2">
             {MOTIONFLOW_OPTS.map((m) => (
               <OptionButton
                 key={m}
                 active={(settings.motionflow ?? "off") === m}
-                onClick={() => update("motionflow", m, { motionflow: m })}
+                onClick={() => onChange({ ...settings, motionflow: m })}
                 info={MOTIONFLOW_INFO[m]}
               >
                 {MOTIONFLOW_LABELS[m]}
@@ -490,13 +481,13 @@ export function ManualControls({ settings, onChange, showPowerAction }: Props) {
 
         <SliderRow
           label="Sharpness"
-          info={SECTION_INFO.sharpness}
-          hint="0 = naturlig · höga värden ger ringingar"
+          info={`${SECTION_INFO.sharpness} ${XW5000ES_ADCP_NOTE}`}
+          hint="0 = naturlig · sparas i scenen men skickas inte via ADCP"
           value={settings.sharpness ?? 0}
           min={0}
           max={100}
           step={1}
-          onChange={(v) => update("sharpness", v, { sharpness: v })}
+          onChange={(v) => onChange({ ...settings, sharpness: v })}
         />
 
         <Card className="p-5">

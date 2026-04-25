@@ -318,15 +318,12 @@ export async function getStatus(): Promise<CommandResult> {
 // which is split into two commands (real_cre on/off + reality_creation_val level).
 const SETTINGS_ACTIONS: Action[] = [
   "pic_mode",
-  "laser_output",
-  "brightness",
-  "contrast",
-  "color",
-  "sharpness",
+  // XW5000ES ADCP test: these UI sliders are not stable as SET commands:
+  // laser_output, brightness, contrast, color, sharpness.
   // reality_creation handled separately below
   "hdr_enhancer",
   "dynamic_control",
-  "motionflow",
+  // motionflow is not exposed reliably via ADCP on XW5000ES.
   "gamma_correction",
   "color_temp",
 ];
@@ -396,7 +393,10 @@ export function parseStatus(raw: unknown): ProjectorStatus {
   if (sharpness !== undefined) out.sharpness = sharpness;
 
   const hdr = str(r.hdr_enhancer);
-  if (hdr) out.hdr_enhancer = hdr as HdrEnhancer;
+  if (hdr) {
+    const hdrMap: Record<string, HdrEnhancer> = { mid: "middle" };
+    out.hdr_enhancer = (hdrMap[hdr.toLowerCase()] ?? hdr) as HdrEnhancer;
+  }
 
   // Motionflow — bridge sends `motion_flow` or `motionflow`
   const mf = str(r.motion_flow ?? r.motionflow);
@@ -458,12 +458,7 @@ export async function applySettings(
     results.push(res);
     if (!res.ok) break; // stop on first failure
   }
-  // Reality Creation: send on/off + level
-  if (settings.reality_creation !== undefined && settings.reality_creation !== null) {
-    const level = Math.round(settings.reality_creation);
-    const onOff = await sendRealityCreation(level);
-    results.push(...onOff);
-  }
+  // Reality Creation is intentionally not sent for XW5000ES ADCP: tested SET/GET is unsupported.
   return results;
 }
 
