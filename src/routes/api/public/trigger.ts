@@ -119,6 +119,10 @@ export const Route = createFileRoute("/api/public/trigger")({
                 name: l.name,
                 type: l.light_type,
                 on: treatAsOff ? false : r.on_state,
+                // Per-lampa timing — bryggan ansvarar för delay innan kommandot
+                // skickas och för mjukvarufade till målvärdet.
+                delay_ms: r.delay_ms ?? 0,
+                fade_ms: r.fade_ms ?? 0,
               };
               if (!treatAsOff) {
                 if (r.brightness !== null) cmd.brightness = r.brightness;
