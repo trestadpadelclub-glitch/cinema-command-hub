@@ -50,6 +50,8 @@ interface LightRow {
   brightness: number;
   kelvin: number;
   color_hex: string;
+  delay_ms: number;
+  fade_ms: number;
 }
 
 const LIGHT_DEFAULTS = { brightness: 80, kelvin: 3000, color_hex: "#ffaa55" };
@@ -77,6 +79,11 @@ export function SceneEditorDialog({ open, onOpenChange, householdCode, scene, on
   // Lights
   const [lightsOn, setLightsOn] = useState<boolean | null>(scene.lights_on);
   const [lightRows, setLightRows] = useState<LightRow[]>([]);
+
+  // Timing — per device
+  const [projectorDelayMs, setProjectorDelayMs] = useState(scene.projector_delay_ms);
+  const [marantzDelayMs, setMarantzDelayMs] = useState(scene.marantz_delay_ms);
+  const [lightsDelayMs, setLightsDelayMs] = useState(scene.lights_delay_ms);
 
   // Reset state whenever dialog opens with a (potentially new) scene
   useEffect(() => {
