@@ -12,7 +12,6 @@ import { SceneGrid } from "@/components/SceneGrid";
 import { MarantzPanel } from "@/components/MarantzPanel";
 import { MarantzRemote } from "@/components/MarantzRemote";
 import { LightsManager } from "@/components/LightsManager";
-import { AutomationSettings } from "@/components/AutomationSettings";
 import { TriggerTester } from "@/components/TriggerTester";
 import { PollingControl } from "@/components/PollingControl";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
