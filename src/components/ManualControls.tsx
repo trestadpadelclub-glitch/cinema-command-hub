@@ -106,7 +106,7 @@ const SECTION_INFO: Record<string, string> = {
 };
 
 const XW5000ES_ADCP_NOTE =
-  "Visas som scen-/referensvärde i appen. Din XW5000ES accepterar inte denna justering stabilt via ADCP, så inget kommando skickas.";
+  "Skickas via korrigerad ADCP numeric-syntax i bridge v9.";
 
 const PIC_MODE_INFO: Record<PicMode, string> = {
   cinema_film_1:
@@ -336,7 +336,7 @@ export function ManualControls({ settings, onChange, showPowerAction }: Props) {
           max={100}
           step={1}
           suffix="%"
-          onChange={(v) => onChange({ ...settings, laser_output: v })}
+          onChange={(v) => update("laser_output", v, { laser_output: v })}
         />
 
         <SliderRow
@@ -347,7 +347,7 @@ export function ManualControls({ settings, onChange, showPowerAction }: Props) {
           min={0}
           max={100}
           step={1}
-          onChange={(v) => onChange({ ...settings, brightness: v })}
+          onChange={(v) => update("brightness", v, { brightness: v })}
         />
 
         <SliderRow
@@ -357,7 +357,7 @@ export function ManualControls({ settings, onChange, showPowerAction }: Props) {
           min={0}
           max={100}
           step={1}
-          onChange={(v) => onChange({ ...settings, contrast: v })}
+          onChange={(v) => update("contrast", v, { contrast: v })}
         />
 
         <SliderRow
@@ -368,7 +368,7 @@ export function ManualControls({ settings, onChange, showPowerAction }: Props) {
           min={0}
           max={100}
           step={1}
-          onChange={(v) => onChange({ ...settings, color: v })}
+          onChange={(v) => update("color", v, { color: v })}
         />
 
         <SliderRow
@@ -379,7 +379,7 @@ export function ManualControls({ settings, onChange, showPowerAction }: Props) {
           min={0}
           max={100}
           step={1}
-          onChange={(v) => onChange({ ...settings, reality_creation: Math.round(v) })}
+          onChange={(v) => update("reality_creation", Math.round(v), { reality_creation: Math.round(v) })}
         />
 
         <Card className="p-5">
