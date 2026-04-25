@@ -1,52 +1,21 @@
 import { useEffect, useState } from "react";
-import {
-  Lightbulb,
-  Play,
-  Pencil,
-  Settings2,
-  Power,
-  Loader2,
-  Zap,
-} from "lucide-react";
+import { Lightbulb, Play, Pencil, Loader2, Zap } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { ManualControls } from "@/components/ManualControls";
-import { SceneLightsDialog } from "@/components/SceneLightsDialog";
+import { SceneEditorDialog } from "@/components/SceneEditorDialog";
 import { SceneTriggersDialog } from "@/components/SceneTriggersDialog";
 import { fetchTriggers, type SceneTrigger } from "@/lib/triggers";
 import { toast } from "sonner";
-import {
-  sendScene,
-  type ProjectorSettings,
-  type SceneLightCommand,
-} from "@/lib/projector";
+import { sendScene, type SceneLightCommand } from "@/lib/projector";
 import {
   fetchScenes,
-  fetchInputs,
   fetchLights,
   fetchSceneLights,
   updateScene,
   type Scene,
-  type MarantzInput,
 } from "@/lib/scenes";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 interface Props {
   householdCode: string;
@@ -56,25 +25,17 @@ interface Props {
 
 export function SceneGrid({ householdCode, activeSceneId }: Props) {
   const [scenes, setScenes] = useState<Scene[]>([]);
-  const [inputs, setInputs] = useState<MarantzInput[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [editing, setEditing] = useState<Scene | null>(null);
-  const [tuning, setTuning] = useState<Scene | null>(null);
-  const [tuningLights, setTuningLights] = useState<Scene | null>(null);
   const [tuningTriggers, setTuningTriggers] = useState<Scene | null>(null);
   const [triggers, setTriggers] = useState<SceneTrigger[]>([]);
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([
-      fetchScenes(householdCode),
-      fetchInputs(householdCode),
-      fetchTriggers(householdCode),
-    ])
-      .then(([s, i, t]) => {
+    Promise.all([fetchScenes(householdCode), fetchTriggers(householdCode)])
+      .then(([s, t]) => {
         if (!cancelled) {
           setScenes(s);
-          setInputs(i);
           setTriggers(t);
         }
       })
@@ -85,10 +46,7 @@ export function SceneGrid({ householdCode, activeSceneId }: Props) {
   }, [householdCode]);
 
   const refresh = async () => {
-    const [s, t] = await Promise.all([
-      fetchScenes(householdCode),
-      fetchTriggers(householdCode),
-    ]);
+    const [s, t] = await Promise.all([fetchScenes(householdCode), fetchTriggers(householdCode)]);
     setScenes(s);
     setTriggers(t);
   };
@@ -158,43 +116,6 @@ export function SceneGrid({ householdCode, activeSceneId }: Props) {
     setScenes((prev) => prev.map((x) => (x.id === s.id ? { ...x, enabled: val } : x)));
   };
 
-  const [saving, setSaving] = useState(false);
-  const saveEdit = async () => {
-    if (!editing || saving) return;
-    setSaving(true);
-    try {
-      await updateScene(editing.id, {
-        name: editing.name,
-        lights_on: editing.lights_on,
-        marantz_power: editing.marantz_power,
-        marantz_input: editing.marantz_input,
-        marantz_volume: editing.marantz_volume,
-        scene_payload: editing.scene_payload,
-      });
-      toast.success("Scen sparad");
-      setEditing(null);
-      refresh();
-    } catch (e) {
-      const msg = String(e instanceof Error ? e.message : e);
-      const isFetchFail = msg.includes("Failed to fetch") || msg.includes("NetworkError");
-      toast.error("Kunde inte spara scenen", {
-        description: isFetchFail
-          ? "Nätverksfel mot databasen. Stäng av eventuell ad-blocker / privacy-extension för denna sida och försök igen."
-          : msg,
-      });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const saveTuning = async (settings: ProjectorSettings) => {
-    if (!tuning) return;
-    await updateScene(tuning.id, { projector_settings: settings });
-    toast.success(`Tuning sparad för "${tuning.name}"`);
-    setTuning(null);
-    refresh();
-  };
-
   return (
     <>
       <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
@@ -227,12 +148,8 @@ export function SceneGrid({ householdCode, activeSceneId }: Props) {
                 {s.name}
               </h3>
               <div className="flex items-center gap-1 text-[10px] text-muted-foreground mb-3 min-h-[14px]">
-                {s.lights_on === true && (
-                  <Lightbulb className="h-3 w-3 text-amber-400" />
-                )}
-                {s.marantz_input && (
-                  <span className="truncate">{s.marantz_input}</span>
-                )}
+                {s.lights_on === true && <Lightbulb className="h-3 w-3 text-amber-400" />}
+                {s.marantz_input && <span className="truncate">{s.marantz_input}</span>}
                 {triggers.some((t) => t.scene_id === s.id && t.enabled) && (
                   <Badge
                     variant="secondary"
@@ -265,18 +182,9 @@ export function SceneGrid({ householdCode, activeSceneId }: Props) {
                   variant="ghost"
                   className="h-8 w-8 p-0"
                   onClick={() => setEditing(s)}
-                  title="Byt namn / källa"
+                  title="Redigera scen (bild · ljud · ljus · timing)"
                 >
                   <Pencil className="h-3.5 w-3.5" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-8 w-8 p-0"
-                  onClick={() => setTuningLights(s)}
-                  title="Tuna lampor för denna scen"
-                >
-                  <Lightbulb className="h-3.5 w-3.5 text-amber-400" />
                 </Button>
                 <Button
                   size="sm"
@@ -287,179 +195,20 @@ export function SceneGrid({ householdCode, activeSceneId }: Props) {
                 >
                   <Zap className="h-3.5 w-3.5 text-amber-400" />
                 </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-8 w-8 p-0"
-                  onClick={() => setTuning(s)}
-                  title="Tuna projektor-inställningar"
-                >
-                  <Settings2 className="h-3.5 w-3.5" />
-                </Button>
               </div>
             </Card>
           );
         })}
       </div>
 
-      {/* Edit name / lights / input dialog */}
-      <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Redigera scen</DialogTitle>
-          </DialogHeader>
-          {editing && (
-            <div className="space-y-4">
-              <div className="space-y-1">
-                <Label>Namn</Label>
-                <Input
-                  value={editing.name}
-                  onChange={(e) => setEditing({ ...editing, name: e.target.value })}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label>Scen-payload (skickas till backend som value)</Label>
-                <Input
-                  value={editing.scene_payload ?? String(editing.scene_number)}
-                  onChange={(e) =>
-                    setEditing({ ...editing, scene_payload: e.target.value })
-                  }
-                  placeholder={String(editing.scene_number)}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label>Marantz Power</Label>
-                <Select
-                  value={editing.marantz_power ?? "none"}
-                  onValueChange={(v) =>
-                    setEditing({
-                      ...editing,
-                      marantz_power: v === "none" ? null : (v as "on" | "off"),
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">— rör inte —</SelectItem>
-                    <SelectItem value="on">Slå på</SelectItem>
-                    <SelectItem value="off">Stäng av</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <Label>Marantz Input</Label>
-                <Select
-                  value={editing.marantz_input ?? "none"}
-                  onValueChange={(v) =>
-                    setEditing({
-                      ...editing,
-                      marantz_input: v === "none" ? null : v,
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">— rör inte —</SelectItem>
-                    {inputs.map((i) => (
-                      <SelectItem key={i.id} value={i.marantz_code}>
-                        {i.label} ({i.marantz_code})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <Label>Marantz Volym (0-98, tomt = rör inte)</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  max={98}
-                  value={editing.marantz_volume ?? ""}
-                  onChange={(e) =>
-                    setEditing({
-                      ...editing,
-                      marantz_volume: e.target.value === "" ? null : Number(e.target.value),
-                    })
-                  }
-                />
-              </div>
-              <div className="flex items-center justify-between rounded-lg border p-3">
-                <div className="flex items-center gap-2">
-                  <Lightbulb className="h-4 w-4 text-amber-400" />
-                  <Label>Tänd ljus när scen körs</Label>
-                </div>
-                <Select
-                  value={
-                    editing.lights_on === null
-                      ? "none"
-                      : editing.lights_on
-                        ? "on"
-                        : "off"
-                  }
-                  onValueChange={(v) =>
-                    setEditing({
-                      ...editing,
-                      lights_on: v === "none" ? null : v === "on",
-                    })
-                  }
-                >
-                  <SelectTrigger className="w-32">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Rör inte</SelectItem>
-                    <SelectItem value="on">Tänd</SelectItem>
-                    <SelectItem value="off">Släck</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setEditing(null)} disabled={saving}>
-              Avbryt
-            </Button>
-            <Button onClick={saveEdit} disabled={saving}>
-              {saving && <Loader2 className="h-4 w-4 animate-spin mr-1.5" />}
-              Spara
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Tuning dialog */}
-      <Dialog open={!!tuning} onOpenChange={(o) => !o && setTuning(null)}>
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              <span className="flex items-center gap-2">
-                <Settings2 className="h-5 w-5" />
-                Tuna projektor — {tuning?.name}
-              </span>
-            </DialogTitle>
-          </DialogHeader>
-          {tuning && (
-            <SceneTuner
-              initial={tuning.projector_settings}
-              onSave={saveTuning}
-              onCancel={() => setTuning(null)}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Lights tuning dialog */}
-      {tuningLights && (
-        <SceneLightsDialog
-          open={!!tuningLights}
-          onOpenChange={(o) => !o && setTuningLights(null)}
+      {/* Unified scene editor (Bild · Ljud · Ljus · Timing) */}
+      {editing && (
+        <SceneEditorDialog
+          open={!!editing}
+          onOpenChange={(o) => !o && setEditing(null)}
           householdCode={householdCode}
-          sceneId={tuningLights.id}
-          sceneName={tuningLights.name}
+          scene={editing}
+          onSaved={refresh}
         />
       )}
 
@@ -478,35 +227,5 @@ export function SceneGrid({ householdCode, activeSceneId }: Props) {
         />
       )}
     </>
-  );
-}
-
-function SceneTuner({
-  initial,
-  onSave,
-  onCancel,
-}: {
-  initial: ProjectorSettings;
-  onSave: (s: ProjectorSettings) => void;
-  onCancel: () => void;
-}) {
-  const [draft, setDraft] = useState<ProjectorSettings>(initial);
-  return (
-    <div className="space-y-4">
-      <p className="text-xs text-muted-foreground">
-        Reglagen skickar live till projektorn (förhandsgranskning). Klicka Spara för att skriva
-        värdena till scenen.
-      </p>
-      <ManualControls settings={draft} onChange={setDraft} showPowerAction />
-      <div className="flex justify-end gap-2 sticky bottom-0 bg-background pt-2">
-        <Button variant="ghost" onClick={onCancel}>
-          Avbryt
-        </Button>
-        <Button onClick={() => onSave(draft)}>
-          <Power className="h-4 w-4 mr-1.5" />
-          Spara till scen
-        </Button>
-      </div>
-    </div>
   );
 }
