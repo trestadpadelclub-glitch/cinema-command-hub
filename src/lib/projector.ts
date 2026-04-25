@@ -725,6 +725,10 @@ export interface SceneLightCommand {
   brightness?: number;
   kelvin?: number;
   color?: string;
+  /** Bryggan väntar så här länge innan denna lampa uppdateras. */
+  delay_ms?: number;
+  /** Mjukvarufade till målvärdet. 0 = direkt. */
+  fade_ms?: number;
 }
 
 export interface SceneCommandPayload {
@@ -735,15 +739,39 @@ export interface SceneCommandPayload {
   marantzVolume?: number | null;
   lightsOn?: boolean | null;
   sceneLights?: SceneLightCommand[];
+  /** Fördröjning innan FÖRSTA projektor-kommandot. */
+  projectorDelayMs?: number;
+  /** Fördröjning innan FÖRSTA marantz-kommandot. */
+  marantzDelayMs?: number;
+  /** Fördröjning innan FÖRSTA ljus-kommandot. */
+  lightsDelayMs?: number;
 }
 
 /** Skicka en scen — först {action:"scene", value:N}, sen ev. extra parametrar. */
 export async function sendScene(p: SceneCommandPayload): Promise<CommandResult[]> {
   const results: CommandResult[] = [];
+  let projectorDelayPending = p.projectorDelayMs ?? 0;
+  let marantzDelayPending = p.marantzDelayMs ?? 0;
+  let lightsDelayPending = p.lightsDelayMs ?? 0;
+  const waitProjector = async () => {
+    if (projectorDelayPending > 0) await sleep(projectorDelayPending);
+    projectorDelayPending = 0;
+  };
+  const waitMarantz = async () => {
+    if (marantzDelayPending > 0) await sleep(marantzDelayPending);
+    marantzDelayPending = 0;
+  };
+  const waitLights = async () => {
+    if (lightsDelayPending > 0) await sleep(lightsDelayPending);
+    lightsDelayPending = 0;
+  };
+
+  await waitProjector();
   results.push(
     await sendCommand({ action: "scene" as Action, value: p.scenePayload }),
   );
   if (p.lightsOn === true || p.lightsOn === false) {
+    await waitLights();
     results.push(
       await postJson(
         lightsUrl(),
@@ -753,6 +781,7 @@ export async function sendScene(p: SceneCommandPayload): Promise<CommandResult[]
     );
   }
   if (p.sceneLights && p.sceneLights.length > 0) {
+    await waitLights();
     results.push(
       await postJson(
         lightsUrl(),
@@ -763,9 +792,9 @@ export async function sendScene(p: SceneCommandPayload): Promise<CommandResult[]
   }
   // Marantz power FIRST — om "off" så skippa input/volym
   if (p.marantzPower === "on" || p.marantzPower === "off") {
+    await waitMarantz();
     results.push(await sendMarantz(p.marantzPower === "on" ? "PWON" : "PWSTANDBY"));
     if (p.marantzPower === "off") {
-      // Skippa input/volym när vi just stängt av
       if (p.projectorSettings && Object.keys(p.projectorSettings).length > 0) {
         const more = await applySettings(p.projectorSettings);
         results.push(...more);
@@ -774,9 +803,11 @@ export async function sendScene(p: SceneCommandPayload): Promise<CommandResult[]
     }
   }
   if (p.marantzInput) {
+    await waitMarantz();
     results.push(await sendMarantz(`SI${p.marantzInput}`));
   }
   if (typeof p.marantzVolume === "number") {
+    await waitMarantz();
     const v = String(p.marantzVolume).padStart(2, "0");
     results.push(await sendMarantz(`MV${v}`));
   }
