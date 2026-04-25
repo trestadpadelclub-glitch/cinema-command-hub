@@ -342,7 +342,7 @@ export function ManualControls({ settings, onChange, showPowerAction }: Props) {
         <SliderRow
           label="Brightness"
           info={`${SECTION_INFO.brightness} ${XW5000ES_ADCP_NOTE}`}
-          hint="50 = neutral · sparas i scenen men skickas inte via ADCP"
+          hint="50 = neutral · skickas via bridge v9"
           value={settings.brightness ?? 50}
           min={0}
           max={100}
@@ -363,7 +363,7 @@ export function ManualControls({ settings, onChange, showPowerAction }: Props) {
         <SliderRow
           label="Color"
           info={`${SECTION_INFO.color} ${XW5000ES_ADCP_NOTE}`}
-          hint="50 = neutral mättnad · sparas i scenen men skickas inte via ADCP"
+          hint="50 = neutral mättnad · skickas via bridge v9"
           value={settings.color ?? 50}
           min={0}
           max={100}
@@ -374,7 +374,7 @@ export function ManualControls({ settings, onChange, showPowerAction }: Props) {
         <SliderRow
           label="Reality Creation"
           info={`${SECTION_INFO.reality_creation} ${XW5000ES_ADCP_NOTE}`}
-          hint="0 = av · sparas i scenen men skickas inte via ADCP"
+          hint="0 = av · skickas som real_cre/real_cre_reso via bridge v9"
           value={settings.reality_creation ?? 20}
           min={0}
           max={100}
@@ -482,7 +482,7 @@ export function ManualControls({ settings, onChange, showPowerAction }: Props) {
         <SliderRow
           label="Sharpness"
           info={`${SECTION_INFO.sharpness} ${XW5000ES_ADCP_NOTE}`}
-          hint="0 = naturlig · sparas i scenen men skickas inte via ADCP"
+          hint="0 = naturlig · skickas via bridge v9"
           value={settings.sharpness ?? 0}
           min={0}
           max={100}
