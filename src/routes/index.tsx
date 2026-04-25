@@ -12,7 +12,6 @@ import { SceneGrid } from "@/components/SceneGrid";
 import { MarantzPanel } from "@/components/MarantzPanel";
 import { MarantzRemote } from "@/components/MarantzRemote";
 import { LightsManager } from "@/components/LightsManager";
-import { AutomationSettings } from "@/components/AutomationSettings";
 import { TriggerTester } from "@/components/TriggerTester";
 import { PollingControl } from "@/components/PollingControl";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -281,7 +280,7 @@ function Index() {
             <TabsTrigger value="scenes">Scenes</TabsTrigger>
             <TabsTrigger value="devices">Devices</TabsTrigger>
             <TabsTrigger value="marantz">Marantz Remote</TabsTrigger>
-            <TabsTrigger value="automation">Automation</TabsTrigger>
+            <TabsTrigger value="automation">Inställningar</TabsTrigger>
             <TabsTrigger value="calibration">Expert Calibration</TabsTrigger>
           </TabsList>
 
@@ -331,9 +330,6 @@ function Index() {
                 onChange={refetchPollSettings}
                 onManualPoll={() => syncStatus("full", true)}
               />
-            </Section>
-            <Section title="Ljus-automation">
-              <AutomationSettings householdCode={household} />
             </Section>
             <Section title="Scen-triggers (auto-körning)">
               <TriggerTester householdCode={household} />

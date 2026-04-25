@@ -35,42 +35,6 @@ export type Database = {
         }
         Relationships: []
       }
-      automation_events: {
-        Row: {
-          delay_ms: number
-          enabled: boolean
-          event_key: string
-          fade_ms: number
-          household_code: string
-          id: string
-          label: string
-          lights_target: number | null
-          updated_at: string
-        }
-        Insert: {
-          delay_ms?: number
-          enabled?: boolean
-          event_key: string
-          fade_ms?: number
-          household_code: string
-          id?: string
-          label: string
-          lights_target?: number | null
-          updated_at?: string
-        }
-        Update: {
-          delay_ms?: number
-          enabled?: boolean
-          event_key?: string
-          fade_ms?: number
-          household_code?: string
-          id?: string
-          label?: string
-          lights_target?: number | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
       households: {
         Row: {
           code: string
@@ -159,6 +123,8 @@ export type Database = {
         Row: {
           brightness: number | null
           color_hex: string | null
+          delay_ms: number
+          fade_ms: number
           id: string
           in_scene: boolean
           kelvin: number | null
@@ -170,6 +136,8 @@ export type Database = {
         Insert: {
           brightness?: number | null
           color_hex?: string | null
+          delay_ms?: number
+          fade_ms?: number
           id?: string
           in_scene?: boolean
           kelvin?: number | null
@@ -181,6 +149,8 @@ export type Database = {
         Update: {
           brightness?: number | null
           color_hex?: string | null
+          delay_ms?: number
+          fade_ms?: number
           id?: string
           in_scene?: boolean
           kelvin?: number | null
@@ -251,11 +221,14 @@ export type Database = {
           enabled: boolean
           household_code: string
           id: string
+          lights_delay_ms: number
           lights_on: boolean | null
+          marantz_delay_ms: number
           marantz_input: string | null
           marantz_power: string | null
           marantz_volume: number | null
           name: string
+          projector_delay_ms: number
           projector_settings: Json
           scene_number: number
           scene_payload: string | null
@@ -266,11 +239,14 @@ export type Database = {
           enabled?: boolean
           household_code: string
           id?: string
+          lights_delay_ms?: number
           lights_on?: boolean | null
+          marantz_delay_ms?: number
           marantz_input?: string | null
           marantz_power?: string | null
           marantz_volume?: number | null
           name: string
+          projector_delay_ms?: number
           projector_settings?: Json
           scene_number: number
           scene_payload?: string | null
@@ -281,11 +257,14 @@ export type Database = {
           enabled?: boolean
           household_code?: string
           id?: string
+          lights_delay_ms?: number
           lights_on?: boolean | null
+          marantz_delay_ms?: number
           marantz_input?: string | null
           marantz_power?: string | null
           marantz_volume?: number | null
           name?: string
+          projector_delay_ms?: number
           projector_settings?: Json
           scene_number?: number
           scene_payload?: string | null
