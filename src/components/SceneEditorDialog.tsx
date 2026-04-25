@@ -540,3 +540,34 @@ export function SceneEditorDialog({ open, onOpenChange, householdCode, scene, on
     </Dialog>
   );
 }
+
+function DeviceDelayRow({
+  icon,
+  label,
+  value,
+  onChange,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <div className="rounded-lg border p-3 space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          {icon}
+          <span className="font-medium text-sm">{label}</span>
+        </div>
+        <span className="font-mono text-xs text-muted-foreground">{value} ms</span>
+      </div>
+      <Slider
+        value={[value]}
+        min={0}
+        max={5000}
+        step={50}
+        onValueChange={([v]) => onChange(v)}
+      />
+    </div>
+  );
+}
