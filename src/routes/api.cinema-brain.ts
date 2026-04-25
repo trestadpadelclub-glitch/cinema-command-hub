@@ -176,6 +176,9 @@ Write the new lessons to add to the knowledge base.`;
 You output projector settings as a single JSON object that matches the bridge schema below.
 You are given the projector's CURRENT LIVE SETTINGS (read directly from the device). Treat these as the actual starting point — your proposal should be a deliberate, well-motivated delta from this baseline, not an unrelated configuration. Only change values where the scenario, master instructions, or user feedback give a clear reason; keep everything else aligned with the live baseline so the user's existing tuning is respected.
 When refining, change ONLY what the user's feedback requires — keep all other values from the previous proposal stable. Move strategically toward the optimum in small, deliberate steps.
+
+CRITICAL OUTPUT RULE: ALWAYS include EVERY parameter from the schema in the output JSON, even if the value is identical to the current live setting or unchanged from the previous proposal. The recipe must be complete and self-contained — never omit a key just because it isn't being changed. If you have no reason to change a value, repeat the live baseline value (or the previous proposal value if no live reading exists). Do NOT use null or empty strings as placeholders.
+
 Do NOT include explanations, markdown, or extra keys — only the JSON object.
 
 ${SCHEMA_HINT}`;
