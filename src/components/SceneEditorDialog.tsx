@@ -425,16 +425,99 @@ export function SceneEditorDialog({ open, onOpenChange, householdCode, scene, on
               )}
             </TabsContent>
 
-            {/* ----------- TIMING (placeholder för Steg 3) ----------- */}
+            {/* ----------- TIMING ----------- */}
             <TabsContent value="timing" className="flex-1 overflow-y-auto pr-1 space-y-4 mt-4">
-              <div className="rounded-lg border border-dashed border-primary/40 bg-primary/5 p-6 text-center">
-                <Clock className="h-8 w-8 mx-auto mb-3 text-primary/70" />
-                <h4 className="font-semibold mb-1">Timing kommer i nästa steg</h4>
-                <p className="text-xs text-muted-foreground max-w-md mx-auto">
-                  Här kommer du kunna ställa in delay per enhet (projektor, Marantz, ljus) samt
-                  delay + fade per enskild lampa. Databasen är redan förberedd — gränssnittet
-                  kopplas in i Steg 3.
-                </p>
+              <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-xs text-muted-foreground">
+                Delay = hur många millisekunder appen väntar innan kommandot skickas
+                till respektive enhet, räknat från att scenen startas. Fade (på lampor) =
+                hur lång övergångstid bryggan ska använda när ljusnivån ändras.
+              </div>
+
+              <div className="space-y-3">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Enheter
+                </h4>
+                <DeviceDelayRow
+                  icon={<Monitor className="h-4 w-4" />}
+                  label="Projektor"
+                  value={projectorDelayMs}
+                  onChange={setProjectorDelayMs}
+                />
+                <DeviceDelayRow
+                  icon={<Volume2 className="h-4 w-4" />}
+                  label="Marantz"
+                  value={marantzDelayMs}
+                  onChange={setMarantzDelayMs}
+                />
+                <DeviceDelayRow
+                  icon={<Lightbulb className="h-4 w-4 text-amber-400" />}
+                  label="Ljus (master)"
+                  value={lightsDelayMs}
+                  onChange={setLightsDelayMs}
+                />
+              </div>
+
+              <div className="space-y-3">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Per lampa
+                </h4>
+                {lightRows.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-4 text-center">
+                    Inga lampor inlagda.
+                  </p>
+                ) : (
+                  lightRows
+                    .filter((r) => r.in_scene)
+                    .map((r) => (
+                      <div
+                        key={r.light.id}
+                        className="rounded-lg border p-3 space-y-3"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Lightbulb className="h-4 w-4 text-amber-400" />
+                          <span className="font-medium text-sm">{r.light.name}</span>
+                        </div>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-xs">
+                              <Label>Delay</Label>
+                              <span className="font-mono">{r.delay_ms} ms</span>
+                            </div>
+                            <Slider
+                              value={[r.delay_ms]}
+                              min={0}
+                              max={5000}
+                              step={50}
+                              onValueChange={([v]) =>
+                                updateLightRow(r.light.id, { delay_ms: v })
+                              }
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-xs">
+                              <Label>Fade</Label>
+                              <span className="font-mono">{r.fade_ms} ms</span>
+                            </div>
+                            <Slider
+                              value={[r.fade_ms]}
+                              min={0}
+                              max={5000}
+                              step={100}
+                              onValueChange={([v]) =>
+                                updateLightRow(r.light.id, { fade_ms: v })
+                              }
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                )}
+                {lightRows.length > 0 && lightRows.every((r) => !r.in_scene) && (
+                  <p className="text-xs text-muted-foreground italic text-center py-2">
+                    Aktivera lampor under <strong>Ljus</strong>-tabben för att kunna
+                    sätta delay/fade per lampa.
+                  </p>
+                )}
               </div>
             </TabsContent>
           </Tabs>
