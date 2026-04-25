@@ -148,11 +148,29 @@ export const Route = createFileRoute("/api/public/trigger")({
 
         const commands: Cmd[] = [];
 
-        // 1. Scene payload till projektor
-        commands.push({
-          endpoint: "/api/projector",
-          body: { action: "scene", value: scene.scene_payload || String(scene.scene_number) },
-        });
+        // Hjälp: läs projector_settings (kan vara null)
+        const projSettings =
+          scene.projector_settings && typeof scene.projector_settings === "object"
+            ? (scene.projector_settings as Record<string, unknown>)
+            : {};
+        const projPower = projSettings.power;
+
+        // 0. Projektor POWER FIRST (om scenen säger något)
+        //    Speglar applySettings(): power skickas före allt annat på projektorn.
+        if (projPower === "on" || projPower === "off") {
+          commands.push({
+            endpoint: "/api/projector",
+            body: { action: "power", value: projPower },
+          });
+        }
+
+        // 1. Scene payload till projektor — hoppa över om vi just stängt av
+        if (projPower !== "off") {
+          commands.push({
+            endpoint: "/api/projector",
+            body: { action: "scene", value: scene.scene_payload || String(scene.scene_number) },
+          });
+        }
 
         // 2. lights on/off
         if (scene.lights_on === true || scene.lights_on === false) {
