@@ -169,14 +169,25 @@ Write the new lessons to add to the knowledge base.`;
         // ---------- CALIBRATE MODE (initial + refinement) ----------
         const scenario = body.scenario ?? {};
         const currentSettings = body.currentSettings ?? {};
+        const liveSettings = body.liveSettings ?? null;
         const chatHistory = body.chatHistory ?? [];
 
         const systemPrompt = `You are an expert home cinema calibrator for the Sony VPL-XW5000ES laser projector.
 You output projector settings as a single JSON object that matches the bridge schema below.
-When refining, change ONLY what the user's feedback requires — keep all other values from the current settings stable. Move strategically toward the optimum in small, deliberate steps.
+You are given the projector's CURRENT LIVE SETTINGS (read directly from the device). Treat these as the actual starting point — your proposal should be a deliberate, well-motivated delta from this baseline, not an unrelated configuration. Only change values where the scenario, master instructions, or user feedback give a clear reason; keep everything else aligned with the live baseline so the user's existing tuning is respected.
+When refining, change ONLY what the user's feedback requires — keep all other values from the previous proposal stable. Move strategically toward the optimum in small, deliberate steps.
 Do NOT include explanations, markdown, or extra keys — only the JSON object.
 
 ${SCHEMA_HINT}`;
+
+        const liveBlock = liveSettings && Object.keys(liveSettings).length > 0
+          ? `CURRENT LIVE PROJECTOR SETTINGS (read from the device right now — primary baseline):
+${JSON.stringify(liveSettings, null, 2)}
+
+`
+          : `CURRENT LIVE PROJECTOR SETTINGS: (unavailable — projector did not respond; rely on master instructions and scenario)
+
+`;
 
         const baseUserPrompt = `MASTER INSTRUCTIONS (knowledge base):
 ${masterInstructions}
@@ -184,10 +195,10 @@ ${masterInstructions}
 CURRENT SCENARIO:
 ${JSON.stringify(scenario, null, 2)}
 
-CURRENT PROJECTOR SETTINGS (your previous proposal — keep stable unless feedback says otherwise):
+${liveBlock}PREVIOUS AI PROPOSAL (keep stable unless feedback or live readings say otherwise):
 ${JSON.stringify(currentSettings, null, 2)}
 
-Produce the optimal calibration JSON for this scenario.`;
+Produce the optimal calibration JSON for this scenario, weighing the live baseline as a primary input alongside the master instructions and scenario.`;
 
         const messages: Array<{ role: string; content: string }> = [
           { role: "system", content: systemPrompt },
