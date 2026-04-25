@@ -47,7 +47,6 @@ const PIC_MODES: PicMode[] = [
   "bright_tv",
   "game",
   "user1",
-  "user2",
   "user3",
 ];
 const INPUT_OPTS: InputSource[] = ["hdmi1", "hdmi2"];
