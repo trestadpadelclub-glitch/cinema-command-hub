@@ -184,17 +184,6 @@ function Index() {
     };
   }, []);
 
-  const handleManualLights = async () => {
-    setLightsBusy(true);
-    const res = await sendLights("toggle");
-    setLightsBusy(false);
-    if (res.ok) toast.success("Ljus togglat");
-    else
-      toast.error("Kunde inte styra ljuset", {
-        description: res.error || `Status ${res.status}`,
-      });
-  };
-
   if (!ready || !household) {
     return (
       <div className="min-h-screen bg-[image:var(--gradient-screen)] flex items-center justify-center">
