@@ -24,15 +24,7 @@ export interface MarantzInput {
   icon: string;
 }
 
-export interface AutomationEvent {
-  id: string;
-  event_key: string;
-  label: string;
-  delay_ms: number;
-  fade_ms: number;
-  lights_target: number | null;
-  enabled: boolean;
-}
+// AutomationEvent removed — timing now per-scene/per-light
 
 export interface AppSettings {
   household_code: string;
