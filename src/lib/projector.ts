@@ -809,6 +809,7 @@ export async function sendLights(value: "toggle" | "on" | "off"): Promise<Comman
 export async function runBridgeCommands(commands: BridgeEndpointCommand[]): Promise<CommandResult[]> {
   const results: CommandResult[] = [];
   for (const cmd of commands) {
+    if (cmd.delay_ms && cmd.delay_ms > 0) await sleep(cmd.delay_ms);
     results.push(await postJson(endpointUrl(cmd.endpoint), cmd.body, summarizeCommand(cmd.body)));
   }
   return results;
