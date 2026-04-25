@@ -100,7 +100,7 @@ export function MarantzRemote({ householdCode }: Props) {
 
   const handleDirac = (slot: string) => {
     setDiracSlot(slot);
-    const cmd = slot === "OFF" ? "PSDIRAC OFF" : `PSDIRAC SLOT ${slot}`;
+    const cmd = slot === "OFF" ? "PSDIRAC OFF" : `PSDIRAC ${slot}`;
     send(cmd, `Dirac ${slot}`, `dirac`);
   };
 
@@ -312,7 +312,7 @@ export function MarantzRemote({ householdCode }: Props) {
           })}
         </RadioGroup>
         <p className="text-xs text-muted-foreground mt-2">
-          Skickar <code className="text-primary/80">PSDIRAC SLOT 1/2/3</code> eller{" "}
+          Skickar <code className="text-primary/80">PSDIRAC 1/2/3</code> eller{" "}
           <code className="text-primary/80">PSDIRAC OFF</code>.
         </p>
       </Card>
