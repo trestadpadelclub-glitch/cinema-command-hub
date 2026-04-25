@@ -274,11 +274,13 @@ export function ExpertCalibration() {
         const { power: _p, ...rest } = parsed;
         if (Object.keys(rest).length > 0) {
           liveSettings = rest as Record<string, unknown>;
+          setLiveBaseline(liveSettings);
           toast.info("Aktuella projektor-inställningar hämtade", {
             description: `${Object.keys(rest).length} fält lästa från projektorn`,
           });
         }
       } else {
+        setLiveBaseline(null);
         toast.warning("Kunde inte läsa projektorns aktuella läge", {
           description: "AI fortsätter utan live-baseline",
         });
