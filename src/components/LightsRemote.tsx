@@ -101,26 +101,35 @@ export function LightsRemote({ householdCode }: Props) {
   const onScene = scenes.find((s) => s.id === onSceneId) ?? null;
   const offScene = scenes.find((s) => s.id === offSceneId) ?? null;
 
-  /** Bygg scene_lights-payload med offset applicerat på brightness. */
+  /** Bygg scene_lights-payload med offset applicerat på brightness.
+   * Matchar logiken i SceneGrid "Kör": brightness=0 tolkas som släck. */
   const buildOnLightsPayload = (offsetPct: number): SceneLightCommand[] => {
     const out: SceneLightCommand[] = [];
     for (const sl of onSceneLights) {
       if (!sl.in_scene) continue;
       const light = lightsById.get(sl.light_id);
-      if (!light || !light.enabled) continue;
-      const baseBrightness = sl.brightness ?? 80;
-      const adjusted = clamp(Math.round(baseBrightness + offsetPct), 1, 100);
-      out.push({
+      if (!light) continue;
+      // Default brightness=0 betyder "släck" i scenen
+      const baseBrightness = sl.brightness ?? 0;
+      const treatAsOff = sl.on_state && baseBrightness === 0;
+      const cmd: SceneLightCommand = {
         device_id: light.tuya_device_id,
         name: light.name,
         type: light.light_type,
-        on: sl.on_state,
-        brightness: sl.on_state ? adjusted : undefined,
-        kelvin: sl.kelvin ?? undefined,
-        color: sl.color_hex ?? undefined,
-        delay_ms: sl.delay_ms || undefined,
-        fade_ms: sl.fade_ms || undefined,
-      });
+        on: treatAsOff ? false : sl.on_state,
+        delay_ms: sl.delay_ms ?? 0,
+        fade_ms: sl.fade_ms ?? 0,
+      };
+      if (!treatAsOff && sl.on_state) {
+        // Applicera offset, clamp 10..100
+        const adjusted = clamp(Math.round(baseBrightness + offsetPct), 10, 100);
+        cmd.brightness = adjusted;
+        if ((light.light_type === "cct" || light.light_type === "rgbcct") && sl.kelvin !== null)
+          cmd.kelvin = sl.kelvin;
+        if ((light.light_type === "rgb" || light.light_type === "rgbcct") && sl.color_hex)
+          cmd.color = sl.color_hex;
+      }
+      out.push(cmd);
     }
     return out;
   };
