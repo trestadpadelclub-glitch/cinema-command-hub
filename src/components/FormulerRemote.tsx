@@ -537,7 +537,7 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
                 <span className="text-xs">Konfig</span>
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-80 space-y-3">
+            <PopoverContent className="w-96 space-y-3 max-h-[80vh] overflow-y-auto">
               <div>
                 <Label className="text-xs">Marantz-input för Formuler</Label>
                 <Input
