@@ -140,18 +140,20 @@ export function CustomRemote({ householdCode }: Props) {
         if (!treatAsOff) {
           if (r.brightness !== null) cmd.brightness = r.brightness;
           if (r.kelvin !== null) cmd.kelvin = r.kelvin;
-          if (r.color_hex !== null) cmd.color_hex = r.color_hex;
+          if (r.color_hex !== null) cmd.color = r.color_hex;
         }
         return cmd;
       })
       .filter((x): x is SceneLightCommand => x !== null);
 
     return sendScene({
+      scenePayload: s.scene_payload ?? String(s.scene_number),
       projectorSettings: s.projector_settings,
       marantzPower: s.marantz_power ?? undefined,
       marantzInput: s.marantz_input ?? undefined,
       marantzVolume: s.marantz_volume ?? undefined,
-      lights: sceneLights,
+      lightsOn: s.lights_on,
+      sceneLights,
       projectorDelayMs: s.projector_delay_ms,
       marantzDelayMs: s.marantz_delay_ms,
       lightsDelayMs: s.lights_delay_ms,
