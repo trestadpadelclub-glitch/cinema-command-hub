@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Formuler_alfa_status_v9.py
+Formuler_alfa_status_v18.py
 ==========================
+
+v18: Robustare formuler_launch_app — `monkey` med fallback till `am start`,
+v18: och full stdout/stderr-loggning. Versionsbump så det syns att rätt fil körs.
+v18:
 
 v9: Rättar grundfelet för numeric ADCP-kommandon. Laser Output, Brightness,
 Contrast, Sharpness och Reality Creation Resolution skickas nu UTAN citationstecken
