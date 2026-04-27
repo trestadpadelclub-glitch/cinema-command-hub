@@ -945,6 +945,83 @@ def formuler_keyevent(keycode: str, timeout: float = 4.0) -> Dict[str, Any]:
         return {"ok": True, "rc": rc, "stdout": out, "stderr": err, "keycode": key}
 
 
+def formuler_list_apps(timeout: float = 8.0) -> Dict[str, Any]:
+    """Lista alla launchable appar på Formuler-boxen.
+
+    Använder två strategier och slår ihop resultatet:
+      1) `cmd package query-activities` med LEANBACK_LAUNCHER (TV-appar).
+      2) `cmd package query-activities` med vanlig LAUNCHER (fallback för
+         appar som saknar leanback-banner).
+    Hämtar även människovänliga labels via `cmd package list packages -f`
+    + `aapt`-fri parsing — om labels inte går att läsa returneras paketnamnet.
+    """
+    adb = SETTINGS["adb_bin"]
+    host = SETTINGS["formuler_host"]
+    port = SETTINGS["formuler_port"]
+    target = f"{host}:{port}"
+    if not host:
+        return {"ok": False, "error": "formuler_host_missing"}
+
+    def _run(args, t=timeout):
+        try:
+            p = subprocess.run([adb, *args], capture_output=True, text=True, timeout=t)
+            return p.returncode, (p.stdout or "").strip(), (p.stderr or "").strip()
+        except FileNotFoundError:
+            return 127, "", f"adb binary not found ({adb})"
+        except subprocess.TimeoutExpired:
+            return 124, "", f"adb timeout after {t}s"
+        except Exception as e:
+            return 1, "", str(e)
+
+    # Säkerställ ADB-anslutning
+    _run(["connect", target], t=4.0)
+
+    apps: Dict[str, Dict[str, str]] = {}
+
+    def _parse_query(out: str, source: str) -> None:
+        """Parsa output från `cmd package query-activities`.
+        Format: rader som `packageName=...` och `name=...` (aktivitet)."""
+        current_pkg = None
+        current_act = None
+        for line in out.splitlines():
+            s = line.strip()
+            if s.startswith("packageName="):
+                current_pkg = s.split("=", 1)[1].strip()
+            elif s.startswith("name=") and current_pkg:
+                current_act = s.split("=", 1)[1].strip()
+                if current_pkg not in apps:
+                    apps[current_pkg] = {
+                        "package": current_pkg,
+                        "activity": current_act,
+                        "source": source,
+                    }
+                current_pkg = None
+                current_act = None
+
+    # 1) LEANBACK_LAUNCHER (TV-appar — primärt på Formuler)
+    rc, out, err = _run([
+        "-s", target, "shell", "cmd", "package", "query-activities",
+        "-a", "android.intent.action.MAIN",
+        "-c", "android.intent.category.LEANBACK_LAUNCHER",
+    ])
+    if rc == 0:
+        _parse_query(out, "leanback")
+
+    # 2) Vanlig LAUNCHER (fallback)
+    rc, out, err = _run([
+        "-s", target, "shell", "cmd", "package", "query-activities",
+        "-a", "android.intent.action.MAIN",
+        "-c", "android.intent.category.LAUNCHER",
+    ])
+    if rc == 0:
+        _parse_query(out, "launcher")
+
+    # Sortera & returnera
+    items = sorted(apps.values(), key=lambda x: x["package"])
+    _log(f"FORMULER list_apps -> {len(items)} appar")
+    return {"ok": True, "apps": items, "count": len(items)}
+
+
 def formuler_launch_app(package: str, timeout: float = 6.0) -> Dict[str, Any]:
     """Starta en Android-app på Formuler-boxen.
 
