@@ -312,7 +312,7 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
       const res = await listFormulerApps();
       if (!res.ok) {
         toast.error("Kunde inte hämta applistan", {
-          description: res.error || "Bryggan måste vara v19+",
+          description: res.error || "Bryggan måste vara v20+",
         });
         return;
       }
@@ -577,7 +577,7 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label className="text-xs">Android-paket per app</Label>
+                  <Label className="text-xs">Android-startkommando per app</Label>
                   <Button
                     variant="outline"
                     size="sm"
@@ -664,21 +664,29 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
                       {installedApps
                         .filter((app) =>
                           appFilter.trim() === "" ||
-                          app.package.toLowerCase().includes(appFilter.toLowerCase())
+                           app.package.toLowerCase().includes(appFilter.toLowerCase()) ||
+                           app.activity?.toLowerCase().includes(appFilter.toLowerCase()) ||
+                           app.component?.toLowerCase().includes(appFilter.toLowerCase())
                         )
                         .slice(0, 50)
                         .map((app) => (
                           <button
-                            key={app.package}
+                            key={app.component ?? `${app.package}/${app.activity}`}
                             className="w-full text-left text-[10px] font-mono px-1.5 py-1 rounded hover:bg-accent"
                             onClick={() => {
-                              setPackages((p) => ({ ...p, [assignTarget]: app.package }));
+                              const launchValue = app.component ?? `${app.package}/${app.activity}`;
+                              setPackages((p) => ({ ...p, [assignTarget]: launchValue }));
                               setAssignTarget(null);
-                              toast.success(`${assignTarget} → ${app.package}`);
+                              toast.success(`${assignTarget} → ${launchValue}`);
                             }}
                           >
                             {app.package}
-                            <span className="text-muted-foreground ml-1">({app.source})</span>
+                            {app.activity && (
+                              <span className="block text-muted-foreground truncate">
+                                {app.activity}
+                              </span>
+                            )}
+                            <span className="text-muted-foreground">({app.source})</span>
                           </button>
                         ))}
                     </div>
