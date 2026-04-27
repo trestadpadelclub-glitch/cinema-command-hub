@@ -306,6 +306,23 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
   const lightsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /** Skicka brightness till alla lampor i ON-scenen, debouncat under dragning. */
+  const scanInstalledApps = async () => {
+    setScanningApps(true);
+    try {
+      const res = await listFormulerApps();
+      if (!res.ok) {
+        toast.error("Kunde inte hämta applistan", {
+          description: res.error || "Bryggan måste vara v19+",
+        });
+        return;
+      }
+      setInstalledApps(res.apps);
+      toast.success(`Hittade ${res.apps.length} appar`);
+    } finally {
+      setScanningApps(false);
+    }
+  };
+
   const pushLightsBrightness = (pct: number) => {
     if (lightsDebounceRef.current) clearTimeout(lightsDebounceRef.current);
     lightsDebounceRef.current = setTimeout(async () => {
