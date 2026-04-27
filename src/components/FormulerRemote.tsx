@@ -312,7 +312,7 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
       const res = await listFormulerApps();
       if (!res.ok) {
         toast.error("Kunde inte hämta applistan", {
-          description: res.error || "Bryggan måste vara v19+",
+          description: res.error || "Bryggan måste vara v20+",
         });
         return;
       }
@@ -577,7 +577,7 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label className="text-xs">Android-paket per app</Label>
+                  <Label className="text-xs">Android-startkommando per app</Label>
                   <Button
                     variant="outline"
                     size="sm"
@@ -664,7 +664,9 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
                       {installedApps
                         .filter((app) =>
                           appFilter.trim() === "" ||
-                          app.package.toLowerCase().includes(appFilter.toLowerCase())
+                           app.package.toLowerCase().includes(appFilter.toLowerCase()) ||
+                           app.activity?.toLowerCase().includes(appFilter.toLowerCase()) ||
+                           app.component?.toLowerCase().includes(appFilter.toLowerCase())
                         )
                         .slice(0, 50)
                         .map((app) => (
