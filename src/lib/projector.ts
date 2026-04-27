@@ -919,18 +919,19 @@ export async function sendFormulerCommand(keycode: string): Promise<CommandResul
   );
 }
 
-/** Starta en Android-app på Formuler — POST /api/formuler {action:"launch_app", value:"<package>"}. */
-export async function launchFormulerApp(packageName: string): Promise<CommandResult> {
+/** Starta en Android-app på Formuler — value kan vara paket eller exakt paket/aktivitet. */
+export async function launchFormulerApp(packageNameOrComponent: string): Promise<CommandResult> {
   return postJson(
     formulerUrl(),
-    { action: "launch_app", value: packageName },
-    { action: "remote_key" as Action, value: packageName },
+    { action: "launch_app", value: packageNameOrComponent },
+    { action: "remote_key" as Action, value: packageNameOrComponent },
   );
 }
 
 export interface FormulerInstalledApp {
   package: string;
   activity: string;
+  component?: string;
   source: string;
 }
 
