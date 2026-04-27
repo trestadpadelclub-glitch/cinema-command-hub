@@ -852,6 +852,15 @@ export async function sendFormulerCommand(keycode: string): Promise<CommandResul
   );
 }
 
+/** Starta en Android-app på Formuler — POST /api/formuler {action:"launch_app", value:"<package>"}. */
+export async function launchFormulerApp(packageName: string): Promise<CommandResult> {
+  return postJson(
+    formulerUrl(),
+    { action: "launch_app", value: packageName },
+    { action: "remote_key" as Action, value: packageName },
+  );
+}
+
 /** Toggle / explicit set lights — POST /api/lights {action:"lights", value}. */
 export async function sendLights(value: "toggle" | "on" | "off"): Promise<CommandResult> {
   return postJson(

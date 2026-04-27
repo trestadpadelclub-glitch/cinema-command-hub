@@ -941,6 +941,55 @@ def formuler_keyevent(keycode: str, timeout: float = 4.0) -> Dict[str, Any]:
         return {"ok": True, "rc": rc, "stdout": out, "stderr": err, "keycode": key}
 
 
+def formuler_launch_app(package: str, timeout: float = 6.0) -> Dict[str, Any]:
+    """Starta en Android-app på Formuler-boxen via `monkey`.
+
+    Kör: adb shell monkey -p <package> -c android.intent.category.LAUNCHER 1
+    Detta öppnar appens launcher-aktivitet utan att vi behöver känna till den.
+    """
+    adb = SETTINGS["adb_bin"]
+    host = SETTINGS["formuler_host"]
+    port = SETTINGS["formuler_port"]
+    target = f"{host}:{port}"
+    if not host:
+        return {"ok": False, "error": "formuler_host_missing"}
+
+    pkg = (package or "").strip()
+    if not pkg:
+        return {"ok": False, "error": "missing_package"}
+
+    def _run(args, t=timeout):
+        try:
+            p = subprocess.run([adb, *args], capture_output=True, text=True, timeout=t)
+            return p.returncode, (p.stdout or "").strip(), (p.stderr or "").strip()
+        except FileNotFoundError:
+            return 127, "", f"adb binary not found ({adb})"
+        except subprocess.TimeoutExpired:
+            return 124, "", f"adb timeout after {t}s"
+        except Exception as e:
+            return 1, "", str(e)
+
+    with _FORMULER_KEY_LOCK:
+        rc, out, err = _run(["connect", target], t=5.0)
+        line = (out + " " + err).lower()
+        if rc != 0 or not ("connected to" in line or "already" in line):
+            return {"ok": False, "error": f"adb_connect_failed: {(out + err)[:160]}"}
+
+        rc, out, err = _run([
+            "-s", target, "shell", "monkey",
+            "-p", pkg,
+            "-c", "android.intent.category.LAUNCHER",
+            "1",
+        ], t=timeout)
+        # monkey returnerar 0 även när appen inte hittas; kolla stderr/stdout
+        combined = (out + " " + err).lower()
+        if "no activities found" in combined or "error" in combined and rc != 0:
+            return {"ok": False, "rc": rc, "stdout": out, "stderr": err, "package": pkg}
+        if rc != 0:
+            return {"ok": False, "rc": rc, "stdout": out, "stderr": err, "package": pkg}
+        return {"ok": True, "rc": rc, "stdout": out, "stderr": err, "package": pkg}
+
+
 class FormulerMonitor(threading.Thread):
     """Bakgrundstråd som pollar Formuler Z11 via ADB och postar triggers."""
 
@@ -1509,15 +1558,30 @@ class Handler(BaseHTTPRequestHandler):
         self._send_json(200, {"status": "sent", "command": cmd, "reply": reply})
 
     def _handle_formuler(self, body: Dict[str, Any]) -> None:
-        """Skicka ADB keyevent till Formuler Z11.
+        """Skicka ADB keyevent eller starta app på Formuler Z11.
 
         Lovable-appen postar:
-            {"action": "keyevent",   "value": "KEYCODE_DPAD_UP"}
-            {"action": "remote_key", "value": "KEYCODE_HOME"}
-        Båda actionsnamnen accepteras (klienten skickar bägge i ett retry-led).
+            {"action": "keyevent",    "value": "KEYCODE_DPAD_UP"}
+            {"action": "remote_key",  "value": "KEYCODE_HOME"}
+            {"action": "launch_app",  "value": "com.spotify.tv.android"}
         """
         action = str(body.get("action", "")).strip().lower()
         value = body.get("value")
+
+        if action == "launch_app":
+            if not isinstance(value, str) or not value.strip():
+                self._send_json(400, {"error": "missing_value"})
+                return
+            pkg = value.strip()
+            _log(f"FORMULER launch_app -> {pkg}")
+            result = formuler_launch_app(pkg)
+            if result.get("ok"):
+                self._send_json(200, {"status": "sent", "package": pkg, **result})
+            else:
+                _log(f"FORMULER launch_app FAIL: {result}")
+                self._send_json(502, {"status": "error", "package": pkg, **result})
+            return
+
         if action not in ("keyevent", "remote_key", "key", ""):
             self._send_json(400, {"error": "unknown_action", "action": action})
             return
