@@ -7,6 +7,8 @@ import { SettingsDialog } from "@/components/SettingsDialog";
 import { PowerControl } from "@/components/PowerControl";
 import { ManualControls } from "@/components/ManualControls";
 import { AiAssistant } from "@/components/AiAssistant";
+import { RemoteHub } from "@/components/RemoteHub";
+import { CustomRemote } from "@/components/CustomRemote";
 import { ExpertCalibration } from "@/components/ExpertCalibration";
 import { SceneGrid } from "@/components/SceneGrid";
 import { MarantzPanel } from "@/components/MarantzPanel";
@@ -252,8 +254,10 @@ function Index() {
         </header>
 
         <Tabs defaultValue="scenes" className="w-full">
-          <TabsList className="mb-6">
+          <TabsList className="mb-6 flex flex-wrap h-auto">
             <TabsTrigger value="scenes">Scenes</TabsTrigger>
+            <TabsTrigger value="remotes">Remotes</TabsTrigger>
+            <TabsTrigger value="custom">Custom Remote</TabsTrigger>
             <TabsTrigger value="devices">Devices</TabsTrigger>
             <TabsTrigger value="marantz">Marantz Remote</TabsTrigger>
             <TabsTrigger value="automation">Inställningar</TabsTrigger>
@@ -268,6 +272,24 @@ function Index() {
 
             <Section title="Power">
               <PowerControl />
+            </Section>
+          </TabsContent>
+
+          {/* REMOTES — swipeable hub */}
+          <TabsContent value="remotes" className="mt-0">
+            <Section title="Remote Hub">
+              <RemoteHub
+                householdCode={household}
+                settings={settings}
+                onSettingsChange={setSettings}
+              />
+            </Section>
+          </TabsContent>
+
+          {/* CUSTOM REMOTE — macros */}
+          <TabsContent value="custom" className="mt-0">
+            <Section title="Custom Remote — makron">
+              <CustomRemote householdCode={household} />
             </Section>
           </TabsContent>
 
