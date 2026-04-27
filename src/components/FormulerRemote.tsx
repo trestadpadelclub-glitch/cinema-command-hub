@@ -251,6 +251,9 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
       return;
     }
     setAppBusy(key);
+    // Sätt aktiv app direkt så transport-knapparna dyker upp även om
+    // launch misslyckas (paketnamn fel etc.)
+    setActiveApp(key);
     try {
       // 1) Byt Marantz-input till den ingång där Formuler är ansluten
       if (marantzInput.trim()) {
@@ -268,7 +271,6 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
           description: res.error || `Status ${res.status}`,
         });
       } else {
-        setActiveApp(key);
         toast.success(`${label} startad`);
       }
     } finally {
