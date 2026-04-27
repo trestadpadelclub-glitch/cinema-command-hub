@@ -678,7 +678,11 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
                 max={90}
                 step={5}
                 value={[lightsBrightness]}
-                onValueChange={(v) => setLightsBrightness(v[0] ?? 50)}
+                onValueChange={(v) => {
+                  const next = v[0] ?? 50;
+                  setLightsBrightness(next);
+                  pushLightsBrightness(next);
+                }}
                 className="h-44"
                 aria-label="Ljusintensitet"
               />
