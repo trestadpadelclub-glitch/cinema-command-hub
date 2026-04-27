@@ -482,21 +482,66 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
                 </p>
               </div>
               <div className="space-y-2">
+                <Label className="text-xs">Ljus-scener</Label>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs w-12 text-muted-foreground">ON</span>
+                  <Select value={onSceneId} onValueChange={setOnSceneId}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Välj ON-scen" /></SelectTrigger>
+                    <SelectContent>
+                      {scenes.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs w-12 text-muted-foreground">OFF</span>
+                  <Select value={offSceneId} onValueChange={setOffSceneId}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Välj OFF-scen" /></SelectTrigger>
+                    <SelectContent>
+                      {scenes.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-2">
                 <Label className="text-xs">Android-paket per app</Label>
-                {APPS.map((a) => (
-                  <div key={a.key} className="flex items-center gap-2">
-                    <span className="text-xs w-24 text-muted-foreground">{a.label}</span>
-                    <Input
-                      value={packages[a.key]}
-                      onChange={(e) =>
-                        setPackages((p) => ({ ...p, [a.key]: e.target.value.trim() }))
-                      }
-                      className="h-8 text-xs font-mono"
-                    />
-                  </div>
-                ))}
+                {APPS.map((a) => {
+                  const candidates = APP_CANDIDATES[a.key] ?? [];
+                  return (
+                    <div key={a.key} className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs w-24 text-muted-foreground">{a.label}</span>
+                        <Input
+                          value={packages[a.key]}
+                          onChange={(e) =>
+                            setPackages((p) => ({ ...p, [a.key]: e.target.value.trim() }))
+                          }
+                          className="h-8 text-xs font-mono"
+                        />
+                      </div>
+                      {candidates.length > 1 && (
+                        <div className="flex flex-wrap gap-1 pl-26 ml-24">
+                          {candidates.map((c) => (
+                            <Button
+                              key={c}
+                              variant={packages[a.key] === c ? "default" : "outline"}
+                              size="sm"
+                              className="h-6 px-1.5 text-[10px] font-mono"
+                              onClick={() => setPackages((p) => ({ ...p, [a.key]: c }))}
+                            >
+                              {c.split(".").pop()}
+                            </Button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
                 <p className="text-[11px] text-muted-foreground">
-                  Justera om en app inte startar — paketnamn kan variera mellan Formuler-modeller.
+                  Klicka på ett kandidatnamn om appen inte startar — paketnamn varierar mellan Formuler-modeller.
                 </p>
               </div>
             </PopoverContent>
