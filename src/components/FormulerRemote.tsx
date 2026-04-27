@@ -287,14 +287,67 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
     }
   };
 
+  const lightsById = useMemo(() => {
+    const m = new Map<string, Light>();
+    for (const l of lights) m.set(l.id, l);
+    return m;
+  }, [lights]);
+
   const handleLights = async (state: "on" | "off") => {
+    const sceneId = state === "on" ? onSceneId : offSceneId;
+    const scene = scenes.find((s) => s.id === sceneId);
+    if (!scene) {
+      toast.error(`Välj en ${state.toUpperCase()}-scen i Konfig först`);
+      return;
+    }
     setLightsBusy(state);
-    const res = await sendLights(state);
-    setLightsBusy(null);
-    if (!res.ok) {
-      toast.error(`Ljus ${state.toUpperCase()} misslyckades`, {
-        description: res.error || `Status ${res.status}`,
+    try {
+      const sceneLights = await fetchSceneLights(scene.id);
+      const payload: SceneLightCommand[] = [];
+      for (const sl of sceneLights) {
+        if (!sl.in_scene) continue;
+        const light = lightsById.get(sl.light_id);
+        if (!light) continue;
+        const baseBrightness = sl.brightness ?? 0;
+        const treatAsOff = sl.on_state && baseBrightness === 0;
+        const cmd: SceneLightCommand = {
+          device_id: light.tuya_device_id,
+          name: light.name,
+          type: light.light_type,
+          on: treatAsOff ? false : sl.on_state,
+          delay_ms: sl.delay_ms ?? 0,
+          fade_ms: sl.fade_ms ?? 0,
+        };
+        if (!treatAsOff && sl.on_state) {
+          // För ON: använd scenens brightness (kan justeras via separat slider senare)
+          cmd.brightness = baseBrightness || 100;
+          if ((light.light_type === "cct" || light.light_type === "rgbcct") && sl.kelvin !== null)
+            cmd.kelvin = sl.kelvin;
+          if ((light.light_type === "rgb" || light.light_type === "rgbcct") && sl.color_hex)
+            cmd.color = sl.color_hex;
+        }
+        payload.push(cmd);
+      }
+      if (payload.length === 0) {
+        toast.error(`Scenen "${scene.name}" har inga lampor`);
+        return;
+      }
+      const results = await sendScene({
+        scenePayload: scene.scene_payload ?? String(scene.scene_number),
+        sceneLights: payload,
       });
+      const failed = results.find((r) => !r.ok);
+      if (failed) {
+        toast.error(`Ljus ${state.toUpperCase()} misslyckades`, {
+          description: failed.error || `Status ${failed.status}`,
+        });
+      } else {
+        toast.success(`Ljus ${state.toUpperCase()}: ${scene.name}`);
+      }
+    } catch (e) {
+      toast.error(`Ljus ${state.toUpperCase()} fel`, { description: String(e) });
+    } finally {
+      setLightsBusy(null);
     }
   };
 
