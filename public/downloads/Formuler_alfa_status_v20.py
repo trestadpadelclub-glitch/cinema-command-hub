@@ -1059,9 +1059,11 @@ def formuler_launch_app(package: str, timeout: float = 6.0) -> Dict[str, Any]:
     if not host:
         return {"ok": False, "error": "formuler_host_missing"}
 
-    pkg = (package or "").strip()
-    if not pkg:
+    launch_target = (package or "").strip()
+    if not launch_target:
         return {"ok": False, "error": "missing_package"}
+    explicit_component = launch_target if "/" in launch_target else None
+    pkg = launch_target.split("/", 1)[0].strip() if explicit_component else launch_target
 
     # Kända launcher-aktiviteter per paket — utöka vid behov.
     KNOWN_ACTIVITIES = {
@@ -1123,6 +1125,27 @@ def formuler_launch_app(package: str, timeout: float = 6.0) -> Dict[str, Any]:
             return {"ok": False, "error": f"adb_connect_failed: {(out + err)[:160]}"}
 
         attempts = []
+
+        def _try_component(component: str, method: str) -> Optional[Dict[str, Any]]:
+            rc, out, err = _run([
+                "-s", target, "shell", "am", "start",
+                "-n", component,
+            ], t=timeout)
+            fail = _is_failure(rc, out, err)
+            attempts.append({
+                "method": method, "component": component,
+                "rc": rc, "stdout": out, "stderr": err, "fail": fail,
+            })
+            _log(f"FORMULER am start -n {component} rc={rc} out={out!r} err={err!r}")
+            if fail is None:
+                return {"ok": True, "method": method, "package": pkg,
+                        "component": component, "attempts": attempts}
+            return None
+
+        if explicit_component:
+            result = _try_component(explicit_component, "am_start_component")
+            if result:
+                return result
 
         # 1) monkey
         rc, out, err = _run([
