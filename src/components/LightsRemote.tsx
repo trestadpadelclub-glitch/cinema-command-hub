@@ -178,18 +178,24 @@ export function LightsRemote({ householdCode }: Props) {
       for (const sl of offSceneLights) {
         if (!sl.in_scene) continue;
         const light = lightsById.get(sl.light_id);
-        if (!light || !light.enabled) continue;
-        payload.push({
+        if (!light) continue;
+        const treatAsOff = sl.on_state && (sl.brightness ?? 0) === 0;
+        const cmd: SceneLightCommand = {
           device_id: light.tuya_device_id,
           name: light.name,
           type: light.light_type,
-          on: sl.on_state,
-          brightness: sl.on_state ? sl.brightness ?? undefined : undefined,
-          kelvin: sl.kelvin ?? undefined,
-          color: sl.color_hex ?? undefined,
-          delay_ms: sl.delay_ms || undefined,
-          fade_ms: sl.fade_ms || undefined,
-        });
+          on: treatAsOff ? false : sl.on_state,
+          delay_ms: sl.delay_ms ?? 0,
+          fade_ms: sl.fade_ms ?? 0,
+        };
+        if (!treatAsOff && sl.on_state) {
+          if (sl.brightness !== null) cmd.brightness = sl.brightness;
+          if ((light.light_type === "cct" || light.light_type === "rgbcct") && sl.kelvin !== null)
+            cmd.kelvin = sl.kelvin;
+          if ((light.light_type === "rgb" || light.light_type === "rgbcct") && sl.color_hex)
+            cmd.color = sl.color_hex;
+        }
+        payload.push(cmd);
       }
       const results = await sendScene({
         scenePayload: offScene.scene_payload ?? String(offScene.scene_number),
