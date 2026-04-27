@@ -7,6 +7,8 @@ import { SettingsDialog } from "@/components/SettingsDialog";
 import { PowerControl } from "@/components/PowerControl";
 import { ManualControls } from "@/components/ManualControls";
 import { AiAssistant } from "@/components/AiAssistant";
+import { RemoteHub } from "@/components/RemoteHub";
+import { CustomRemote } from "@/components/CustomRemote";
 import { ExpertCalibration } from "@/components/ExpertCalibration";
 import { SceneGrid } from "@/components/SceneGrid";
 import { MarantzPanel } from "@/components/MarantzPanel";
