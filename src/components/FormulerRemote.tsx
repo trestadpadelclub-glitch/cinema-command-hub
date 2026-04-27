@@ -38,10 +38,25 @@ import {
   sendFormulerCommand,
   launchFormulerApp,
   sendMarantz,
-  sendLights,
+  sendScene,
   marantzMvToDb,
   type MarantzStatus,
+  type SceneLightCommand,
 } from "@/lib/projector";
+import {
+  fetchScenes,
+  fetchLights,
+  fetchSceneLights,
+  type Scene,
+  type Light,
+} from "@/lib/scenes";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import logoYoutube from "@/assets/logo-youtube.png";
 import logoRedbull from "@/assets/logo-redbull.png";
@@ -71,11 +86,28 @@ type KeyName = keyof typeof KEYCODES;
 // Standardpaket — kan justeras av användaren via popover om det skiljer sig
 // på just deras Formuler. Används för `adb shell monkey -p <pkg>`.
 const DEFAULT_APPS = {
-  mytvonline3: "com.formuler.mytvonline3",
+  mytvonline3: "com.formuler.mol3",
   youtube: "com.google.android.youtube.tv",
   redbull: "com.nousguide.android.rbtv",
   spotify: "com.spotify.tv.android",
 } as const;
+
+// Kandidatpaket att prova om standardvalet inte finns på boxen.
+const APP_CANDIDATES: Record<AppKey, string[]> = {
+  mytvonline3: [
+    "com.formuler.mol3",
+    "com.formuler.mytvonline3",
+    "com.formuler.mytvonline2",
+    "com.formuler.mytvonline",
+    "com.mytvonline3",
+  ],
+  youtube: [
+    "com.google.android.youtube.tv",
+    "com.google.android.youtube",
+  ],
+  redbull: ["com.nousguide.android.rbtv"],
+  spotify: ["com.spotify.tv.android", "com.spotify.music"],
+};
 
 type AppKey = keyof typeof DEFAULT_APPS;
 
@@ -108,6 +140,9 @@ const APPS: { key: AppKey; label: string; logo?: string; icon?: React.ReactNode 
 const PKG_STORAGE_KEY = "formuler_app_packages";
 const MARANTZ_INPUT_KEY = "formuler_marantz_input";
 const ACTIVE_APP_KEY = "formuler_active_app";
+// Återanvänd samma scen-val som LightsRemote använder
+const LS_ON_KEY = (h: string) => `lights_remote_on_scene_${h}`;
+const LS_OFF_KEY = (h: string) => `lights_remote_off_scene_${h}`;
 
 function loadPackages(): Record<AppKey, string> {
   if (typeof window === "undefined") return { ...DEFAULT_APPS };
@@ -123,7 +158,7 @@ function loadPackages(): Record<AppKey, string> {
 
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
 
-export function FormulerRemote({ marantzStatus, marantzReachable, onMarantzRefresh }: Props) {
+export function FormulerRemote({ householdCode, marantzStatus, marantzReachable, onMarantzRefresh }: Props) {
   const [busy, setBusy] = useState<KeyName | null>(null);
   const [appBusy, setAppBusy] = useState<AppKey | null>(null);
   const [transportBusy, setTransportBusy] = useState<Transport | null>(null);
@@ -138,8 +173,17 @@ export function FormulerRemote({ marantzStatus, marantzReachable, onMarantzRefre
     return v && v in DEFAULT_APPS ? v : null;
   });
 
-  // Lights local UI-state — vi har ingen feedback från lampor här,
-  // så detta är optimistisk view.
+  // Lights — koppla mot scen-systemet (samma val som LightsRemote)
+  const [scenes, setScenes] = useState<Scene[]>([]);
+  const [lights, setLights] = useState<Light[]>([]);
+  const [onSceneId, setOnSceneId] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
+    return localStorage.getItem(LS_ON_KEY(householdCode)) ?? "";
+  });
+  const [offSceneId, setOffSceneId] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
+    return localStorage.getItem(LS_OFF_KEY(householdCode)) ?? "";
+  });
   const [lightsBrightness, setLightsBrightness] = useState<number>(50);
   const [lightsBusy, setLightsBusy] = useState<"on" | "off" | null>(null);
 
@@ -152,6 +196,26 @@ export function FormulerRemote({ marantzStatus, marantzReachable, onMarantzRefre
   useEffect(() => {
     localStorage.setItem(PKG_STORAGE_KEY, JSON.stringify(packages));
   }, [packages]);
+
+  useEffect(() => {
+    if (onSceneId) localStorage.setItem(LS_ON_KEY(householdCode), onSceneId);
+  }, [onSceneId, householdCode]);
+  useEffect(() => {
+    if (offSceneId) localStorage.setItem(LS_OFF_KEY(householdCode), offSceneId);
+  }, [offSceneId, householdCode]);
+
+  // Ladda scener + lampor en gång
+  useEffect(() => {
+    let alive = true;
+    Promise.all([fetchScenes(householdCode), fetchLights(householdCode)])
+      .then(([s, l]) => {
+        if (!alive) return;
+        setScenes(s);
+        setLights(l);
+      })
+      .catch(() => { /* tyst */ });
+    return () => { alive = false; };
+  }, [householdCode]);
 
   useEffect(() => {
     localStorage.setItem(MARANTZ_INPUT_KEY, marantzInput);
@@ -223,14 +287,67 @@ export function FormulerRemote({ marantzStatus, marantzReachable, onMarantzRefre
     }
   };
 
+  const lightsById = useMemo(() => {
+    const m = new Map<string, Light>();
+    for (const l of lights) m.set(l.id, l);
+    return m;
+  }, [lights]);
+
   const handleLights = async (state: "on" | "off") => {
+    const sceneId = state === "on" ? onSceneId : offSceneId;
+    const scene = scenes.find((s) => s.id === sceneId);
+    if (!scene) {
+      toast.error(`Välj en ${state.toUpperCase()}-scen i Konfig först`);
+      return;
+    }
     setLightsBusy(state);
-    const res = await sendLights(state);
-    setLightsBusy(null);
-    if (!res.ok) {
-      toast.error(`Ljus ${state.toUpperCase()} misslyckades`, {
-        description: res.error || `Status ${res.status}`,
+    try {
+      const sceneLights = await fetchSceneLights(scene.id);
+      const payload: SceneLightCommand[] = [];
+      for (const sl of sceneLights) {
+        if (!sl.in_scene) continue;
+        const light = lightsById.get(sl.light_id);
+        if (!light) continue;
+        const baseBrightness = sl.brightness ?? 0;
+        const treatAsOff = sl.on_state && baseBrightness === 0;
+        const cmd: SceneLightCommand = {
+          device_id: light.tuya_device_id,
+          name: light.name,
+          type: light.light_type,
+          on: treatAsOff ? false : sl.on_state,
+          delay_ms: sl.delay_ms ?? 0,
+          fade_ms: sl.fade_ms ?? 0,
+        };
+        if (!treatAsOff && sl.on_state) {
+          // För ON: använd scenens brightness (kan justeras via separat slider senare)
+          cmd.brightness = baseBrightness || 100;
+          if ((light.light_type === "cct" || light.light_type === "rgbcct") && sl.kelvin !== null)
+            cmd.kelvin = sl.kelvin;
+          if ((light.light_type === "rgb" || light.light_type === "rgbcct") && sl.color_hex)
+            cmd.color = sl.color_hex;
+        }
+        payload.push(cmd);
+      }
+      if (payload.length === 0) {
+        toast.error(`Scenen "${scene.name}" har inga lampor`);
+        return;
+      }
+      const results = await sendScene({
+        scenePayload: scene.scene_payload ?? String(scene.scene_number),
+        sceneLights: payload,
       });
+      const failed = results.find((r) => !r.ok);
+      if (failed) {
+        toast.error(`Ljus ${state.toUpperCase()} misslyckades`, {
+          description: failed.error || `Status ${failed.status}`,
+        });
+      } else {
+        toast.success(`Ljus ${state.toUpperCase()}: ${scene.name}`);
+      }
+    } catch (e) {
+      toast.error(`Ljus ${state.toUpperCase()} fel`, { description: String(e) });
+    } finally {
+      setLightsBusy(null);
     }
   };
 
@@ -365,21 +482,66 @@ export function FormulerRemote({ marantzStatus, marantzReachable, onMarantzRefre
                 </p>
               </div>
               <div className="space-y-2">
+                <Label className="text-xs">Ljus-scener</Label>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs w-12 text-muted-foreground">ON</span>
+                  <Select value={onSceneId} onValueChange={setOnSceneId}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Välj ON-scen" /></SelectTrigger>
+                    <SelectContent>
+                      {scenes.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs w-12 text-muted-foreground">OFF</span>
+                  <Select value={offSceneId} onValueChange={setOffSceneId}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Välj OFF-scen" /></SelectTrigger>
+                    <SelectContent>
+                      {scenes.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-2">
                 <Label className="text-xs">Android-paket per app</Label>
-                {APPS.map((a) => (
-                  <div key={a.key} className="flex items-center gap-2">
-                    <span className="text-xs w-24 text-muted-foreground">{a.label}</span>
-                    <Input
-                      value={packages[a.key]}
-                      onChange={(e) =>
-                        setPackages((p) => ({ ...p, [a.key]: e.target.value.trim() }))
-                      }
-                      className="h-8 text-xs font-mono"
-                    />
-                  </div>
-                ))}
+                {APPS.map((a) => {
+                  const candidates = APP_CANDIDATES[a.key] ?? [];
+                  return (
+                    <div key={a.key} className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs w-24 text-muted-foreground">{a.label}</span>
+                        <Input
+                          value={packages[a.key]}
+                          onChange={(e) =>
+                            setPackages((p) => ({ ...p, [a.key]: e.target.value.trim() }))
+                          }
+                          className="h-8 text-xs font-mono"
+                        />
+                      </div>
+                      {candidates.length > 1 && (
+                        <div className="flex flex-wrap gap-1 pl-26 ml-24">
+                          {candidates.map((c) => (
+                            <Button
+                              key={c}
+                              variant={packages[a.key] === c ? "default" : "outline"}
+                              size="sm"
+                              className="h-6 px-1.5 text-[10px] font-mono"
+                              onClick={() => setPackages((p) => ({ ...p, [a.key]: c }))}
+                            >
+                              {c.split(".").pop()}
+                            </Button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
                 <p className="text-[11px] text-muted-foreground">
-                  Justera om en app inte startar — paketnamn kan variera mellan Formuler-modeller.
+                  Klicka på ett kandidatnamn om appen inte startar — paketnamn varierar mellan Formuler-modeller.
                 </p>
               </div>
             </PopoverContent>
