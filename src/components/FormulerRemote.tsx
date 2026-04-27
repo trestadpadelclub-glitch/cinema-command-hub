@@ -317,7 +317,9 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
         return;
       }
       setInstalledApps(res.apps);
-      toast.success(`Hittade ${res.apps.length} appar`);
+      setAssignTarget(null);
+      setAppFilter("");
+      toast.success(`Hittade ${res.apps.length} appar — listan ligger längst ner i Konfig`);
     } finally {
       setScanningApps(false);
     }
@@ -640,10 +642,10 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
                   );
                 })}
                 {installedApps && (
-                  <div className="border border-border rounded p-2 space-y-1.5 bg-muted/30">
+                  <div className="border border-primary/50 rounded p-2 space-y-1.5 bg-primary/5 shadow-[0_0_0_1px_var(--primary)]">
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-[11px] font-medium">
-                        {installedApps.length} installerade appar
+                          Applista: {installedApps.length} appar
                         {assignTarget && ` — tilldela till: ${APPS.find((a) => a.key === assignTarget)?.label}`}
                       </span>
                       <Button
@@ -660,7 +662,7 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
                     </div>
                     {!assignTarget && (
                       <p className="text-[10px] text-muted-foreground">
-                        Klicka på "…" bredvid en app-rad ovan för att tilldela en av dessa, eller bara bläddra listan.
+                        Listan visas här under sökfältet. Klicka på "…" bredvid MyTVOnline3 först om du vill välja startkommando.
                       </p>
                     )}
                     <Input
@@ -670,15 +672,21 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
                       className="h-7 text-[11px]"
                     />
                     <div className="max-h-64 overflow-y-auto space-y-0.5">
-                      {installedApps
-                        .filter((app) =>
+                      {(() => {
+                        const filteredApps = installedApps.filter((app) =>
                           appFilter.trim() === "" ||
                            app.package.toLowerCase().includes(appFilter.toLowerCase()) ||
                            app.activity?.toLowerCase().includes(appFilter.toLowerCase()) ||
                            app.component?.toLowerCase().includes(appFilter.toLowerCase())
-                        )
-                        .slice(0, 100)
-                        .map((app) => {
+                        );
+                        if (filteredApps.length === 0) {
+                          return (
+                            <p className="text-[10px] text-muted-foreground px-1.5 py-2">
+                              Inga appar matchar filtret.
+                            </p>
+                          );
+                        }
+                        return filteredApps.slice(0, 100).map((app) => {
                           const launchValue = app.component ?? `${app.package}/${app.activity ?? ""}`;
                           return (
                             <button
@@ -701,7 +709,8 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
                               <span className="text-muted-foreground">({app.source})</span>
                             </button>
                           );
-                        })}
+                        });
+                      })()}
                     </div>
                   </div>
                 )}
