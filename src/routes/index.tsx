@@ -254,8 +254,10 @@ function Index() {
         </header>
 
         <Tabs defaultValue="scenes" className="w-full">
-          <TabsList className="mb-6">
+          <TabsList className="mb-6 flex flex-wrap h-auto">
             <TabsTrigger value="scenes">Scenes</TabsTrigger>
+            <TabsTrigger value="remotes">Remotes</TabsTrigger>
+            <TabsTrigger value="custom">Custom Remote</TabsTrigger>
             <TabsTrigger value="devices">Devices</TabsTrigger>
             <TabsTrigger value="marantz">Marantz Remote</TabsTrigger>
             <TabsTrigger value="automation">Inställningar</TabsTrigger>
