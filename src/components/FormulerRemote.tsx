@@ -140,6 +140,9 @@ const APPS: { key: AppKey; label: string; logo?: string; icon?: React.ReactNode 
 const PKG_STORAGE_KEY = "formuler_app_packages";
 const MARANTZ_INPUT_KEY = "formuler_marantz_input";
 const ACTIVE_APP_KEY = "formuler_active_app";
+// Återanvänd samma scen-val som LightsRemote använder
+const LS_ON_KEY = (h: string) => `lights_remote_on_scene_${h}`;
+const LS_OFF_KEY = (h: string) => `lights_remote_off_scene_${h}`;
 
 function loadPackages(): Record<AppKey, string> {
   if (typeof window === "undefined") return { ...DEFAULT_APPS };
