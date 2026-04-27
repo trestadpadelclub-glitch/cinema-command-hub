@@ -669,16 +669,22 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
                         .slice(0, 50)
                         .map((app) => (
                           <button
-                            key={app.package}
+                            key={app.component ?? `${app.package}/${app.activity}`}
                             className="w-full text-left text-[10px] font-mono px-1.5 py-1 rounded hover:bg-accent"
                             onClick={() => {
-                              setPackages((p) => ({ ...p, [assignTarget]: app.package }));
+                              const launchValue = app.component ?? `${app.package}/${app.activity}`;
+                              setPackages((p) => ({ ...p, [assignTarget]: launchValue }));
                               setAssignTarget(null);
-                              toast.success(`${assignTarget} → ${app.package}`);
+                              toast.success(`${assignTarget} → ${launchValue}`);
                             }}
                           >
                             {app.package}
-                            <span className="text-muted-foreground ml-1">({app.source})</span>
+                            {app.activity && (
+                              <span className="block text-muted-foreground truncate">
+                                {app.activity}
+                              </span>
+                            )}
+                            <span className="text-muted-foreground">({app.source})</span>
                           </button>
                         ))}
                     </div>
