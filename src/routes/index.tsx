@@ -28,6 +28,7 @@ import {
   type ProjectorSettings,
 } from "@/lib/projector";
 import { useHousehold } from "@/hooks/useHousehold";
+import { useMarantzStatus } from "@/hooks/useMarantzStatus";
 import { fetchAppSettings } from "@/lib/scenes";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -73,6 +74,12 @@ function Index() {
   const [pollIntervalS, setPollIntervalS] = useState(5);
   const [pollEnabled, setPollEnabled] = useState(true);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Global Marantz-status — pollas i samma takt som projektorn.
+  const marantz = useMarantzStatus({
+    enabled: pollEnabled,
+    intervalSeconds: pollIntervalS,
+  });
 
   const syncStatus = async (mode: "power" | "full" = "power", showToast = false) => {
     const res = await getStatus();
@@ -282,6 +289,9 @@ function Index() {
                 householdCode={household}
                 settings={settings}
                 onSettingsChange={setSettings}
+                marantzStatus={marantz.status}
+                marantzReachable={marantz.reachable}
+                onMarantzRefresh={marantz.refetch}
               />
             </Section>
           </TabsContent>
