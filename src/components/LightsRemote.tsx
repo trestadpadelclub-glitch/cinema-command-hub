@@ -363,15 +363,15 @@ export function LightsRemote({ householdCode }: Props) {
           </div>
         </div>
         <Slider
-          min={-50}
-          max={50}
+          min={-90}
+          max={90}
           step={5}
           value={[offset]}
           onValueChange={handleOffsetChange}
           disabled={!onScene || onLightCount === 0}
         />
         <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-          <span>−50%</span>
+          <span>−90%</span>
           <button
             type="button"
             onClick={() => handleOffsetChange([0])}
