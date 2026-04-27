@@ -252,14 +252,16 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
   };
 
   const launchApp = async (key: AppKey, label: string) => {
-    const pkg = packages[key];
-    if (!pkg) {
+    const configured = packages[key];
+    // Bygg lista: konfigurerat paket först, sedan alla kandidater (utan dubbletter)
+    const candidates = Array.from(
+      new Set([configured, ...(APP_CANDIDATES[key] ?? [])].filter(Boolean) as string[])
+    );
+    if (candidates.length === 0) {
       toast.error(`Inget paketnamn för ${label}`);
       return;
     }
     setAppBusy(key);
-    // Sätt aktiv app direkt så transport-knapparna dyker upp även om
-    // launch misslyckas (paketnamn fel etc.)
     setActiveApp(key);
     try {
       // 1) Byt Marantz-input till den ingång där Formuler är ansluten
@@ -271,15 +273,29 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
           });
         }
       }
-      // 2) Starta vald app på Formuler
-      const res = await launchFormulerApp(pkg);
-      if (!res.ok) {
-        toast.error(`Kunde inte starta ${label}`, {
-          description: res.error || `Status ${res.status}`,
-        });
-      } else {
-        toast.success(`${label} startad`);
+      // 2) Starta vald app — prova kandidater i tur och ordning
+      const tried: string[] = [];
+      let lastErr = "";
+      for (const pkg of candidates) {
+        tried.push(pkg);
+        const res = await launchFormulerApp(pkg);
+        if (res.ok) {
+          // Spara paketet som lyckades så nästa gång går direkt
+          if (configured !== pkg) {
+            const next = { ...packages, [key]: pkg };
+            setPackages(next);
+            try {
+              localStorage.setItem(PKG_STORAGE_KEY, JSON.stringify(next));
+            } catch {}
+          }
+          toast.success(`${label} startad`, { description: pkg });
+          return;
+        }
+        lastErr = res.error || `Status ${res.status}`;
       }
+      toast.error(`Kunde inte starta ${label}`, {
+        description: `Provade: ${tried.join(", ")} — ${lastErr}`,
+      });
     } finally {
       setAppBusy(null);
     }
