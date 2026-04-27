@@ -251,6 +251,9 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
       return;
     }
     setAppBusy(key);
+    // Sätt aktiv app direkt så transport-knapparna dyker upp även om
+    // launch misslyckas (paketnamn fel etc.)
+    setActiveApp(key);
     try {
       // 1) Byt Marantz-input till den ingång där Formuler är ansluten
       if (marantzInput.trim()) {
@@ -268,7 +271,6 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
           description: res.error || `Status ${res.status}`,
         });
       } else {
-        setActiveApp(key);
         toast.success(`${label} startad`);
       }
     } finally {
@@ -292,6 +294,49 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
     for (const l of lights) m.set(l.id, l);
     return m;
   }, [lights]);
+
+  // Debounce-ref för ljus-slidern
+  const lightsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /** Skicka brightness till alla lampor i ON-scenen, debouncat under dragning. */
+  const pushLightsBrightness = (pct: number) => {
+    if (lightsDebounceRef.current) clearTimeout(lightsDebounceRef.current);
+    lightsDebounceRef.current = setTimeout(async () => {
+      const scene = scenes.find((s) => s.id === onSceneId);
+      if (!scene) return;
+      try {
+        const sceneLights = await fetchSceneLights(scene.id);
+        const payload: SceneLightCommand[] = [];
+        for (const sl of sceneLights) {
+          if (!sl.in_scene || !sl.on_state) continue;
+          const light = lightsById.get(sl.light_id);
+          if (!light) continue;
+          payload.push({
+            device_id: light.tuya_device_id,
+            name: light.name,
+            type: light.light_type,
+            on: true,
+            brightness: pct,
+            ...((light.light_type === "cct" || light.light_type === "rgbcct") && sl.kelvin !== null
+              ? { kelvin: sl.kelvin }
+              : {}),
+            ...((light.light_type === "rgb" || light.light_type === "rgbcct") && sl.color_hex
+              ? { color: sl.color_hex }
+              : {}),
+            delay_ms: 0,
+            fade_ms: sl.fade_ms ?? 0,
+          });
+        }
+        if (payload.length === 0) return;
+        await sendScene({
+          scenePayload: scene.scene_payload ?? String(scene.scene_number),
+          sceneLights: payload,
+        });
+      } catch {
+        /* tyst under dragning */
+      }
+    }, 200);
+  };
 
   const handleLights = async (state: "on" | "off") => {
     const sceneId = state === "on" ? onSceneId : offSceneId;
@@ -633,7 +678,11 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
                 max={90}
                 step={5}
                 value={[lightsBrightness]}
-                onValueChange={(v) => setLightsBrightness(v[0] ?? 50)}
+                onValueChange={(v) => {
+                  const next = v[0] ?? 50;
+                  setLightsBrightness(next);
+                  pushLightsBrightness(next);
+                }}
                 className="h-44"
                 aria-label="Ljusintensitet"
               />
