@@ -982,6 +982,20 @@ def formuler_list_apps(timeout: float = 8.0) -> Dict[str, Any]:
 
     apps: Dict[str, Dict[str, str]] = {}
 
+    def _add_app(pkg: str, act: str, source: str) -> None:
+        pkg = (pkg or "").strip()
+        act = (act or "").strip()
+        if not pkg or not act:
+            return
+        component = f"{pkg}/{act}"
+        if component not in apps:
+            apps[component] = {
+                "package": pkg,
+                "activity": act,
+                "component": component,
+                "source": source,
+            }
+
     def _parse_query(out: str, source: str) -> None:
         """Parsa output från `cmd package query-activities`.
         Format: rader som `packageName=...` och `name=...` (aktivitet)."""
@@ -989,16 +1003,15 @@ def formuler_list_apps(timeout: float = 8.0) -> Dict[str, Any]:
         current_act = None
         for line in out.splitlines():
             s = line.strip()
-            if s.startswith("packageName="):
-                current_pkg = s.split("=", 1)[1].strip()
-            elif s.startswith("name=") and current_pkg:
-                current_act = s.split("=", 1)[1].strip()
-                if current_pkg not in apps:
-                    apps[current_pkg] = {
-                        "package": current_pkg,
-                        "activity": current_act,
-                        "source": source,
-                    }
+            comp = re.search(r"([A-Za-z0-9_.$]+(?:\.[A-Za-z0-9_.$]+)+)/(\.?[A-Za-z0-9_.$]+)", s)
+            if comp:
+                _add_app(comp.group(1), comp.group(2), source)
+                continue
+            if s.startswith("packageName=") or s.startswith("packageName:"):
+                current_pkg = re.split(r"[:=]", s, 1)[1].strip()
+            elif (s.startswith("name=") or s.startswith("name:")) and current_pkg:
+                current_act = re.split(r"[:=]", s, 1)[1].strip()
+                _add_app(current_pkg, current_act, source)
                 current_pkg = None
                 current_act = None
 
