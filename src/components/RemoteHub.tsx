@@ -3,7 +3,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ManualControls } from "@/components/ManualControls";
 import { MarantzRemote } from "@/components/MarantzRemote";
 import { FormulerRemote } from "@/components/FormulerRemote";
-import { LightsManager } from "@/components/LightsManager";
+import { LightsRemote } from "@/components/LightsRemote";
 import type { ProjectorSettings } from "@/lib/projector";
 
 interface Props {
@@ -44,7 +44,7 @@ export function RemoteHub({ householdCode, settings, onSettingsChange }: Props) 
         <FormulerRemote />
       </TabsContent>
       <TabsContent value="lights" className="mt-4">
-        <LightsManager householdCode={householdCode} />
+        <LightsRemote householdCode={householdCode} />
       </TabsContent>
     </Tabs>
   );
