@@ -379,7 +379,7 @@ export function LightsRemote({ householdCode }: Props) {
           >
             återställ till 0
           </button>
-          <span>+50%</span>
+          <span>+90%</span>
         </div>
       </Card>
     </div>
