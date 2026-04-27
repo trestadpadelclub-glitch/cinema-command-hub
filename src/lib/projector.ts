@@ -150,7 +150,7 @@ export interface CommandResult {
   command?: SingleCommand;
 }
 
-export type BridgeEndpoint = "/api/projector" | "/api/lights" | "/api/marantz";
+export type BridgeEndpoint = "/api/projector" | "/api/lights" | "/api/marantz" | "/api/formuler";
 
 export interface BridgeEndpointCommand {
   endpoint: BridgeEndpoint;
@@ -220,9 +220,25 @@ function marantzUrl(): string {
   return base.replace(/\/+$/, "") + "/api/marantz";
 }
 
+/**
+ * Derive the formuler endpoint from the projector bridge URL.
+ * `<base>/api/projector` -> `<base>/api/formuler`
+ */
+function formulerUrl(): string {
+  const base = getBridgeUrl();
+  if (/\/api\/projector$/i.test(base)) {
+    return base.replace(/\/api\/projector$/i, "/api/formuler");
+  }
+  if (/\/[^/]+$/.test(base)) {
+    return base.replace(/\/[^/]+$/, "/api/formuler");
+  }
+  return base.replace(/\/+$/, "") + "/api/formuler";
+}
+
 function endpointUrl(endpoint: BridgeEndpoint): string {
   if (endpoint === "/api/lights") return lightsUrl();
   if (endpoint === "/api/marantz") return marantzUrl();
+  if (endpoint === "/api/formuler") return formulerUrl();
   return getBridgeUrl();
 }
 
@@ -824,6 +840,15 @@ export async function sendMarantz(value: string): Promise<CommandResult> {
     marantzUrl(),
     { action: "marantz", value },
     { action: "marantz" as Action, value },
+  );
+}
+
+/** Formuler Z11 ADB remote — POST /api/formuler {action:"keyevent", value:"<KEYCODE>"}. */
+export async function sendFormulerCommand(keycode: string): Promise<CommandResult> {
+  return postJson(
+    formulerUrl(),
+    { action: "keyevent", value: keycode },
+    { action: "remote_key" as Action, value: keycode },
   );
 }
 
