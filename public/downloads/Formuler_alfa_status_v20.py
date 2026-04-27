@@ -1968,7 +1968,7 @@ class MarantzMonitor(threading.Thread):
 def main() -> None:
     addr = ("0.0.0.0", SETTINGS["bridge_port"])
     httpd = ThreadingHTTPServer(addr, Handler)
-    _log(f"bridge ready  http://{addr[0]}:{addr[1]} (v19 + Formuler list_apps)")
+    _log(f"bridge ready  http://{addr[0]}:{addr[1]} (v20 + Formuler component launch)")
     _log(f"projector     {SETTINGS['host']}:{SETTINGS['port']} (ADCP)")
     if SETTINGS["marantz_host"]:
         _log(f"marantz       {SETTINGS['marantz_host']}:{SETTINGS['marantz_port']} (Telnet)")
