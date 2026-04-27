@@ -275,6 +275,24 @@ function Index() {
             </Section>
           </TabsContent>
 
+          {/* REMOTES — swipeable hub */}
+          <TabsContent value="remotes" className="mt-0">
+            <Section title="Remote Hub">
+              <RemoteHub
+                householdCode={household}
+                settings={settings}
+                onSettingsChange={setSettings}
+              />
+            </Section>
+          </TabsContent>
+
+          {/* CUSTOM REMOTE — macros */}
+          <TabsContent value="custom" className="mt-0">
+            <Section title="Custom Remote — makron">
+              <CustomRemote householdCode={household} />
+            </Section>
+          </TabsContent>
+
           {/* DEVICES */}
           <TabsContent value="devices" className="mt-0">
             <main className="grid gap-6 lg:grid-cols-[1fr_360px]">
