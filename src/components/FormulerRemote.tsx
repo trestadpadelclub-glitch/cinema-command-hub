@@ -38,10 +38,25 @@ import {
   sendFormulerCommand,
   launchFormulerApp,
   sendMarantz,
-  sendLights,
+  sendScene,
   marantzMvToDb,
   type MarantzStatus,
+  type SceneLightCommand,
 } from "@/lib/projector";
+import {
+  fetchScenes,
+  fetchLights,
+  fetchSceneLights,
+  type Scene,
+  type Light,
+} from "@/lib/scenes";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import logoYoutube from "@/assets/logo-youtube.png";
 import logoRedbull from "@/assets/logo-redbull.png";
