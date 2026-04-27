@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Formuler_alfa_status_v18.py
+Formuler_alfa_status_v20.py
 ==========================
+
+v20: Stöd för exakt Android-komponent (paket/aktivitet) från Hitta appar.
+v20: `launch_app` kan nu ta t.ex. com.pkg/.MainActivity och provar även
+v20: dynamiskt hittade launcher-aktiviteter innan sista paket-fallback.
 
 v18: Robustare formuler_launch_app — `monkey` med fallback till `am start`,
 v18: och full stdout/stderr-loggning. Versionsbump så det syns att rätt fil körs.
