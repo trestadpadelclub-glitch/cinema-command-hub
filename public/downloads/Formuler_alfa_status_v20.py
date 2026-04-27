@@ -1162,19 +1162,18 @@ def formuler_launch_app(package: str, timeout: float = 6.0) -> Dict[str, Any]:
 
         # 2) am start -n med kända aktivitetsnamn
         for activity in KNOWN_ACTIVITIES.get(pkg, []):
-            rc, out, err = _run([
-                "-s", target, "shell", "am", "start",
-                "-n", f"{pkg}/{activity}",
-            ], t=timeout)
-            fail = _is_failure(rc, out, err)
-            attempts.append({
-                "method": "am_start_n", "activity": activity,
-                "rc": rc, "stdout": out, "stderr": err, "fail": fail,
-            })
-            _log(f"FORMULER am start -n {pkg}/{activity} rc={rc} out={out!r} err={err!r}")
-            if fail is None:
-                return {"ok": True, "method": "am_start_n", "package": pkg,
-                        "activity": activity, "attempts": attempts}
+            result = _try_component(f"{pkg}/{activity}", "am_start_known")
+            if result:
+                return result
+
+        # 2b) Hämta faktisk launcher-aktivitet dynamiskt och starta komponenten.
+        listed = formuler_list_apps(timeout=timeout)
+        for app in listed.get("apps", []):
+            if app.get("package") != pkg or not app.get("component"):
+                continue
+            result = _try_component(str(app["component"]), "am_start_discovered")
+            if result:
+                return result
 
         # 3) Generisk MAIN/LAUNCHER-intent mot paketet
         rc, out, err = _run([
