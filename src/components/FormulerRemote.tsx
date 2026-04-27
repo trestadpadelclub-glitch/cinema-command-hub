@@ -166,6 +166,10 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
   const [appBusy, setAppBusy] = useState<AppKey | null>(null);
   const [transportBusy, setTransportBusy] = useState<Transport | null>(null);
   const [packages, setPackages] = useState<Record<AppKey, string>>(() => loadPackages());
+  const [installedApps, setInstalledApps] = useState<FormulerInstalledApp[] | null>(null);
+  const [scanningApps, setScanningApps] = useState(false);
+  const [appFilter, setAppFilter] = useState("");
+  const [assignTarget, setAssignTarget] = useState<AppKey | null>(null);
   const [marantzInput, setMarantzInput] = useState<string>(() => {
     if (typeof window === "undefined") return "";
     return localStorage.getItem(MARANTZ_INPUT_KEY) ?? "";
