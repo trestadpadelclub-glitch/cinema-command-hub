@@ -23,6 +23,7 @@ import {
   VolumeX,
   Plus,
   Minus,
+  Search,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,8 @@ import {
 import {
   sendFormulerCommand,
   launchFormulerApp,
+  listFormulerApps,
+  type FormulerInstalledApp,
   sendMarantz,
   sendScene,
   marantzMvToDb,
@@ -163,6 +166,10 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
   const [appBusy, setAppBusy] = useState<AppKey | null>(null);
   const [transportBusy, setTransportBusy] = useState<Transport | null>(null);
   const [packages, setPackages] = useState<Record<AppKey, string>>(() => loadPackages());
+  const [installedApps, setInstalledApps] = useState<FormulerInstalledApp[] | null>(null);
+  const [scanningApps, setScanningApps] = useState(false);
+  const [appFilter, setAppFilter] = useState("");
+  const [assignTarget, setAssignTarget] = useState<AppKey | null>(null);
   const [marantzInput, setMarantzInput] = useState<string>(() => {
     if (typeof window === "undefined") return "";
     return localStorage.getItem(MARANTZ_INPUT_KEY) ?? "";
@@ -299,6 +306,23 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
   const lightsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /** Skicka brightness till alla lampor i ON-scenen, debouncat under dragning. */
+  const scanInstalledApps = async () => {
+    setScanningApps(true);
+    try {
+      const res = await listFormulerApps();
+      if (!res.ok) {
+        toast.error("Kunde inte hämta applistan", {
+          description: res.error || "Bryggan måste vara v19+",
+        });
+        return;
+      }
+      setInstalledApps(res.apps);
+      toast.success(`Hittade ${res.apps.length} appar`);
+    } finally {
+      setScanningApps(false);
+    }
+  };
+
   const pushLightsBrightness = (pct: number) => {
     if (lightsDebounceRef.current) clearTimeout(lightsDebounceRef.current);
     lightsDebounceRef.current = setTimeout(async () => {
@@ -513,7 +537,7 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
                 <span className="text-xs">Konfig</span>
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-80 space-y-3">
+            <PopoverContent className="w-96 space-y-3 max-h-[80vh] overflow-y-auto">
               <div>
                 <Label className="text-xs">Marantz-input för Formuler</Label>
                 <Input
@@ -552,7 +576,23 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
                 </div>
               </div>
               <div className="space-y-2">
-                <Label className="text-xs">Android-paket per app</Label>
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs">Android-paket per app</Label>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 px-2 text-[11px]"
+                    onClick={scanInstalledApps}
+                    disabled={scanningApps}
+                  >
+                    {scanningApps ? (
+                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                    ) : (
+                      <Search className="h-3 w-3 mr-1" />
+                    )}
+                    Hitta appar
+                  </Button>
+                </div>
                 {APPS.map((a) => {
                   const candidates = APP_CANDIDATES[a.key] ?? [];
                   return (
@@ -566,6 +606,20 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
                           }
                           className="h-8 text-xs font-mono"
                         />
+                        {installedApps && installedApps.length > 0 && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-1.5 text-[10px]"
+                            onClick={() => {
+                              setAssignTarget(a.key);
+                              setAppFilter("");
+                            }}
+                            title="Välj från installerade appar"
+                          >
+                            …
+                          </Button>
+                        )}
                       </div>
                       {candidates.length > 1 && (
                         <div className="flex flex-wrap gap-1 pl-26 ml-24">
@@ -585,8 +639,53 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
                     </div>
                   );
                 })}
+                {assignTarget && installedApps && (
+                  <div className="border border-border rounded p-2 space-y-1.5 bg-muted/30">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[11px] font-medium">
+                        Tilldela till: {APPS.find((a) => a.key === assignTarget)?.label}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-1 text-[10px]"
+                        onClick={() => setAssignTarget(null)}
+                      >
+                        Stäng
+                      </Button>
+                    </div>
+                    <Input
+                      value={appFilter}
+                      onChange={(e) => setAppFilter(e.target.value)}
+                      placeholder="Filtrera (mytv, formuler, spotify...)"
+                      className="h-7 text-[11px]"
+                    />
+                    <div className="max-h-48 overflow-y-auto space-y-0.5">
+                      {installedApps
+                        .filter((app) =>
+                          appFilter.trim() === "" ||
+                          app.package.toLowerCase().includes(appFilter.toLowerCase())
+                        )
+                        .slice(0, 50)
+                        .map((app) => (
+                          <button
+                            key={app.package}
+                            className="w-full text-left text-[10px] font-mono px-1.5 py-1 rounded hover:bg-accent"
+                            onClick={() => {
+                              setPackages((p) => ({ ...p, [assignTarget]: app.package }));
+                              setAssignTarget(null);
+                              toast.success(`${assignTarget} → ${app.package}`);
+                            }}
+                          >
+                            {app.package}
+                            <span className="text-muted-foreground ml-1">({app.source})</span>
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+                )}
                 <p className="text-[11px] text-muted-foreground">
-                  Klicka på ett kandidatnamn om appen inte startar — paketnamn varierar mellan Formuler-modeller.
+                  Tryck "Hitta appar" för att lista alla installerade Android-appar på boxen, klicka sedan på "…" bredvid en app-rad för att tilldela.
                 </p>
               </div>
             </PopoverContent>
