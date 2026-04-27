@@ -158,7 +158,7 @@ function loadPackages(): Record<AppKey, string> {
 
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
 
-export function FormulerRemote({ marantzStatus, marantzReachable, onMarantzRefresh }: Props) {
+export function FormulerRemote({ householdCode, marantzStatus, marantzReachable, onMarantzRefresh }: Props) {
   const [busy, setBusy] = useState<KeyName | null>(null);
   const [appBusy, setAppBusy] = useState<AppKey | null>(null);
   const [transportBusy, setTransportBusy] = useState<Transport | null>(null);
@@ -173,8 +173,17 @@ export function FormulerRemote({ marantzStatus, marantzReachable, onMarantzRefre
     return v && v in DEFAULT_APPS ? v : null;
   });
 
-  // Lights local UI-state — vi har ingen feedback från lampor här,
-  // så detta är optimistisk view.
+  // Lights — koppla mot scen-systemet (samma val som LightsRemote)
+  const [scenes, setScenes] = useState<Scene[]>([]);
+  const [lights, setLights] = useState<Light[]>([]);
+  const [onSceneId, setOnSceneId] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
+    return localStorage.getItem(LS_ON_KEY(householdCode)) ?? "";
+  });
+  const [offSceneId, setOffSceneId] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
+    return localStorage.getItem(LS_OFF_KEY(householdCode)) ?? "";
+  });
   const [lightsBrightness, setLightsBrightness] = useState<number>(50);
   const [lightsBusy, setLightsBusy] = useState<"on" | "off" | null>(null);
 
@@ -187,6 +196,26 @@ export function FormulerRemote({ marantzStatus, marantzReachable, onMarantzRefre
   useEffect(() => {
     localStorage.setItem(PKG_STORAGE_KEY, JSON.stringify(packages));
   }, [packages]);
+
+  useEffect(() => {
+    if (onSceneId) localStorage.setItem(LS_ON_KEY(householdCode), onSceneId);
+  }, [onSceneId, householdCode]);
+  useEffect(() => {
+    if (offSceneId) localStorage.setItem(LS_OFF_KEY(householdCode), offSceneId);
+  }, [offSceneId, householdCode]);
+
+  // Ladda scener + lampor en gång
+  useEffect(() => {
+    let alive = true;
+    Promise.all([fetchScenes(householdCode), fetchLights(householdCode)])
+      .then(([s, l]) => {
+        if (!alive) return;
+        setScenes(s);
+        setLights(l);
+      })
+      .catch(() => { /* tyst */ });
+    return () => { alive = false; };
+  }, [householdCode]);
 
   useEffect(() => {
     localStorage.setItem(MARANTZ_INPUT_KEY, marantzInput);
