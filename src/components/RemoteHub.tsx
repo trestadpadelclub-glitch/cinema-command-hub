@@ -4,15 +4,25 @@ import { ManualControls } from "@/components/ManualControls";
 import { MarantzRemote } from "@/components/MarantzRemote";
 import { FormulerRemote } from "@/components/FormulerRemote";
 import { LightsRemote } from "@/components/LightsRemote";
-import type { ProjectorSettings } from "@/lib/projector";
+import type { ProjectorSettings, MarantzStatus } from "@/lib/projector";
 
 interface Props {
   householdCode: string;
   settings: ProjectorSettings;
   onSettingsChange: (s: ProjectorSettings) => void;
+  marantzStatus: MarantzStatus | null;
+  marantzReachable: boolean | null;
+  onMarantzRefresh: () => Promise<void>;
 }
 
-export function RemoteHub({ householdCode, settings, onSettingsChange }: Props) {
+export function RemoteHub({
+  householdCode,
+  settings,
+  onSettingsChange,
+  marantzStatus,
+  marantzReachable,
+  onMarantzRefresh,
+}: Props) {
   return (
     <Tabs defaultValue="sony" className="w-full">
       <TabsList className="grid w-full grid-cols-4 h-auto">
@@ -41,7 +51,12 @@ export function RemoteHub({ householdCode, settings, onSettingsChange }: Props) 
         <MarantzRemote householdCode={householdCode} />
       </TabsContent>
       <TabsContent value="formuler" className="mt-4">
-        <FormulerRemote />
+        <FormulerRemote
+          householdCode={householdCode}
+          marantzStatus={marantzStatus}
+          marantzReachable={marantzReachable}
+          onMarantzRefresh={onMarantzRefresh}
+        />
       </TabsContent>
       <TabsContent value="lights" className="mt-4">
         <LightsRemote householdCode={householdCode} />
