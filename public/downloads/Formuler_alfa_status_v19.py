@@ -1633,6 +1633,13 @@ class Handler(BaseHTTPRequestHandler):
                 _log(f"marantz status error: {e}")
                 self._send_json(200, {"power": "unknown", "error": str(e)})
             return
+        if path == "/api/formuler/list_apps":
+            try:
+                self._send_json(200, formuler_list_apps())
+            except Exception as e:
+                _log(f"formuler list_apps error: {e}")
+                self._send_json(200, {"ok": False, "error": str(e), "apps": []})
+            return
         self._send_json(404, {"error": "not_found", "path": self.path})
 
     def do_POST(self) -> None:
