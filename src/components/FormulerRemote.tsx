@@ -639,28 +639,37 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
                     </div>
                   );
                 })}
-                {assignTarget && installedApps && (
+                {installedApps && (
                   <div className="border border-border rounded p-2 space-y-1.5 bg-muted/30">
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-[11px] font-medium">
-                        Tilldela till: {APPS.find((a) => a.key === assignTarget)?.label}
+                        {installedApps.length} installerade appar
+                        {assignTarget && ` — tilldela till: ${APPS.find((a) => a.key === assignTarget)?.label}`}
                       </span>
                       <Button
                         variant="ghost"
                         size="sm"
                         className="h-6 px-1 text-[10px]"
-                        onClick={() => setAssignTarget(null)}
+                        onClick={() => {
+                          setInstalledApps(null);
+                          setAssignTarget(null);
+                        }}
                       >
-                        Stäng
+                        Dölj
                       </Button>
                     </div>
+                    {!assignTarget && (
+                      <p className="text-[10px] text-muted-foreground">
+                        Klicka på "…" bredvid en app-rad ovan för att tilldela en av dessa, eller bara bläddra listan.
+                      </p>
+                    )}
                     <Input
                       value={appFilter}
                       onChange={(e) => setAppFilter(e.target.value)}
                       placeholder="Filtrera (mytv, formuler, spotify...)"
                       className="h-7 text-[11px]"
                     />
-                    <div className="max-h-48 overflow-y-auto space-y-0.5">
+                    <div className="max-h-64 overflow-y-auto space-y-0.5">
                       {installedApps
                         .filter((app) =>
                           appFilter.trim() === "" ||
@@ -668,32 +677,36 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
                            app.activity?.toLowerCase().includes(appFilter.toLowerCase()) ||
                            app.component?.toLowerCase().includes(appFilter.toLowerCase())
                         )
-                        .slice(0, 50)
-                        .map((app) => (
-                          <button
-                            key={app.component ?? `${app.package}/${app.activity}`}
-                            className="w-full text-left text-[10px] font-mono px-1.5 py-1 rounded hover:bg-accent"
-                            onClick={() => {
-                              const launchValue = app.component ?? `${app.package}/${app.activity}`;
-                              setPackages((p) => ({ ...p, [assignTarget]: launchValue }));
-                              setAssignTarget(null);
-                              toast.success(`${assignTarget} → ${launchValue}`);
-                            }}
-                          >
-                            {app.package}
-                            {app.activity && (
-                              <span className="block text-muted-foreground truncate">
-                                {app.activity}
-                              </span>
-                            )}
-                            <span className="text-muted-foreground">({app.source})</span>
-                          </button>
-                        ))}
+                        .slice(0, 100)
+                        .map((app) => {
+                          const launchValue = app.component ?? `${app.package}/${app.activity ?? ""}`;
+                          return (
+                            <button
+                              key={launchValue}
+                              className="w-full text-left text-[10px] font-mono px-1.5 py-1 rounded hover:bg-accent disabled:opacity-50"
+                              disabled={!assignTarget}
+                              onClick={() => {
+                                if (!assignTarget) return;
+                                setPackages((p) => ({ ...p, [assignTarget]: launchValue }));
+                                setAssignTarget(null);
+                                toast.success(`${assignTarget} → ${launchValue}`);
+                              }}
+                            >
+                              {app.package}
+                              {app.activity && (
+                                <span className="block text-muted-foreground truncate">
+                                  {app.activity}
+                                </span>
+                              )}
+                              <span className="text-muted-foreground">({app.source})</span>
+                            </button>
+                          );
+                        })}
                     </div>
                   </div>
                 )}
                 <p className="text-[11px] text-muted-foreground">
-                  Tryck "Hitta appar" för att lista alla installerade Android-appar på boxen, klicka sedan på "…" bredvid en app-rad för att tilldela.
+                  Tryck "Hitta appar" för att lista alla installerade Android-appar på boxen. Listan visas direkt under — klicka på "…" bredvid en app-rad för att tilldela.
                 </p>
               </div>
             </PopoverContent>
