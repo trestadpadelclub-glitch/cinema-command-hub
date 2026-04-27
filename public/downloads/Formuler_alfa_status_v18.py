@@ -946,10 +946,17 @@ def formuler_keyevent(keycode: str, timeout: float = 4.0) -> Dict[str, Any]:
 
 
 def formuler_launch_app(package: str, timeout: float = 6.0) -> Dict[str, Any]:
-    """Starta en Android-app på Formuler-boxen via `monkey`.
+    """Starta en Android-app på Formuler-boxen.
 
-    Kör: adb shell monkey -p <package> -c android.intent.category.LAUNCHER 1
-    Detta öppnar appens launcher-aktivitet utan att vi behöver känna till den.
+    Strategi:
+      1) `adb shell monkey -p <pkg> -c LAUNCHER 1` — fungerar för de flesta appar.
+      2) Om monkey rapporterar "No activities found" eller liknande, fallback
+         till `adb shell am start -n <pkg>/<aktivitet>` med en lista kända
+         launcher-aktiviteter per paket.
+      3) Sista fallback: `am start -a android.intent.action.MAIN -c LAUNCHER -p <pkg>`.
+
+    Returnerar alltid full stdout/stderr i svaret så vi kan diagnostisera
+    från Lovable-toast eller bridge-loggen.
     """
     adb = SETTINGS["adb_bin"]
     host = SETTINGS["formuler_host"]
@@ -962,6 +969,27 @@ def formuler_launch_app(package: str, timeout: float = 6.0) -> Dict[str, Any]:
     if not pkg:
         return {"ok": False, "error": "missing_package"}
 
+    # Kända launcher-aktiviteter per paket — utöka vid behov.
+    KNOWN_ACTIVITIES = {
+        "com.formuler.mytvonline3": [
+            "com.formuler.mytvonline3.MainActivity",
+            "com.formuler.mytvonline3.activities.SplashActivity",
+        ],
+        "com.google.android.youtube.tv": [
+            "com.google.android.apps.youtube.tv.activity.ShellActivity",
+        ],
+        "com.google.android.youtube.tvkids": [
+            "com.google.android.apps.youtube.kids.tv.activity.MainActivity",
+        ],
+        "com.nousguide.android.rbtv": [
+            "com.nousguide.android.rbtv.MainActivity",
+            "com.nousguide.android.rbtv.applib.activities.MainActivity",
+        ],
+        "com.spotify.tv.android": [
+            "com.spotify.tv.android.SpotifyTVActivity",
+        ],
+    }
+
     def _run(args, t=timeout):
         try:
             p = subprocess.run([adb, *args], capture_output=True, text=True, timeout=t)
@@ -973,25 +1001,84 @@ def formuler_launch_app(package: str, timeout: float = 6.0) -> Dict[str, Any]:
         except Exception as e:
             return 1, "", str(e)
 
+    def _is_failure(rc: int, out: str, err: str) -> Optional[str]:
+        """Returnera felorsak (string) om utdatan tyder på misslyckande, annars None."""
+        combined = (out + " " + err).lower()
+        markers = (
+            "no activities found",
+            "monkey aborted",
+            "does not have a main activity",
+            "error type",
+            "error: activity",
+            "error: not found",
+            "unable to resolve intent",
+            "permission denial",
+            "java.lang.",
+        )
+        for m in markers:
+            if m in combined:
+                return m
+        if rc != 0:
+            return f"rc={rc}"
+        return None
+
     with _FORMULER_KEY_LOCK:
         rc, out, err = _run(["connect", target], t=5.0)
         line = (out + " " + err).lower()
         if rc != 0 or not ("connected to" in line or "already" in line):
             return {"ok": False, "error": f"adb_connect_failed: {(out + err)[:160]}"}
 
+        attempts = []
+
+        # 1) monkey
         rc, out, err = _run([
             "-s", target, "shell", "monkey",
             "-p", pkg,
             "-c", "android.intent.category.LAUNCHER",
             "1",
         ], t=timeout)
-        # monkey returnerar 0 även när appen inte hittas; kolla stderr/stdout
-        combined = (out + " " + err).lower()
-        if "no activities found" in combined or "error" in combined and rc != 0:
-            return {"ok": False, "rc": rc, "stdout": out, "stderr": err, "package": pkg}
-        if rc != 0:
-            return {"ok": False, "rc": rc, "stdout": out, "stderr": err, "package": pkg}
-        return {"ok": True, "rc": rc, "stdout": out, "stderr": err, "package": pkg}
+        fail = _is_failure(rc, out, err)
+        attempts.append({"method": "monkey", "rc": rc, "stdout": out, "stderr": err, "fail": fail})
+        _log(f"FORMULER monkey {pkg} rc={rc} out={out!r} err={err!r}")
+        if fail is None:
+            return {"ok": True, "method": "monkey", "package": pkg, "attempts": attempts}
+
+        # 2) am start -n med kända aktivitetsnamn
+        for activity in KNOWN_ACTIVITIES.get(pkg, []):
+            rc, out, err = _run([
+                "-s", target, "shell", "am", "start",
+                "-n", f"{pkg}/{activity}",
+            ], t=timeout)
+            fail = _is_failure(rc, out, err)
+            attempts.append({
+                "method": "am_start_n", "activity": activity,
+                "rc": rc, "stdout": out, "stderr": err, "fail": fail,
+            })
+            _log(f"FORMULER am start -n {pkg}/{activity} rc={rc} out={out!r} err={err!r}")
+            if fail is None:
+                return {"ok": True, "method": "am_start_n", "package": pkg,
+                        "activity": activity, "attempts": attempts}
+
+        # 3) Generisk MAIN/LAUNCHER-intent mot paketet
+        rc, out, err = _run([
+            "-s", target, "shell", "am", "start",
+            "-a", "android.intent.action.MAIN",
+            "-c", "android.intent.category.LAUNCHER",
+            "-p", pkg,
+        ], t=timeout)
+        fail = _is_failure(rc, out, err)
+        attempts.append({"method": "am_start_intent", "rc": rc, "stdout": out, "stderr": err, "fail": fail})
+        _log(f"FORMULER am start -p {pkg} rc={rc} out={out!r} err={err!r}")
+        if fail is None:
+            return {"ok": True, "method": "am_start_intent", "package": pkg, "attempts": attempts}
+
+        return {
+            "ok": False,
+            "package": pkg,
+            "error": f"all_methods_failed (last: {fail})",
+            "attempts": attempts,
+        }
+
 
 
 class FormulerMonitor(threading.Thread):
