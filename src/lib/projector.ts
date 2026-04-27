@@ -843,6 +843,73 @@ export async function sendMarantz(value: string): Promise<CommandResult> {
   );
 }
 
+/** Status från Marantz/Denon-receivern via bryggan. */
+export interface MarantzStatus {
+  power?: "on" | "off" | string;
+  /** Volym i Marantz-skalan 0..98 (MV-värde). */
+  volume?: number;
+  mute?: boolean;
+  input?: string;
+}
+
+export async function getMarantzStatus(): Promise<CommandResult> {
+  const url = marantzUrl() + "/status";
+  try {
+    const res = await fetch(url, {
+      method: "GET",
+      headers: {
+        "ngrok-skip-browser-warning": "true",
+        Accept: "application/json",
+      },
+    });
+    const text = await res.text();
+    let data: unknown = text;
+    try { data = text ? JSON.parse(text) : undefined; } catch { /* keep raw */ }
+    return { ok: res.ok, status: res.status, data };
+  } catch (err) {
+    return {
+      ok: false,
+      status: 0,
+      error: err instanceof Error ? err.message : String(err),
+    };
+  }
+}
+
+export function parseMarantzStatus(raw: unknown): MarantzStatus {
+  const out: MarantzStatus = {};
+  if (!raw || typeof raw !== "object") return out;
+  const r = raw as Record<string, unknown>;
+
+  const pw = typeof r.power === "string" ? r.power.toLowerCase().trim() : undefined;
+  if (pw === "on" || pw === "off" || pw === "standby") {
+    out.power = pw === "standby" ? "off" : pw;
+  }
+
+  const vol = r.volume;
+  if (typeof vol === "number") {
+    out.volume = Math.max(0, Math.min(98, Math.round(vol)));
+  } else if (typeof vol === "string" && vol.trim() !== "" && !isNaN(Number(vol))) {
+    out.volume = Math.max(0, Math.min(98, Math.round(Number(vol))));
+  }
+
+  const mu = r.mute;
+  if (typeof mu === "boolean") out.mute = mu;
+  else if (typeof mu === "string") out.mute = mu.toLowerCase() === "on" || mu.toLowerCase() === "true";
+
+  const si = r.input;
+  if (typeof si === "string" && si.trim()) out.input = si.trim().toUpperCase();
+
+  return out;
+}
+
+/**
+ * Marantz MV-värde till dB.
+ * Skalan: MV80 = 0 dB, MV00 = -80 dB, MV98 = +18 dB. Linjär 1:1.
+ */
+export function marantzMvToDb(mv: number): number {
+  return Math.round((mv - 80) * 10) / 10;
+}
+
 /** Formuler Z11 ADB remote — POST /api/formuler {action:"keyevent", value:"<KEYCODE>"}. */
 export async function sendFormulerCommand(keycode: string): Promise<CommandResult> {
   return postJson(
