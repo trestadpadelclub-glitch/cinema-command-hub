@@ -928,6 +928,33 @@ export async function launchFormulerApp(packageName: string): Promise<CommandRes
   );
 }
 
+export interface FormulerInstalledApp {
+  package: string;
+  activity: string;
+  source: string;
+}
+
+/** Lista alla launchable appar på Formuler — GET /api/formuler/list_apps. */
+export async function listFormulerApps(): Promise<{
+  ok: boolean;
+  apps: FormulerInstalledApp[];
+  error?: string;
+}> {
+  try {
+    const url = formulerUrl().replace(/\/api\/formuler$/i, "/api/formuler/list_apps");
+    const res = await fetch(url, {
+      headers: { accept: "application/json", "ngrok-skip-browser-warning": "true" },
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { ok: false, apps: [], error: data?.error || `Status ${res.status}` };
+    }
+    return { ok: !!data.ok, apps: Array.isArray(data.apps) ? data.apps : [], error: data.error };
+  } catch (e) {
+    return { ok: false, apps: [], error: String(e) };
+  }
+}
+
 /** Toggle / explicit set lights — POST /api/lights {action:"lights", value}. */
 export async function sendLights(value: "toggle" | "on" | "off"): Promise<CommandResult> {
   return postJson(
