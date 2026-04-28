@@ -1336,14 +1336,16 @@ class FormulerMonitor(threading.Thread):
             play = "stopped"
 
         audio_text = sections["AUDIO"]
+        music_text = sections["MUSIC"]
         audio_lower = audio_text.lower()
+        music_lower = music_text.lower()
 
-        # Signal 1: klassisk isMusicActive-flagga
+        # Signal 1: klassisk isMusicActive-flagga (från MUSIC-sektionen)
         music_active = (
-            "ismusicactive()=true" in audio_lower
-            or "ismusicactive=true" in audio_lower
-            or "ismusicactive: true" in audio_lower
-            or "ismusicactive: 1" in audio_lower
+            "ismusicactive()=true" in music_lower
+            or "ismusicactive=true" in music_lower
+            or "ismusicactive: true" in music_lower
+            or "ismusicactive: 1" in music_lower
         )
 
         # Signal 2: AudioPlaybackConfiguration med state:started/playing.
