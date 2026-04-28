@@ -2129,7 +2129,9 @@ def main() -> None:
             f"formuler      {SETTINGS['formuler_host']}:{SETTINGS['formuler_port']} (ADB) "
             f"-> {SETTINGS['trigger_url']} hh={SETTINGS['household_code'] or '(SAKNAS!)'}"
         )
-        FormulerMonitor().start()
+        global _formuler_monitor
+        _formuler_monitor = FormulerMonitor()
+        _formuler_monitor.start()
     else:
         _log("formuler      (avstängd — sätt FORMULER_HOST=<ip>)")
     cc_target = SETTINGS["chromecast_name"] or "(första hittade)"
