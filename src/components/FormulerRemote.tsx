@@ -991,6 +991,19 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
               />
               <span className="text-[9px] text-muted-foreground">10–90%</span>
             </div>
+            <div className="flex flex-col items-center gap-1 pt-2 border-t border-border w-full">
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground text-center leading-tight">
+                Auto<br />film
+              </Label>
+              <Switch
+                checked={movieAutoOn}
+                onCheckedChange={toggleMovieAuto}
+                disabled={movieAutoBusy || movieScenes.length !== 2}
+                aria-label="Aktivera automatiska film-scener (4 & 5)"
+              />
+              <span className="text-[9px] text-muted-foreground">
+                {movieAutoOn ? "På" : "Av"}
+              </span>
           </div>
 
           {/* MITT: D-Pad + transport */}
