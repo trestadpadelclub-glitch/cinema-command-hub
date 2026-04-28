@@ -133,6 +133,22 @@ const TRANSPORT_KEYCODES: Record<Transport, string> = {
   rew: "KEYCODE_MEDIA_REWIND",
 };
 
+// App-specifika genvägar — visas bara när motsvarande app är aktiv.
+// För MyTVOnline3 mappas TV Guide / VOD / TV-serier till de färgade
+// fjärrknapparna (RED/GREEN/YELLOW/BLUE) som appen lyssnar på.
+type AppShortcut = { id: string; label: string; keycode: string };
+const APP_SHORTCUTS: Record<AppKey, AppShortcut[]> = {
+  mytvonline3: [
+    { id: "guide", label: "TV Guide", keycode: "KEYCODE_GUIDE" },
+    { id: "back", label: "Backa", keycode: "KEYCODE_BACK" },
+    { id: "vod", label: "VOD", keycode: "KEYCODE_PROG_BLUE" },
+    { id: "series", label: "TV Serier", keycode: "KEYCODE_PROG_YELLOW" },
+  ],
+  youtube: [],
+  redbull: [],
+  spotify: [],
+};
+
 const APPS: { key: AppKey; label: string; logo?: string; icon?: React.ReactNode }[] = [
   { key: "mytvonline3", label: "MyTVOnline3", icon: <Tv className="h-7 w-7" /> },
   { key: "youtube", label: "YouTube", logo: logoYoutube },
@@ -868,6 +884,31 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
                 {transports.map((t) =>
                   transportBtn(t, transportLabel[t], transportIcon[t]),
                 )}
+              </div>
+            )}
+
+            {/* App-genvägar — t.ex. MyTVOnline3: TV Guide / Backa / VOD / TV Serier */}
+            {activeApp && (APP_SHORTCUTS[activeApp]?.length ?? 0) > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-border/50 w-full justify-center">
+                {APP_SHORTCUTS[activeApp].map((s) => (
+                  <Button
+                    key={s.id}
+                    variant="secondary"
+                    size="sm"
+                    className="h-8 px-2.5 text-[11px]"
+                    onClick={async () => {
+                      const r = await sendFormulerCommand(s.keycode);
+                      if (!r.ok) {
+                        toast.error(`${s.label} misslyckades`, {
+                          description: r.error || `Status ${r.status}`,
+                        });
+                      }
+                    }}
+                    title={`${s.label} (${s.keycode})`}
+                  >
+                    {s.label}
+                  </Button>
+                ))}
               </div>
             )}
           </div>
