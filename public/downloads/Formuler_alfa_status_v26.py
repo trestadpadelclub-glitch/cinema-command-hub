@@ -1333,12 +1333,37 @@ class FormulerMonitor(threading.Thread):
 
         audio_text = sections["AUDIO"]
         audio_lower = audio_text.lower()
-        audio_active = (
+
+        # Signal 1: klassisk isMusicActive-flagga
+        music_active = (
             "ismusicactive()=true" in audio_lower
             or "ismusicactive=true" in audio_lower
             or "ismusicactive: true" in audio_lower
             or "ismusicactive: 1" in audio_lower
         )
+
+        # Signal 2: AudioPlaybackConfiguration med state:started/playing.
+        # Formuler/MOL3/VLC rapporterar uppspelning så här. Vi ignorerar
+        # systemljud (SoundPool, USAGE_ASSISTANCE_*, USAGE_NOTIFICATION).
+        playback_active = False
+        for raw_line in audio_text.splitlines():
+            line = raw_line.strip()
+            if not line:
+                continue
+            low = line.lower()
+            if "audioplaybackconfiguration" not in low and "player piid" not in low:
+                continue
+            if "state:started" not in low and "state:playing" not in low and "state=started" not in low and "state=playing" not in low:
+                continue
+            # Ignorera systemljud
+            if "soundpool" in low:
+                continue
+            if "usage_assistance" in low or "usage_notification" in low or "usage_alarm" in low:
+                continue
+            playback_active = True
+            break
+
+        audio_active = music_active or playback_active
         audio_hint = "active" if audio_active else "inactive"
 
         # Fallback: vissa Formuler-firmware/appkombinationer rapporterar alltid
