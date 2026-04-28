@@ -1260,6 +1260,12 @@ class FormulerMonitor(threading.Thread):
         if rc != 0:
             # vanligaste orsaken: tappad TCP-anslutning. Markera för reconnect.
             self._connected = False
+            # Diagnostik: logga felet (rate-limited så vi inte spammar)
+            now = time.time()
+            if (now - self._last_shell_fail_log) > 10.0:
+                snippet = (err or out or "").strip().replace("\n", " ")[:160]
+                _log(f"FORMULER shell FAIL rc={rc} err={snippet!r}")
+                self._last_shell_fail_log = now
             return None
         return out
 
