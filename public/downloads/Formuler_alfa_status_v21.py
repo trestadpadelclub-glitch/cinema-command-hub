@@ -871,6 +871,7 @@ def marantz_status() -> Dict[str, Any]:
 #   1. dumpsys power            -> mWakefulness=Awake/Asleep/Dozing
 #   2. dumpsys window           -> mCurrentFocus  (vilken app är i fokus)
 #   3. dumpsys media_session    -> state=PlaybackState {state=N ...}
+#   4. dumpsys audio            -> fallback om MediaSession alltid visar state=0
 #
 # PlaybackState-konstanter (frameworks/base/media/.../PlaybackState.java):
 #   0=NONE  1=STOPPED  2=PAUSED  3=PLAYING  4=FAST_FORWARDING  5=REWINDING
@@ -896,6 +897,14 @@ _PB_STOPPED = {0, 1, 7}                  # ingen / stoppad / fel
 _RE_PB_STATE = re.compile(r"PlaybackState\s*\{[^}]*?state=(\d+)")
 _RE_WAKE = re.compile(r"mWakefulness=(\w+)")
 _RE_FOCUS = re.compile(r"mCurrentFocus=.*?\s([a-zA-Z0-9_.]+)/")
+_RE_FOCUS_COMPONENT = re.compile(r"(?:mCurrentFocus|mFocusedApp).*?\s([A-Za-z0-9_.$]+/[A-Za-z0-9_.$]+)")
+
+# Appar där tystnad efter aktivt ljud sannolikt betyder paus snarare än att boxen är idle.
+_FORMULER_PLAYER_PACKAGES = {
+    "tv.formuler.mol3.real",
+    "com.formuler.mytvonline3",
+    "org.videolan.vlc",
+}
 
 
 
