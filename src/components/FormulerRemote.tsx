@@ -1120,6 +1120,89 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
           </Button>
         </div>
       </Card>
+
+      {/* Tangentbord för app-sökning (skickar tecken som ADB-keycodes) */}
+      <Dialog open={keyboardOpen} onOpenChange={setKeyboardOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Search className="h-4 w-4" /> Sök i appen
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Input
+              autoFocus
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  void submitSearchText();
+                }
+              }}
+              placeholder="Skriv sökord och tryck Enter…"
+              className="h-10"
+            />
+            <div className="space-y-1.5">
+              {[
+                ["1","2","3","4","5","6","7","8","9","0"],
+                ["q","w","e","r","t","y","u","i","o","p"],
+                ["a","s","d","f","g","h","j","k","l"],
+                ["z","x","c","v","b","n","m"],
+              ].map((row, ri) => (
+                <div key={ri} className="flex gap-1 justify-center">
+                  {row.map((ch) => (
+                    <Button
+                      key={ch}
+                      variant="secondary"
+                      size="sm"
+                      className="h-9 w-9 p-0 text-sm"
+                      onClick={() => setSearchText((t) => t + ch)}
+                    >
+                      {ch}
+                    </Button>
+                  ))}
+                </div>
+              ))}
+              <div className="flex gap-1 justify-center">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="h-9 px-3"
+                  onClick={() => setSearchText((t) => t + " ")}
+                >
+                  Mellanslag
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="h-9 px-3"
+                  onClick={() => setSearchText((t) => t.slice(0, -1))}
+                >
+                  ⌫
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-9 px-3"
+                  onClick={() => setSearchText("")}
+                >
+                  Rensa
+                </Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setKeyboardOpen(false)}>
+              Avbryt
+            </Button>
+            <Button onClick={() => void submitSearchText()} disabled={sendingText || !searchText}>
+              {sendingText ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : null}
+              Sök
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
