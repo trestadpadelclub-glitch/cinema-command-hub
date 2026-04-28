@@ -1415,6 +1415,23 @@ class FormulerMonitor(threading.Thread):
         focus = st["focus"]
         pb_int = st.get("pb_int", 0)
         audio = st.get("audio", "-")
+        audio_raw = st.get("audio_raw", "")
+        audio_active = audio == "active"
+
+        if audio_active != self._last_audio_active:
+            _log(f"FORMULER audio {self._last_audio_active} -> {audio_active} raw={audio_raw or '-'}")
+            self._last_audio_active = audio_active
+            self._last_audio_change = now
+
+        if (
+            pb_int == 0
+            and focus in _FORMULER_PLAYER_PACKAGES
+            and play == "paused"
+            and self._play_state in ("playing", "paused")
+            and self._last_audio_change > 0
+            and (now - self._last_audio_change) >= self.stale_stop_sec
+        ):
+            play = "stopped"
 
         # Diagnostik: logga rå PlaybackState så fort den ändras (även om vår
         # tolkning playing/paused/stopped är samma som innan).
@@ -1430,7 +1447,7 @@ class FormulerMonitor(threading.Thread):
             _log(
                 f"FORMULER heartbeat box={'on' if box_on else 'off'} "
                 f"play={play} pb_int={pb_int} audio={audio} state={self._play_state} "
-                f"focus={focus or '-'}"
+                f"focus={focus or '-'} audio_raw={audio_raw or '-'}"
             )
             self._last_heartbeat = now
 
