@@ -1526,6 +1526,23 @@ class FormulerMonitor(threading.Thread):
         # --- Playback -----------------------------------------------------
         prev = self._play_state
 
+        # GATE: movie_*-triggers skickas BARA när MOL3 (MyTVOnline) är i fokus.
+        # När man tittar på YouTube/Red Bull/VLC etc. ska ljus/ljud skötas manuellt.
+        is_movie_app = focus in _FORMULER_PLAYER_PACKAGES
+
+        if not is_movie_app:
+            # Om vi tidigare spelade film i MOL3 och användaren bytte app,
+            # avsluta filmen så scenen återställs.
+            if prev in ("playing", "paused"):
+                _log(f"FORMULER focus left MOL3 ({focus}) — skickar movie_stopped")
+                self._post_trigger("movie_stopped")
+                self._play_state = "stopped"
+            self._pending_pause_since = None
+            if focus and focus != self._last_focus:
+                _log(f"FORMULER focus: {self._last_focus} -> {focus} (ej film-app, ignorerar playback)")
+                self._last_focus = focus
+            return
+
         # Debounce paus så spol/seek inte triggar onödigt:
         if play == "paused" and prev == "playing":
             if self._pending_pause_since is None:
