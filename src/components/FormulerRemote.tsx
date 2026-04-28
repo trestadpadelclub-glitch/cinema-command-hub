@@ -916,25 +916,43 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
             {/* App-genvägar — t.ex. MyTVOnline3: TV Guide / Backa / VOD / TV Serier */}
             {activeApp && (APP_SHORTCUTS[activeApp]?.length ?? 0) > 0 && (
               <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-border/50 w-full justify-center">
-                {APP_SHORTCUTS[activeApp].map((s) => (
-                  <Button
-                    key={s.id}
-                    variant="secondary"
-                    size="sm"
-                    className="h-8 px-2.5 text-[11px]"
-                    onClick={async () => {
-                      const r = await sendFormulerCommand(s.keycode);
-                      if (!r.ok) {
-                        toast.error(`${s.label} misslyckades`, {
-                          description: r.error || `Status ${r.status}`,
-                        });
-                      }
-                    }}
-                    title={`${s.label} (${s.keycode})`}
-                  >
-                    {s.label}
-                  </Button>
-                ))}
+                {APP_SHORTCUTS[activeApp].map((s) => {
+                  const idx = shortcutVariant[s.id] ?? 0;
+                  const current = s.keycodes[idx % s.keycodes.length];
+                  const hasMultiple = s.keycodes.length > 1;
+                  return (
+                    <Button
+                      key={s.id}
+                      variant="secondary"
+                      size="sm"
+                      className="h-8 px-2.5 text-[11px]"
+                      onClick={async () => {
+                        const r = await sendFormulerCommand(current);
+                        if (!r.ok) {
+                          toast.error(`${s.label} misslyckades`, {
+                            description: r.error || `Status ${r.status}`,
+                          });
+                          return;
+                        }
+                        if (hasMultiple) {
+                          // Cykla till nästa variant inför nästa klick så att
+                          // användaren kan hitta rätt mapping om appen inte
+                          // svarade på den första.
+                          setShortcutVariant((prev) => ({
+                            ...prev,
+                            [s.id]: (idx + 1) % s.keycodes.length,
+                          }));
+                          toast.message(`${s.label}: ${current}`, {
+                            description: `Reagerar inget? Tryck igen för nästa variant (${s.keycodes.length} totalt).`,
+                          });
+                        }
+                      }}
+                      title={`${s.label} – nästa: ${current}${hasMultiple ? ` (${idx + 1}/${s.keycodes.length})` : ""}`}
+                    >
+                      {s.label}
+                    </Button>
+                  );
+                })}
               </div>
             )}
           </div>
