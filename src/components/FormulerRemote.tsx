@@ -158,8 +158,13 @@ type AppShortcut = {
    * - "single" (default): ett tryck
    * - "double": två snabba tryck (~150ms mellan) — motsvarar dubbelklick på GTV-BT1
    * - "long": långt tryck (~500ms) — emuleras genom upprepade keyevents
+   * - "sequence": skickar `sequence` i ordning med en kort fördröjning
    */
-  mode?: "single" | "double" | "long";
+  mode?: "single" | "double" | "long" | "sequence";
+  /** Sekvens av keycodes som skickas i ordning (används när mode === "sequence"). */
+  sequence?: string[];
+  /** Fördröjning mellan steg i en sekvens (ms). Default 250ms. */
+  sequenceDelayMs?: number;
 };
 const APP_SHORTCUTS: Record<AppKey, AppShortcut[]> = {
   mytvonline3: [
