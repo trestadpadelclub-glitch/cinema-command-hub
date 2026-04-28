@@ -178,16 +178,18 @@ const APP_SHORTCUTS: Record<AppKey, AppShortcut[]> = {
     {
       id: "vod",
       label: "VOD",
-      // GTV-BT1: dubbelklick på "dots"-knappen → KEYCODE_UNKNOWN x2
-      keycodes: ["KEYCODE_UNKNOWN"],
-      mode: "double",
+      // MyTVOnline3: Menu → Down → Center
+      keycodes: ["KEYCODE_MENU"],
+      mode: "sequence",
+      sequence: ["KEYCODE_MENU", "KEYCODE_DPAD_DOWN", "KEYCODE_DPAD_CENTER"],
     },
     {
       id: "series",
       label: "TV Serier",
-      // GTV-BT1: håll "dots"-knappen ~500ms → långt tryck på KEYCODE_UNKNOWN
-      keycodes: ["KEYCODE_UNKNOWN"],
-      mode: "long",
+      // MyTVOnline3: Menu → Down → Down → Center
+      keycodes: ["KEYCODE_MENU"],
+      mode: "sequence",
+      sequence: ["KEYCODE_MENU", "KEYCODE_DPAD_DOWN", "KEYCODE_DPAD_DOWN", "KEYCODE_DPAD_CENTER"],
     },
     {
       id: "search",
