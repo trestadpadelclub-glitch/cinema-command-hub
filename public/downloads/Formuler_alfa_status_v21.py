@@ -1218,6 +1218,7 @@ class FormulerMonitor(threading.Thread):
         self.target = f"{self.host}:{self.port}"
         self.poll_sec = SETTINGS["formuler_poll"]
         self.pause_debounce = SETTINGS["formuler_pause_debounce"]
+        self.stale_stop_sec = SETTINGS["formuler_stale_stop_sec"]
         self.adb = SETTINGS["adb_bin"]
         self._stop = threading.Event()
         # State som hålls mellan pollar:
@@ -1230,6 +1231,8 @@ class FormulerMonitor(threading.Thread):
         self._last_pb_int: Optional[int] = None
         self._last_heartbeat: float = 0.0
         self._last_shell_fail_log: float = 0.0
+        self._last_audio_active: Optional[bool] = None
+        self._last_audio_change: float = 0.0
 
     # -- ADB ----------------------------------------------------------------
 
