@@ -270,6 +270,38 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
   });
   const [lightsBrightness, setLightsBrightness] = useState<number>(50);
   const [lightsBusy, setLightsBusy] = useState<"on" | "off" | null>(null);
+  const [movieAutoBusy, setMovieAutoBusy] = useState(false);
+
+  // Movie-auto är PÅ om båda scen 4 och 5 är enabled
+  const movieScenes = useMemo(
+    () => scenes.filter((s) => s.scene_number === 4 || s.scene_number === 5),
+    [scenes],
+  );
+  const movieAutoOn =
+    movieScenes.length === 2 && movieScenes.every((s) => s.enabled);
+
+  const toggleMovieAuto = async (next: boolean) => {
+    if (movieScenes.length !== 2) {
+      toast.error("Hittar inte scen 4 och 5");
+      return;
+    }
+    setMovieAutoBusy(true);
+    try {
+      await Promise.all(movieScenes.map((s) => updateScene(s.id, { enabled: next })));
+      setScenes((prev) =>
+        prev.map((s) =>
+          s.scene_number === 4 || s.scene_number === 5 ? { ...s, enabled: next } : s,
+        ),
+      );
+      toast.success(
+        next ? "Auto-scener för film aktiverade" : "Auto-scener för film avstängda",
+      );
+    } catch (e) {
+      toast.error("Kunde inte uppdatera scener", { description: String(e) });
+    } finally {
+      setMovieAutoBusy(false);
+    }
+  };
 
   // Marantz volym-slider — lokal "draft" som synkas mot status när
   // användaren inte aktivt drar.
