@@ -886,6 +886,31 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
                 )}
               </div>
             )}
+
+            {/* App-genvägar — t.ex. MyTVOnline3: TV Guide / Backa / VOD / TV Serier */}
+            {activeApp && (APP_SHORTCUTS[activeApp]?.length ?? 0) > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-border/50 w-full justify-center">
+                {APP_SHORTCUTS[activeApp].map((s) => (
+                  <Button
+                    key={s.id}
+                    variant="secondary"
+                    size="sm"
+                    className="h-8 px-2.5 text-[11px]"
+                    onClick={async () => {
+                      const r = await sendFormulerCommand(s.keycode);
+                      if (!r.ok) {
+                        toast.error(`${s.label} misslyckades`, {
+                          description: r.error || `Status ${r.status}`,
+                        });
+                      }
+                    }}
+                    title={`${s.label} (${s.keycode})`}
+                  >
+                    {s.label}
+                  </Button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* HÖGER: Marantz volym */}
