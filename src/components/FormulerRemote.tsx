@@ -236,6 +236,9 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
   // Marantz volym-slider — lokal "draft" som synkas mot status när
   // användaren inte aktivt drar.
   const [volDraft, setVolDraft] = useState<number>(40);
+  // Index för vilken keycode-variant som senast skickades per shortcut-id.
+  // Vi cyklar genom listan vid varje klick så användaren kan hitta rätt variant.
+  const [shortcutVariant, setShortcutVariant] = useState<Record<string, number>>({});
   const draggingVol = useRef(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
