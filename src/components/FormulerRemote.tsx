@@ -1005,7 +1005,6 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
                 {movieAutoOn ? "På" : "Av"}
               </span>
             </div>
-          </div>
 
           {/* MITT: D-Pad + transport */}
           <div className="flex flex-col items-center justify-center gap-3">
