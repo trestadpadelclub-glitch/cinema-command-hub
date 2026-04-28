@@ -154,31 +154,39 @@ type AppShortcut = {
   keycodes: string[]; // primär först, sedan fallbacks
   /** Om satt: efter att keycoden skickats, öppna tangentbord för textinmatning. */
   opensKeyboard?: boolean;
+  /** Hur knappen emuleras på fjärrkontrollen.
+   * - "single" (default): ett tryck
+   * - "double": två snabba tryck (~150ms mellan) — motsvarar dubbelklick på GTV-BT1
+   * - "long": långt tryck (~500ms) — emuleras genom upprepade keyevents
+   */
+  mode?: "single" | "double" | "long";
 };
 const APP_SHORTCUTS: Record<AppKey, AppShortcut[]> = {
   mytvonline3: [
     {
       id: "guide",
       label: "TV Guide",
-      keycodes: ["KEYCODE_GUIDE", "KEYCODE_TV_CONTENTS_MENU", "KEYCODE_PROG_RED"],
+      // GTV-BT1: PROGRAM-knappen öppnar TV-guiden
+      keycodes: ["KEYCODE_PROGRAM", "KEYCODE_GUIDE", "KEYCODE_TV_CONTENTS_MENU"],
     },
     { id: "back", label: "Backa", keycodes: ["KEYCODE_BACK"] },
     {
       id: "vod",
       label: "VOD",
-      // MyTVOnline3 mappar ofta VOD till GRÖN, inte BLÅ
-      keycodes: ["KEYCODE_PROG_GREEN", "KEYCODE_PROG_BLUE", "KEYCODE_F2"],
+      // GTV-BT1: dubbelklick på "dots"-knappen → KEYCODE_UNKNOWN x2
+      keycodes: ["KEYCODE_UNKNOWN"],
+      mode: "double",
     },
     {
       id: "series",
       label: "TV Serier",
-      // Serier ligger oftast på GUL eller BLÅ beroende på firmware
-      keycodes: ["KEYCODE_PROG_YELLOW", "KEYCODE_PROG_BLUE", "KEYCODE_F3"],
+      // GTV-BT1: håll "dots"-knappen ~500ms → långt tryck på KEYCODE_UNKNOWN
+      keycodes: ["KEYCODE_UNKNOWN"],
+      mode: "long",
     },
     {
       id: "search",
       label: "Sök",
-      // Sök är oftast SEARCH-knappen, men kan ligga på GRÖN i vissa firmwares
       keycodes: ["KEYCODE_PROG_GREEN"],
       opensKeyboard: true,
     },
