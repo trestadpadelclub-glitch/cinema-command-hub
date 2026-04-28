@@ -1207,6 +1207,8 @@ def formuler_launch_app(package: str, timeout: float = 6.0) -> Dict[str, Any]:
         }
 
 
+_formuler_monitor: Optional["FormulerMonitor"] = None
+
 
 class FormulerMonitor(threading.Thread):
     """Bakgrundstråd som pollar Formuler Z11 via ADB och postar triggers."""
