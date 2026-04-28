@@ -1215,6 +1215,10 @@ class FormulerMonitor(threading.Thread):
         self._pending_pause_since: Optional[float] = None
         self._last_focus: Optional[str] = None
         self._connected = False
+        # Diagnostik: senaste råa playback-int + heartbeat-tidpunkt
+        self._last_pb_int: Optional[int] = None
+        self._last_heartbeat: float = 0.0
+        self._last_shell_fail_log: float = 0.0
 
     # -- ADB ----------------------------------------------------------------
 
