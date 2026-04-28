@@ -1025,6 +1025,15 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
                             await new Promise((res) => setTimeout(res, 55));
                             r = await sendFormulerCommand(current);
                           }
+                        } else if (mode === "sequence") {
+                          const seq = s.sequence ?? [current];
+                          const delay = s.sequenceDelayMs ?? 250;
+                          r = { ok: true } as Awaited<ReturnType<typeof sendFormulerCommand>>;
+                          for (let i = 0; i < seq.length; i++) {
+                            if (i > 0) await new Promise((res) => setTimeout(res, delay));
+                            r = await sendFormulerCommand(seq[i]);
+                            if (!r.ok) break;
+                          }
                         } else {
                           r = await sendFormulerCommand(current);
                         }
