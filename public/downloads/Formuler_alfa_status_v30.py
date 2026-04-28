@@ -1300,7 +1300,7 @@ class FormulerMonitor(threading.Thread):
         out = self._shell(cmd, timeout=4.0)
         if out is None:
             return None
-        sections = {"POWER": "", "FOCUS": "", "MEDIA": "", "AUDIO": ""}
+        sections = {"POWER": "", "FOCUS": "", "MEDIA": "", "AUDIO": "", "MUSIC": ""}
         current = None
         for line in out.splitlines():
             s = line.strip()
@@ -1308,6 +1308,7 @@ class FormulerMonitor(threading.Thread):
             if s == "--FOCUS--": current = "FOCUS"; continue
             if s == "--MEDIA--": current = "MEDIA"; continue
             if s == "--AUDIO--": current = "AUDIO"; continue
+            if s == "--MUSIC--": current = "MUSIC"; continue
             if current:
                 sections[current] += line + "\n"
 
