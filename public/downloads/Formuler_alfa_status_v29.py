@@ -1811,6 +1811,20 @@ class Handler(BaseHTTPRequestHandler):
                 _log(f"formuler list_apps error: {e}")
                 self._send_json(200, {"ok": False, "error": str(e), "apps": []})
             return
+        if path == "/debug/formuler-audio":
+            try:
+                mon = _formuler_monitor
+                if mon is None:
+                    self._send_json(200, {"error": "monitor not running"})
+                    return
+                out = mon._shell("dumpsys audio", timeout=6.0)
+                self.send_response(200)
+                self.send_header("Content-Type", "text/plain; charset=utf-8")
+                self.end_headers()
+                self.wfile.write((out or "").encode("utf-8", "replace"))
+            except Exception as e:
+                self._send_json(200, {"error": str(e)})
+            return
         self._send_json(404, {"error": "not_found", "path": self.path})
 
     def do_POST(self) -> None:
