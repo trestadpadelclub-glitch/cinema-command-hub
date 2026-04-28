@@ -901,11 +901,11 @@ _RE_WAKE = re.compile(r"mWakefulness=(\w+)")
 _RE_FOCUS = re.compile(r"mCurrentFocus=.*?\s([a-zA-Z0-9_.]+)/")
 _RE_FOCUS_COMPONENT = re.compile(r"(?:mCurrentFocus|mFocusedApp).*?\s([A-Za-z0-9_.$]+/[A-Za-z0-9_.$]+)")
 
-# Appar där tystnad efter aktivt ljud sannolikt betyder paus snarare än att boxen är idle.
+# Endast MyTVOnline3 (MOL3) räknas som "film". YouTube, Red Bull TV, VLC m.fl.
+# ska INTE trigga movie_*-scener — där sköter användaren ljus/ljud manuellt.
 _FORMULER_PLAYER_PACKAGES = {
     "tv.formuler.mol3.real",
     "com.formuler.mytvonline3",
-    "org.videolan.vlc",
 }
 
 
