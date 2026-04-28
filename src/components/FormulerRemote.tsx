@@ -943,7 +943,7 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
                   return (
                     <Button
                       key={s.id}
-                      variant="secondary"
+                      variant={s.opensKeyboard ? "default" : "secondary"}
                       size="sm"
                       className="h-8 px-2.5 text-[11px]"
                       onClick={async () => {
@@ -954,10 +954,14 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
                           });
                           return;
                         }
+                        if (s.opensKeyboard) {
+                          // Öppna tangentbord för textinmatning efter att
+                          // sökskärmen aktiverats i appen.
+                          setSearchText("");
+                          setKeyboardOpen(true);
+                          return;
+                        }
                         if (hasMultiple) {
-                          // Cykla till nästa variant inför nästa klick så att
-                          // användaren kan hitta rätt mapping om appen inte
-                          // svarade på den första.
                           setShortcutVariant((prev) => ({
                             ...prev,
                             [s.id]: (idx + 1) % s.keycodes.length,
@@ -969,6 +973,7 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
                       }}
                       title={`${s.label} – nästa: ${current}${hasMultiple ? ` (${idx + 1}/${s.keycodes.length})` : ""}`}
                     >
+                      {s.opensKeyboard ? <Search className="h-3.5 w-3.5 mr-1" /> : null}
                       {s.label}
                     </Button>
                   );
