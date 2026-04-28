@@ -128,6 +128,8 @@ SETTINGS = {
     "formuler_poll": float(os.environ.get("FORMULER_POLL_SEC", "2.0")),
     # Liten debounce för paus/stop så spol/seek inte triggar onödiga scenbyten.
     "formuler_pause_debounce": float(os.environ.get("FORMULER_PAUSE_DEBOUNCE", "2.5")),
+    # Om MediaSession är trasig: räkna stopp först när ljudet varit borta en stund.
+    "formuler_stale_stop_sec": float(os.environ.get("FORMULER_STALE_STOP_SEC", "20.0")),
     # Vart triggers postas. household_code är samma kod du använder i UI:t.
     "trigger_url": os.environ.get(
         "TRIGGER_URL",
