@@ -173,8 +173,10 @@ const APP_SHORTCUTS: Record<AppKey, AppShortcut[]> = {
     {
       id: "guide",
       label: "TV Guide",
-      // GTV-BT1: PROGRAM-knappen öppnar TV-guiden
-      keycodes: ["KEYCODE_PROGRAM", "KEYCODE_GUIDE", "KEYCODE_TV_CONTENTS_MENU"],
+      // MyTVOnline3: Menu → Center (OK)
+      keycodes: ["KEYCODE_MENU"],
+      mode: "sequence",
+      sequence: ["KEYCODE_MENU", "KEYCODE_DPAD_CENTER"],
     },
     { id: "back", label: "Backa", keycodes: ["KEYCODE_BACK"] },
     {
