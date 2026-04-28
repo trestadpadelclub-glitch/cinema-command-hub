@@ -128,6 +128,8 @@ SETTINGS = {
     "formuler_poll": float(os.environ.get("FORMULER_POLL_SEC", "2.0")),
     # Liten debounce för paus/stop så spol/seek inte triggar onödiga scenbyten.
     "formuler_pause_debounce": float(os.environ.get("FORMULER_PAUSE_DEBOUNCE", "2.5")),
+    # Om MediaSession är trasig: räkna stopp först när ljudet varit borta en stund.
+    "formuler_stale_stop_sec": float(os.environ.get("FORMULER_STALE_STOP_SEC", "20.0")),
     # Vart triggers postas. household_code är samma kod du använder i UI:t.
     "trigger_url": os.environ.get(
         "TRIGGER_URL",
@@ -1216,6 +1218,7 @@ class FormulerMonitor(threading.Thread):
         self.target = f"{self.host}:{self.port}"
         self.poll_sec = SETTINGS["formuler_poll"]
         self.pause_debounce = SETTINGS["formuler_pause_debounce"]
+        self.stale_stop_sec = SETTINGS["formuler_stale_stop_sec"]
         self.adb = SETTINGS["adb_bin"]
         self._stop = threading.Event()
         # State som hålls mellan pollar:
@@ -1228,6 +1231,8 @@ class FormulerMonitor(threading.Thread):
         self._last_pb_int: Optional[int] = None
         self._last_heartbeat: float = 0.0
         self._last_shell_fail_log: float = 0.0
+        self._last_audio_active: Optional[bool] = None
+        self._last_audio_change: float = 0.0
 
     # -- ADB ----------------------------------------------------------------
 
@@ -1332,7 +1337,7 @@ class FormulerMonitor(threading.Thread):
             "ismusicactive()=true" in audio_lower
             or "ismusicactive=true" in audio_lower
             or "ismusicactive: true" in audio_lower
-            or re.search(r"\bstate\s*[:=]\s*(?:2|started|start|playing|active)\b", audio_lower) is not None
+            or "ismusicactive: 1" in audio_lower
         )
         audio_hint = "active" if audio_active else "inactive"
 
@@ -1352,6 +1357,7 @@ class FormulerMonitor(threading.Thread):
             "focus_component": focus_component,
             "pb_int": pb_int,
             "audio": audio_hint,
+            "audio_raw": " | ".join(line.strip() for line in audio_text.splitlines() if line.strip())[:220],
             "play": play,
         }
 
@@ -1409,6 +1415,23 @@ class FormulerMonitor(threading.Thread):
         focus = st["focus"]
         pb_int = st.get("pb_int", 0)
         audio = st.get("audio", "-")
+        audio_raw = st.get("audio_raw", "")
+        audio_active = audio == "active"
+
+        if audio_active != self._last_audio_active:
+            _log(f"FORMULER audio {self._last_audio_active} -> {audio_active} raw={audio_raw or '-'}")
+            self._last_audio_active = audio_active
+            self._last_audio_change = now
+
+        if (
+            pb_int == 0
+            and focus in _FORMULER_PLAYER_PACKAGES
+            and play == "paused"
+            and self._play_state in ("playing", "paused")
+            and self._last_audio_change > 0
+            and (now - self._last_audio_change) >= self.stale_stop_sec
+        ):
+            play = "stopped"
 
         # Diagnostik: logga rå PlaybackState så fort den ändras (även om vår
         # tolkning playing/paused/stopped är samma som innan).
@@ -1424,7 +1447,7 @@ class FormulerMonitor(threading.Thread):
             _log(
                 f"FORMULER heartbeat box={'on' if box_on else 'off'} "
                 f"play={play} pb_int={pb_int} audio={audio} state={self._play_state} "
-                f"focus={focus or '-'}"
+                f"focus={focus or '-'} audio_raw={audio_raw or '-'}"
             )
             self._last_heartbeat = now
 
