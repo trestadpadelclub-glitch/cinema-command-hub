@@ -1286,18 +1286,20 @@ class FormulerMonitor(threading.Thread):
         cmd = (
             "echo --POWER--; dumpsys power | grep -E 'mWakefulness=|mWakefulnessChanging' ; "
             "echo --FOCUS--; dumpsys window | grep -E 'mCurrentFocus|mFocusedApp' ; "
-            "echo --MEDIA--; dumpsys media_session | grep -E 'PlaybackState |state=PlaybackState'"
+            "echo --MEDIA--; dumpsys media_session | grep -E 'PlaybackState |state=PlaybackState' ; "
+            "echo --AUDIO--; dumpsys audio | grep -Ei 'isMusicActive|mAudioPlayback|AudioPlaybackConfiguration|player piid|state:|state='"
         )
         out = self._shell(cmd, timeout=4.0)
         if out is None:
             return None
-        sections = {"POWER": "", "FOCUS": "", "MEDIA": ""}
+        sections = {"POWER": "", "FOCUS": "", "MEDIA": "", "AUDIO": ""}
         current = None
         for line in out.splitlines():
             s = line.strip()
             if s == "--POWER--": current = "POWER"; continue
             if s == "--FOCUS--": current = "FOCUS"; continue
             if s == "--MEDIA--": current = "MEDIA"; continue
+            if s == "--AUDIO--": current = "AUDIO"; continue
             if current:
                 sections[current] += line + "\n"
 
@@ -1309,6 +1311,8 @@ class FormulerMonitor(threading.Thread):
         # Aktiv app
         focus_m = _RE_FOCUS.search(sections["FOCUS"])
         focus = focus_m.group(1) if focus_m else None
+        focus_component_m = _RE_FOCUS_COMPONENT.search(sections["FOCUS"])
+        focus_component = focus_component_m.group(1) if focus_component_m else None
 
         # Playback — kan finnas flera media sessions, ta den senaste rapporterade.
         # I praktiken ger MOL3/VLC en aktiv session i taget.
@@ -1322,11 +1326,32 @@ class FormulerMonitor(threading.Thread):
         else:
             play = "stopped"
 
+        audio_text = sections["AUDIO"]
+        audio_lower = audio_text.lower()
+        audio_active = (
+            "ismusicactive()=true" in audio_lower
+            or "ismusicactive=true" in audio_lower
+            or "ismusicactive: true" in audio_lower
+            or re.search(r"\bstate\s*[:=]\s*(?:2|started|start|playing|active)\b", audio_lower) is not None
+        )
+        audio_hint = "active" if audio_active else "inactive"
+
+        # Fallback: vissa Formuler-firmware/appkombinationer rapporterar alltid
+        # MediaSession state=0 även när video faktiskt spelas. Då använder vi
+        # ljudaktivitet + aktiv spelapp som signal för playing/paused.
+        if pb_int == 0 and focus in _FORMULER_PLAYER_PACKAGES:
+            if audio_active:
+                play = "playing"
+            elif self._play_state == "playing":
+                play = "paused"
+
         return {
             "box_on": box_on,
             "wake": wake,
             "focus": focus,
+            "focus_component": focus_component,
             "pb_int": pb_int,
+            "audio": audio_hint,
             "play": play,
         }
 
