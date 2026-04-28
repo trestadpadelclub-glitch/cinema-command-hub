@@ -1345,17 +1345,24 @@ class FormulerMonitor(threading.Thread):
         # Signal 2: AudioPlaybackConfiguration med state:started/playing.
         # Formuler/MOL3/VLC rapporterar uppspelning så här. Vi ignorerar
         # systemljud (SoundPool, USAGE_ASSISTANCE_*, USAGE_NOTIFICATION).
+        # OBS: vi splittar både på radbrytning OCH på ' | ' eftersom
+        # adb-output ibland kommer på en enda rad.
         playback_active = False
+        candidate_lines: list[str] = []
         for raw_line in audio_text.splitlines():
-            line = raw_line.strip()
-            if not line:
-                continue
+            for piece in raw_line.split(" | "):
+                piece = piece.strip()
+                if piece:
+                    candidate_lines.append(piece)
+        for line in candidate_lines:
             low = line.lower()
-            if "audioplaybackconfiguration" not in low and "player piid" not in low:
+            # Måste vara en AudioPlaybackConfiguration-rad
+            if "audioplaybackconfiguration" not in low:
                 continue
-            if "state:started" not in low and "state:playing" not in low and "state=started" not in low and "state=playing" not in low:
+            # Måste vara aktivt tillstånd (started/playing)
+            if not any(s in low for s in ("state:started", "state:playing", "state=started", "state=playing")):
                 continue
-            # Ignorera systemljud
+            # Filtrera systemljud
             if "soundpool" in low:
                 continue
             if "usage_assistance" in low or "usage_notification" in low or "usage_alarm" in low:
