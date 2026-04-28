@@ -136,13 +136,36 @@ const TRANSPORT_KEYCODES: Record<Transport, string> = {
 // App-specifika genvägar — visas bara när motsvarande app är aktiv.
 // För MyTVOnline3 mappas TV Guide / VOD / TV-serier till de färgade
 // fjärrknapparna (RED/GREEN/YELLOW/BLUE) som appen lyssnar på.
-type AppShortcut = { id: string; label: string; keycode: string };
+// App-genvägar med fallback-keycodes. Vi provar dem i ordning tills en lyckas
+// (svaret kommer ändå alltid med ok=true från `input keyevent`, så vi kan inte
+// veta om appen reagerade — därför sänder vi den FÖRSTA som accepteras av
+// bryggan och låter användaren välja en annan variant via long-press om den
+// första inte gör något i appen).
+type AppShortcut = {
+  id: string;
+  label: string;
+  keycodes: string[]; // primär först, sedan fallbacks
+};
 const APP_SHORTCUTS: Record<AppKey, AppShortcut[]> = {
   mytvonline3: [
-    { id: "guide", label: "TV Guide", keycode: "KEYCODE_GUIDE" },
-    { id: "back", label: "Backa", keycode: "KEYCODE_BACK" },
-    { id: "vod", label: "VOD", keycode: "KEYCODE_PROG_BLUE" },
-    { id: "series", label: "TV Serier", keycode: "KEYCODE_PROG_YELLOW" },
+    {
+      id: "guide",
+      label: "TV Guide",
+      keycodes: ["KEYCODE_GUIDE", "KEYCODE_TV_CONTENTS_MENU", "KEYCODE_PROG_RED"],
+    },
+    { id: "back", label: "Backa", keycodes: ["KEYCODE_BACK"] },
+    {
+      id: "vod",
+      label: "VOD",
+      // MyTVOnline3 mappar ofta VOD till GRÖN, inte BLÅ
+      keycodes: ["KEYCODE_PROG_GREEN", "KEYCODE_PROG_BLUE", "KEYCODE_F2"],
+    },
+    {
+      id: "series",
+      label: "TV Serier",
+      // Serier ligger oftast på GUL eller BLÅ beroende på firmware
+      keycodes: ["KEYCODE_PROG_YELLOW", "KEYCODE_PROG_BLUE", "KEYCODE_F3"],
+    },
   ],
   youtube: [],
   redbull: [],
