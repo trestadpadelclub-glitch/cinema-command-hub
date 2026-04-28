@@ -1294,7 +1294,8 @@ class FormulerMonitor(threading.Thread):
             "echo --POWER--; dumpsys power | grep -E 'mWakefulness=|mWakefulnessChanging' ; "
             "echo --FOCUS--; dumpsys window | grep -E 'mCurrentFocus|mFocusedApp' ; "
             "echo --MEDIA--; dumpsys media_session | grep -E 'PlaybackState |state=PlaybackState' ; "
-            "echo --AUDIO--; dumpsys audio | tail -n 120"
+            "echo --AUDIO--; dumpsys audio | awk '/^  players:/{f=1; next} f && /^  [a-zA-Z]+:/{f=0} f{print}' ; "
+            "echo --MUSIC--; dumpsys audio | grep -i 'isMusicActive'"
         )
         out = self._shell(cmd, timeout=4.0)
         if out is None:
