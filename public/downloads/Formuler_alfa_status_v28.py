@@ -1362,10 +1362,22 @@ class FormulerMonitor(threading.Thread):
             # Måste vara aktivt tillstånd (started/playing)
             if not any(s in low for s in ("state:started", "state:playing", "state=started", "state=playing")):
                 continue
-            # Filtrera systemljud
+            # Filtrera bort inaktiva states som råkar nämnas på samma rad
+            if "state:idle" in low or "state:paused" in low or "state:stopped" in low:
+                # Endast filtrera om started/playing INTE finns separat
+                if not any(s in low for s in ("state:started", "state:playing")):
+                    continue
+            # Filtrera systemljud baserat på typ
             if "soundpool" in low:
                 continue
-            if "usage_assistance" in low or "usage_notification" in low or "usage_alarm" in low:
+            # Filtrera systemljud baserat på usage
+            if any(u in low for u in (
+                "usage_assistance", "usage_notification", "usage_alarm",
+                "usage_voice_communication", "usage_unknown",
+            )):
+                continue
+            # KRÄV att det är mediauppspelning (film/musik/spel)
+            if not any(u in low for u in ("usage_media", "usage_game", "usage_movie")):
                 continue
             playback_active = True
             break
