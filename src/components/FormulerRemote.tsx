@@ -57,9 +57,11 @@ import {
   fetchScenes,
   fetchLights,
   fetchSceneLights,
+  updateScene,
   type Scene,
   type Light,
 } from "@/lib/scenes";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
