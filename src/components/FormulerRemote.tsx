@@ -57,9 +57,11 @@ import {
   fetchScenes,
   fetchLights,
   fetchSceneLights,
+  updateScene,
   type Scene,
   type Light,
 } from "@/lib/scenes";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -268,6 +270,38 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
   });
   const [lightsBrightness, setLightsBrightness] = useState<number>(50);
   const [lightsBusy, setLightsBusy] = useState<"on" | "off" | null>(null);
+  const [movieAutoBusy, setMovieAutoBusy] = useState(false);
+
+  // Movie-auto är PÅ om båda scen 4 och 5 är enabled
+  const movieScenes = useMemo(
+    () => scenes.filter((s) => s.scene_number === 4 || s.scene_number === 5),
+    [scenes],
+  );
+  const movieAutoOn =
+    movieScenes.length === 2 && movieScenes.every((s) => s.enabled);
+
+  const toggleMovieAuto = async (next: boolean) => {
+    if (movieScenes.length !== 2) {
+      toast.error("Hittar inte scen 4 och 5");
+      return;
+    }
+    setMovieAutoBusy(true);
+    try {
+      await Promise.all(movieScenes.map((s) => updateScene(s.id, { enabled: next })));
+      setScenes((prev) =>
+        prev.map((s) =>
+          s.scene_number === 4 || s.scene_number === 5 ? { ...s, enabled: next } : s,
+        ),
+      );
+      toast.success(
+        next ? "Auto-scener för film aktiverade" : "Auto-scener för film avstängda",
+      );
+    } catch (e) {
+      toast.error("Kunde inte uppdatera scener", { description: String(e) });
+    } finally {
+      setMovieAutoBusy(false);
+    }
+  };
 
   // Marantz volym-slider — lokal "draft" som synkas mot status när
   // användaren inte aktivt drar.
@@ -956,6 +990,20 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
                 aria-label="Ljusintensitet"
               />
               <span className="text-[9px] text-muted-foreground">10–90%</span>
+            </div>
+            <div className="flex flex-col items-center gap-1 pt-2 border-t border-border w-full">
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground text-center leading-tight">
+                Auto<br />film
+              </Label>
+              <Switch
+                checked={movieAutoOn}
+                onCheckedChange={toggleMovieAuto}
+                disabled={movieAutoBusy || movieScenes.length !== 2}
+                aria-label="Aktivera automatiska film-scener (4 & 5)"
+              />
+              <span className="text-[9px] text-muted-foreground">
+                {movieAutoOn ? "På" : "Av"}
+              </span>
             </div>
           </div>
 
