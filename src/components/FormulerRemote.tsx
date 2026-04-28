@@ -136,13 +136,36 @@ const TRANSPORT_KEYCODES: Record<Transport, string> = {
 // App-specifika genvägar — visas bara när motsvarande app är aktiv.
 // För MyTVOnline3 mappas TV Guide / VOD / TV-serier till de färgade
 // fjärrknapparna (RED/GREEN/YELLOW/BLUE) som appen lyssnar på.
-type AppShortcut = { id: string; label: string; keycode: string };
+// App-genvägar med fallback-keycodes. Vi provar dem i ordning tills en lyckas
+// (svaret kommer ändå alltid med ok=true från `input keyevent`, så vi kan inte
+// veta om appen reagerade — därför sänder vi den FÖRSTA som accepteras av
+// bryggan och låter användaren välja en annan variant via long-press om den
+// första inte gör något i appen).
+type AppShortcut = {
+  id: string;
+  label: string;
+  keycodes: string[]; // primär först, sedan fallbacks
+};
 const APP_SHORTCUTS: Record<AppKey, AppShortcut[]> = {
   mytvonline3: [
-    { id: "guide", label: "TV Guide", keycode: "KEYCODE_GUIDE" },
-    { id: "back", label: "Backa", keycode: "KEYCODE_BACK" },
-    { id: "vod", label: "VOD", keycode: "KEYCODE_PROG_BLUE" },
-    { id: "series", label: "TV Serier", keycode: "KEYCODE_PROG_YELLOW" },
+    {
+      id: "guide",
+      label: "TV Guide",
+      keycodes: ["KEYCODE_GUIDE", "KEYCODE_TV_CONTENTS_MENU", "KEYCODE_PROG_RED"],
+    },
+    { id: "back", label: "Backa", keycodes: ["KEYCODE_BACK"] },
+    {
+      id: "vod",
+      label: "VOD",
+      // MyTVOnline3 mappar ofta VOD till GRÖN, inte BLÅ
+      keycodes: ["KEYCODE_PROG_GREEN", "KEYCODE_PROG_BLUE", "KEYCODE_F2"],
+    },
+    {
+      id: "series",
+      label: "TV Serier",
+      // Serier ligger oftast på GUL eller BLÅ beroende på firmware
+      keycodes: ["KEYCODE_PROG_YELLOW", "KEYCODE_PROG_BLUE", "KEYCODE_F3"],
+    },
   ],
   youtube: [],
   redbull: [],
@@ -213,6 +236,9 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
   // Marantz volym-slider — lokal "draft" som synkas mot status när
   // användaren inte aktivt drar.
   const [volDraft, setVolDraft] = useState<number>(40);
+  // Index för vilken keycode-variant som senast skickades per shortcut-id.
+  // Vi cyklar genom listan vid varje klick så användaren kan hitta rätt variant.
+  const [shortcutVariant, setShortcutVariant] = useState<Record<string, number>>({});
   const draggingVol = useRef(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -890,25 +916,43 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
             {/* App-genvägar — t.ex. MyTVOnline3: TV Guide / Backa / VOD / TV Serier */}
             {activeApp && (APP_SHORTCUTS[activeApp]?.length ?? 0) > 0 && (
               <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-border/50 w-full justify-center">
-                {APP_SHORTCUTS[activeApp].map((s) => (
-                  <Button
-                    key={s.id}
-                    variant="secondary"
-                    size="sm"
-                    className="h-8 px-2.5 text-[11px]"
-                    onClick={async () => {
-                      const r = await sendFormulerCommand(s.keycode);
-                      if (!r.ok) {
-                        toast.error(`${s.label} misslyckades`, {
-                          description: r.error || `Status ${r.status}`,
-                        });
-                      }
-                    }}
-                    title={`${s.label} (${s.keycode})`}
-                  >
-                    {s.label}
-                  </Button>
-                ))}
+                {APP_SHORTCUTS[activeApp].map((s) => {
+                  const idx = shortcutVariant[s.id] ?? 0;
+                  const current = s.keycodes[idx % s.keycodes.length];
+                  const hasMultiple = s.keycodes.length > 1;
+                  return (
+                    <Button
+                      key={s.id}
+                      variant="secondary"
+                      size="sm"
+                      className="h-8 px-2.5 text-[11px]"
+                      onClick={async () => {
+                        const r = await sendFormulerCommand(current);
+                        if (!r.ok) {
+                          toast.error(`${s.label} misslyckades`, {
+                            description: r.error || `Status ${r.status}`,
+                          });
+                          return;
+                        }
+                        if (hasMultiple) {
+                          // Cykla till nästa variant inför nästa klick så att
+                          // användaren kan hitta rätt mapping om appen inte
+                          // svarade på den första.
+                          setShortcutVariant((prev) => ({
+                            ...prev,
+                            [s.id]: (idx + 1) % s.keycodes.length,
+                          }));
+                          toast.message(`${s.label}: ${current}`, {
+                            description: `Reagerar inget? Tryck igen för nästa variant (${s.keycodes.length} totalt).`,
+                          });
+                        }
+                      }}
+                      title={`${s.label} – nästa: ${current}${hasMultiple ? ` (${idx + 1}/${s.keycodes.length})` : ""}`}
+                    >
+                      {s.label}
+                    </Button>
+                  );
+                })}
               </div>
             )}
           </div>
