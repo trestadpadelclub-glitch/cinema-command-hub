@@ -354,6 +354,8 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
       setSendingText(false);
     }
   };
+
+  const launchApp = async (key: AppKey, label: string) => {
     const configured = packages[key];
     // Bygg lista: konfigurerat paket först, sedan alla kandidater (utan dubbletter)
     const candidates = Array.from(
