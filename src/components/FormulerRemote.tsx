@@ -255,6 +255,10 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
   // Index för vilken keycode-variant som senast skickades per shortcut-id.
   // Vi cyklar genom listan vid varje klick så användaren kan hitta rätt variant.
   const [shortcutVariant, setShortcutVariant] = useState<Record<string, number>>({});
+  // Tangentbord för app-sökning
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
+  const [searchText, setSearchText] = useState("");
+  const [sendingText, setSendingText] = useState(false);
   const draggingVol = useRef(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
