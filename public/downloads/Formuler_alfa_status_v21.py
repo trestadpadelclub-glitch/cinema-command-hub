@@ -871,6 +871,7 @@ def marantz_status() -> Dict[str, Any]:
 #   1. dumpsys power            -> mWakefulness=Awake/Asleep/Dozing
 #   2. dumpsys window           -> mCurrentFocus  (vilken app är i fokus)
 #   3. dumpsys media_session    -> state=PlaybackState {state=N ...}
+#   4. dumpsys audio            -> fallback om MediaSession alltid visar state=0
 #
 # PlaybackState-konstanter (frameworks/base/media/.../PlaybackState.java):
 #   0=NONE  1=STOPPED  2=PAUSED  3=PLAYING  4=FAST_FORWARDING  5=REWINDING
@@ -896,6 +897,14 @@ _PB_STOPPED = {0, 1, 7}                  # ingen / stoppad / fel
 _RE_PB_STATE = re.compile(r"PlaybackState\s*\{[^}]*?state=(\d+)")
 _RE_WAKE = re.compile(r"mWakefulness=(\w+)")
 _RE_FOCUS = re.compile(r"mCurrentFocus=.*?\s([a-zA-Z0-9_.]+)/")
+_RE_FOCUS_COMPONENT = re.compile(r"(?:mCurrentFocus|mFocusedApp).*?\s([A-Za-z0-9_.$]+/[A-Za-z0-9_.$]+)")
+
+# Appar där tystnad efter aktivt ljud sannolikt betyder paus snarare än att boxen är idle.
+_FORMULER_PLAYER_PACKAGES = {
+    "tv.formuler.mol3.real",
+    "com.formuler.mytvonline3",
+    "org.videolan.vlc",
+}
 
 
 
@@ -1277,18 +1286,20 @@ class FormulerMonitor(threading.Thread):
         cmd = (
             "echo --POWER--; dumpsys power | grep -E 'mWakefulness=|mWakefulnessChanging' ; "
             "echo --FOCUS--; dumpsys window | grep -E 'mCurrentFocus|mFocusedApp' ; "
-            "echo --MEDIA--; dumpsys media_session | grep -E 'PlaybackState |state=PlaybackState'"
+            "echo --MEDIA--; dumpsys media_session | grep -E 'PlaybackState |state=PlaybackState' ; "
+            "echo --AUDIO--; dumpsys audio | grep -Ei 'isMusicActive|mAudioPlayback|AudioPlaybackConfiguration|player piid|state:|state='"
         )
         out = self._shell(cmd, timeout=4.0)
         if out is None:
             return None
-        sections = {"POWER": "", "FOCUS": "", "MEDIA": ""}
+        sections = {"POWER": "", "FOCUS": "", "MEDIA": "", "AUDIO": ""}
         current = None
         for line in out.splitlines():
             s = line.strip()
             if s == "--POWER--": current = "POWER"; continue
             if s == "--FOCUS--": current = "FOCUS"; continue
             if s == "--MEDIA--": current = "MEDIA"; continue
+            if s == "--AUDIO--": current = "AUDIO"; continue
             if current:
                 sections[current] += line + "\n"
 
@@ -1300,6 +1311,8 @@ class FormulerMonitor(threading.Thread):
         # Aktiv app
         focus_m = _RE_FOCUS.search(sections["FOCUS"])
         focus = focus_m.group(1) if focus_m else None
+        focus_component_m = _RE_FOCUS_COMPONENT.search(sections["FOCUS"])
+        focus_component = focus_component_m.group(1) if focus_component_m else None
 
         # Playback — kan finnas flera media sessions, ta den senaste rapporterade.
         # I praktiken ger MOL3/VLC en aktiv session i taget.
@@ -1313,11 +1326,32 @@ class FormulerMonitor(threading.Thread):
         else:
             play = "stopped"
 
+        audio_text = sections["AUDIO"]
+        audio_lower = audio_text.lower()
+        audio_active = (
+            "ismusicactive()=true" in audio_lower
+            or "ismusicactive=true" in audio_lower
+            or "ismusicactive: true" in audio_lower
+            or re.search(r"\bstate\s*[:=]\s*(?:2|started|start|playing|active)\b", audio_lower) is not None
+        )
+        audio_hint = "active" if audio_active else "inactive"
+
+        # Fallback: vissa Formuler-firmware/appkombinationer rapporterar alltid
+        # MediaSession state=0 även när video faktiskt spelas. Då använder vi
+        # ljudaktivitet + aktiv spelapp som signal för playing/paused.
+        if pb_int == 0 and focus in _FORMULER_PLAYER_PACKAGES:
+            if audio_active:
+                play = "playing"
+            elif self._play_state == "playing":
+                play = "paused"
+
         return {
             "box_on": box_on,
             "wake": wake,
             "focus": focus,
+            "focus_component": focus_component,
             "pb_int": pb_int,
+            "audio": audio_hint,
             "play": play,
         }
 
@@ -1374,6 +1408,7 @@ class FormulerMonitor(threading.Thread):
         play = st["play"]
         focus = st["focus"]
         pb_int = st.get("pb_int", 0)
+        audio = st.get("audio", "-")
 
         # Diagnostik: logga rå PlaybackState så fort den ändras (även om vår
         # tolkning playing/paused/stopped är samma som innan).
@@ -1388,7 +1423,7 @@ class FormulerMonitor(threading.Thread):
         if (now - self._last_heartbeat) >= 30.0:
             _log(
                 f"FORMULER heartbeat box={'on' if box_on else 'off'} "
-                f"play={play} pb_int={pb_int} state={self._play_state} "
+                f"play={play} pb_int={pb_int} audio={audio} state={self._play_state} "
                 f"focus={focus or '-'}"
             )
             self._last_heartbeat = now
