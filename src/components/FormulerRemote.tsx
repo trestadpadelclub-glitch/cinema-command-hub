@@ -36,6 +36,13 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
   sendFormulerCommand,
   launchFormulerApp,
   listFormulerApps,
@@ -145,6 +152,8 @@ type AppShortcut = {
   id: string;
   label: string;
   keycodes: string[]; // primär först, sedan fallbacks
+  /** Om satt: efter att keycoden skickats, öppna tangentbord för textinmatning. */
+  opensKeyboard?: boolean;
 };
 const APP_SHORTCUTS: Record<AppKey, AppShortcut[]> = {
   mytvonline3: [
@@ -165,6 +174,13 @@ const APP_SHORTCUTS: Record<AppKey, AppShortcut[]> = {
       label: "TV Serier",
       // Serier ligger oftast på GUL eller BLÅ beroende på firmware
       keycodes: ["KEYCODE_PROG_YELLOW", "KEYCODE_PROG_BLUE", "KEYCODE_F3"],
+    },
+    {
+      id: "search",
+      label: "Sök",
+      // Sök är oftast SEARCH-knappen, men kan ligga på GRÖN i vissa firmwares
+      keycodes: ["KEYCODE_SEARCH", "KEYCODE_PROG_GREEN", "KEYCODE_F1"],
+      opensKeyboard: true,
     },
   ],
   youtube: [],
@@ -239,6 +255,10 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
   // Index för vilken keycode-variant som senast skickades per shortcut-id.
   // Vi cyklar genom listan vid varje klick så användaren kan hitta rätt variant.
   const [shortcutVariant, setShortcutVariant] = useState<Record<string, number>>({});
+  // Tangentbord för app-sökning
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
+  const [searchText, setSearchText] = useState("");
+  const [sendingText, setSendingText] = useState(false);
   const draggingVol = useRef(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -290,6 +310,48 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
       toast.error(`Formuler ${label} misslyckades`, {
         description: res.error || `Status ${res.status}`,
       });
+    }
+  };
+
+  // Skicka en text till Formuler-boxen genom att skicka varje tecken som
+  // ADB-keycode. Avslutas med ENTER för att utlösa sökning i appen.
+  const charToKeycode = (ch: string): string | null => {
+    if (ch === " ") return "KEYCODE_SPACE";
+    if (ch >= "0" && ch <= "9") return `KEYCODE_${ch}`;
+    const lower = ch.toLowerCase();
+    if (lower >= "a" && lower <= "z") return `KEYCODE_${lower.toUpperCase()}`;
+    return null;
+  };
+  const submitSearchText = async () => {
+    const text = searchText.trim();
+    if (!text) return;
+    setSendingText(true);
+    try {
+      for (const ch of text) {
+        const kc = charToKeycode(ch);
+        if (!kc) continue;
+        const r = await sendFormulerCommand(kc);
+        if (!r.ok) {
+          toast.error("Kunde inte skicka tecken", {
+            description: `${ch}: ${r.error || `Status ${r.status}`}`,
+          });
+          setSendingText(false);
+          return;
+        }
+        // Liten paus så appen hinner registrera varje tangent
+        await new Promise((res) => setTimeout(res, 60));
+      }
+      const enter = await sendFormulerCommand("KEYCODE_ENTER");
+      if (!enter.ok) {
+        toast.error("Enter misslyckades", {
+          description: enter.error || `Status ${enter.status}`,
+        });
+        return;
+      }
+      toast.success(`Sökte: "${text}"`);
+      setKeyboardOpen(false);
+    } finally {
+      setSendingText(false);
     }
   };
 
@@ -923,7 +985,7 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
                   return (
                     <Button
                       key={s.id}
-                      variant="secondary"
+                      variant={s.opensKeyboard ? "default" : "secondary"}
                       size="sm"
                       className="h-8 px-2.5 text-[11px]"
                       onClick={async () => {
@@ -934,10 +996,14 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
                           });
                           return;
                         }
+                        if (s.opensKeyboard) {
+                          // Öppna tangentbord för textinmatning efter att
+                          // sökskärmen aktiverats i appen.
+                          setSearchText("");
+                          setKeyboardOpen(true);
+                          return;
+                        }
                         if (hasMultiple) {
-                          // Cykla till nästa variant inför nästa klick så att
-                          // användaren kan hitta rätt mapping om appen inte
-                          // svarade på den första.
                           setShortcutVariant((prev) => ({
                             ...prev,
                             [s.id]: (idx + 1) % s.keycodes.length,
@@ -949,6 +1015,7 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
                       }}
                       title={`${s.label} – nästa: ${current}${hasMultiple ? ` (${idx + 1}/${s.keycodes.length})` : ""}`}
                     >
+                      {s.opensKeyboard ? <Search className="h-3.5 w-3.5 mr-1" /> : null}
                       {s.label}
                     </Button>
                   );
@@ -1095,6 +1162,89 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
           </Button>
         </div>
       </Card>
+
+      {/* Tangentbord för app-sökning (skickar tecken som ADB-keycodes) */}
+      <Dialog open={keyboardOpen} onOpenChange={setKeyboardOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Search className="h-4 w-4" /> Sök i appen
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Input
+              autoFocus
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  void submitSearchText();
+                }
+              }}
+              placeholder="Skriv sökord och tryck Enter…"
+              className="h-10"
+            />
+            <div className="space-y-1.5">
+              {[
+                ["1","2","3","4","5","6","7","8","9","0"],
+                ["q","w","e","r","t","y","u","i","o","p"],
+                ["a","s","d","f","g","h","j","k","l"],
+                ["z","x","c","v","b","n","m"],
+              ].map((row, ri) => (
+                <div key={ri} className="flex gap-1 justify-center">
+                  {row.map((ch) => (
+                    <Button
+                      key={ch}
+                      variant="secondary"
+                      size="sm"
+                      className="h-9 w-9 p-0 text-sm"
+                      onClick={() => setSearchText((t) => t + ch)}
+                    >
+                      {ch}
+                    </Button>
+                  ))}
+                </div>
+              ))}
+              <div className="flex gap-1 justify-center">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="h-9 px-3"
+                  onClick={() => setSearchText((t) => t + " ")}
+                >
+                  Mellanslag
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="h-9 px-3"
+                  onClick={() => setSearchText((t) => t.slice(0, -1))}
+                >
+                  ⌫
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-9 px-3"
+                  onClick={() => setSearchText("")}
+                >
+                  Rensa
+                </Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setKeyboardOpen(false)}>
+              Avbryt
+            </Button>
+            <Button onClick={() => void submitSearchText()} disabled={sendingText || !searchText}>
+              {sendingText ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : null}
+              Sök
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
