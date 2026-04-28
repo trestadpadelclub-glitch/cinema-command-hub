@@ -997,7 +997,25 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
                       size="sm"
                       className="h-8 px-2.5 text-[11px]"
                       onClick={async () => {
-                        const r = await sendFormulerCommand(current);
+                        // Emulera dubbelklick / långt tryck för knappar som
+                        // GTV-BT1-fjärren skickar via "dots"-knappen.
+                        const mode = s.mode ?? "single";
+                        let r;
+                        if (mode === "double") {
+                          r = await sendFormulerCommand(current);
+                          await new Promise((res) => setTimeout(res, 150));
+                          r = await sendFormulerCommand(current);
+                        } else if (mode === "long") {
+                          // Emulera ~500ms hold genom att skicka keyevent
+                          // upprepade gånger (Android repeat-tröskel ~50ms).
+                          r = await sendFormulerCommand(current);
+                          for (let i = 0; i < 9; i++) {
+                            await new Promise((res) => setTimeout(res, 55));
+                            r = await sendFormulerCommand(current);
+                          }
+                        } else {
+                          r = await sendFormulerCommand(current);
+                        }
                         if (!r.ok) {
                           toast.error(`${s.label} misslyckades`, {
                             description: r.error || `Status ${r.status}`,
