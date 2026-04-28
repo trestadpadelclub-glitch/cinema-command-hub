@@ -1337,7 +1337,7 @@ class FormulerMonitor(threading.Thread):
             "ismusicactive()=true" in audio_lower
             or "ismusicactive=true" in audio_lower
             or "ismusicactive: true" in audio_lower
-            or re.search(r"\bstate\s*[:=]\s*(?:2|started|start|playing|active)\b", audio_lower) is not None
+            or "ismusicactive: 1" in audio_lower
         )
         audio_hint = "active" if audio_active else "inactive"
 
@@ -1357,6 +1357,7 @@ class FormulerMonitor(threading.Thread):
             "focus_component": focus_component,
             "pb_int": pb_int,
             "audio": audio_hint,
+            "audio_raw": " | ".join(line.strip() for line in audio_text.splitlines() if line.strip())[:220],
             "play": play,
         }
 
