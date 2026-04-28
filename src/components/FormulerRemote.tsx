@@ -190,6 +190,11 @@ const APP_SHORTCUTS: Record<AppKey, AppShortcut[]> = {
       keycodes: ["KEYCODE_PROG_GREEN"],
       opensKeyboard: true,
     },
+    {
+      id: "menu",
+      label: "Menu",
+      keycodes: ["KEYCODE_MENU"],
+    },
   ],
   youtube: [],
   redbull: [],
