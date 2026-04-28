@@ -152,6 +152,8 @@ type AppShortcut = {
   id: string;
   label: string;
   keycodes: string[]; // primär först, sedan fallbacks
+  /** Om satt: efter att keycoden skickats, öppna tangentbord för textinmatning. */
+  opensKeyboard?: boolean;
 };
 const APP_SHORTCUTS: Record<AppKey, AppShortcut[]> = {
   mytvonline3: [
@@ -172,6 +174,13 @@ const APP_SHORTCUTS: Record<AppKey, AppShortcut[]> = {
       label: "TV Serier",
       // Serier ligger oftast på GUL eller BLÅ beroende på firmware
       keycodes: ["KEYCODE_PROG_YELLOW", "KEYCODE_PROG_BLUE", "KEYCODE_F3"],
+    },
+    {
+      id: "search",
+      label: "Sök",
+      // Sök är oftast SEARCH-knappen, men kan ligga på GRÖN i vissa firmwares
+      keycodes: ["KEYCODE_SEARCH", "KEYCODE_PROG_GREEN", "KEYCODE_F1"],
+      opensKeyboard: true,
     },
   ],
   youtube: [],
