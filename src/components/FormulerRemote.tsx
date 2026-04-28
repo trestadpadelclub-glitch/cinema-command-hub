@@ -158,8 +158,13 @@ type AppShortcut = {
    * - "single" (default): ett tryck
    * - "double": två snabba tryck (~150ms mellan) — motsvarar dubbelklick på GTV-BT1
    * - "long": långt tryck (~500ms) — emuleras genom upprepade keyevents
+   * - "sequence": skickar `sequence` i ordning med en kort fördröjning
    */
-  mode?: "single" | "double" | "long";
+  mode?: "single" | "double" | "long" | "sequence";
+  /** Sekvens av keycodes som skickas i ordning (används när mode === "sequence"). */
+  sequence?: string[];
+  /** Fördröjning mellan steg i en sekvens (ms). Default 250ms. */
+  sequenceDelayMs?: number;
 };
 const APP_SHORTCUTS: Record<AppKey, AppShortcut[]> = {
   mytvonline3: [
@@ -173,16 +178,18 @@ const APP_SHORTCUTS: Record<AppKey, AppShortcut[]> = {
     {
       id: "vod",
       label: "VOD",
-      // GTV-BT1: dubbelklick på "dots"-knappen → KEYCODE_UNKNOWN x2
-      keycodes: ["KEYCODE_UNKNOWN"],
-      mode: "double",
+      // MyTVOnline3: Menu → Down → Center
+      keycodes: ["KEYCODE_MENU"],
+      mode: "sequence",
+      sequence: ["KEYCODE_MENU", "KEYCODE_DPAD_DOWN", "KEYCODE_DPAD_CENTER"],
     },
     {
       id: "series",
       label: "TV Serier",
-      // GTV-BT1: håll "dots"-knappen ~500ms → långt tryck på KEYCODE_UNKNOWN
-      keycodes: ["KEYCODE_UNKNOWN"],
-      mode: "long",
+      // MyTVOnline3: Menu → Down → Down → Center
+      keycodes: ["KEYCODE_MENU"],
+      mode: "sequence",
+      sequence: ["KEYCODE_MENU", "KEYCODE_DPAD_DOWN", "KEYCODE_DPAD_DOWN", "KEYCODE_DPAD_CENTER"],
     },
     {
       id: "search",
@@ -1017,6 +1024,15 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
                           for (let i = 0; i < 9; i++) {
                             await new Promise((res) => setTimeout(res, 55));
                             r = await sendFormulerCommand(current);
+                          }
+                        } else if (mode === "sequence") {
+                          const seq = s.sequence ?? [current];
+                          const delay = s.sequenceDelayMs ?? 250;
+                          r = { ok: true } as Awaited<ReturnType<typeof sendFormulerCommand>>;
+                          for (let i = 0; i < seq.length; i++) {
+                            if (i > 0) await new Promise((res) => setTimeout(res, delay));
+                            r = await sendFormulerCommand(seq[i]);
+                            if (!r.ok) break;
                           }
                         } else {
                           r = await sendFormulerCommand(current);
