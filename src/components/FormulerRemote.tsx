@@ -179,7 +179,7 @@ const APP_SHORTCUTS: Record<AppKey, AppShortcut[]> = {
       id: "search",
       label: "Sök",
       // Sök är oftast SEARCH-knappen, men kan ligga på GRÖN i vissa firmwares
-      keycodes: ["KEYCODE_SEARCH", "KEYCODE_PROG_GREEN", "KEYCODE_F1"],
+      keycodes: ["KEYCODE_PROG_GREEN"],
       opensKeyboard: true,
     },
   ],
