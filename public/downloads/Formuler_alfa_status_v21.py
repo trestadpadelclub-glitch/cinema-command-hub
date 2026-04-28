@@ -1373,6 +1373,25 @@ class FormulerMonitor(threading.Thread):
         box_on = st["box_on"]
         play = st["play"]
         focus = st["focus"]
+        pb_int = st.get("pb_int", 0)
+
+        # Diagnostik: logga rå PlaybackState så fort den ändras (även om vår
+        # tolkning playing/paused/stopped är samma som innan).
+        if pb_int != self._last_pb_int:
+            _log(
+                f"FORMULER playback raw pb_int={pb_int} -> play={play} "
+                f"(prev_int={self._last_pb_int} prev_play={self._play_state})"
+            )
+            self._last_pb_int = pb_int
+
+        # Heartbeat var 30:e sekund så det syns att monitorn lever och vad den ser.
+        if (now - self._last_heartbeat) >= 30.0:
+            _log(
+                f"FORMULER heartbeat box={'on' if box_on else 'off'} "
+                f"play={play} pb_int={pb_int} state={self._play_state} "
+                f"focus={focus or '-'}"
+            )
+            self._last_heartbeat = now
 
         # --- Box på/av ----------------------------------------------------
         if self._box_on is None:
