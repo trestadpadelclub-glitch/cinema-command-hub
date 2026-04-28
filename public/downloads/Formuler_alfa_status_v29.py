@@ -1401,7 +1401,8 @@ class FormulerMonitor(threading.Thread):
             "focus_component": focus_component,
             "pb_int": pb_int,
             "audio": audio_hint,
-            "audio_raw": " | ".join(line.strip() for line in audio_text.splitlines() if line.strip())[:220],
+            "audio_raw": " | ".join(line.strip() for line in audio_text.splitlines() if line.strip())[:1500],
+            "audio_full": audio_text,
             "play": play,
         }
 
