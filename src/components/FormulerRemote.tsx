@@ -313,7 +313,47 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
     }
   };
 
-  const launchApp = async (key: AppKey, label: string) => {
+  // Skicka en text till Formuler-boxen genom att skicka varje tecken som
+  // ADB-keycode. Avslutas med ENTER för att utlösa sökning i appen.
+  const charToKeycode = (ch: string): string | null => {
+    if (ch === " ") return "KEYCODE_SPACE";
+    if (ch >= "0" && ch <= "9") return `KEYCODE_${ch}`;
+    const lower = ch.toLowerCase();
+    if (lower >= "a" && lower <= "z") return `KEYCODE_${lower.toUpperCase()}`;
+    return null;
+  };
+  const submitSearchText = async () => {
+    const text = searchText.trim();
+    if (!text) return;
+    setSendingText(true);
+    try {
+      for (const ch of text) {
+        const kc = charToKeycode(ch);
+        if (!kc) continue;
+        const r = await sendFormulerCommand(kc);
+        if (!r.ok) {
+          toast.error("Kunde inte skicka tecken", {
+            description: `${ch}: ${r.error || `Status ${r.status}`}`,
+          });
+          setSendingText(false);
+          return;
+        }
+        // Liten paus så appen hinner registrera varje tangent
+        await new Promise((res) => setTimeout(res, 60));
+      }
+      const enter = await sendFormulerCommand("KEYCODE_ENTER");
+      if (!enter.ok) {
+        toast.error("Enter misslyckades", {
+          description: enter.error || `Status ${enter.status}`,
+        });
+        return;
+      }
+      toast.success(`Sökte: "${text}"`);
+      setKeyboardOpen(false);
+    } finally {
+      setSendingText(false);
+    }
+  };
     const configured = packages[key];
     // Bygg lista: konfigurerat paket först, sedan alla kandidater (utan dubbletter)
     const candidates = Array.from(
