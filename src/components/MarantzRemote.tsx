@@ -74,8 +74,15 @@ export function MarantzRemote({
   const [diracSlot, setDiracSlot] = useState<string>("");
   const [speakerPreset, setSpeakerPreset] = useState<string>("");
 
-  // Mute kommer från bryggan (status pollas).
+  // Status kommer från bryggan (pollas) och används både för visning och aktiva val.
   const muted = marantzStatus?.mute ?? false;
+  const currentPower = marantzStatus?.power === "on" ? "ON" : marantzStatus?.power === "off" ? "Standby" : "—";
+  const currentVolume = (() => {
+    const volNum = marantzStatus?.volume;
+    if (typeof volNum !== "number") return "—";
+    const volDb = marantzMvToDb(volNum);
+    return `${volNum} (${volDb >= 0 ? "+" : ""}${volDb} dB)`;
+  })();
 
   useEffect(() => {
     fetchInputs(householdCode).then(setInputs);
@@ -164,9 +171,6 @@ export function MarantzRemote({
     return match ? `${match.label} (${match.marantz_code})` : marantzStatus.input;
   })();
 
-  const volNum = marantzStatus?.volume;
-  const volDb = typeof volNum === "number" ? marantzMvToDb(volNum) : null;
-
   return (
     <div className="space-y-4">
       {/* Status — speglar receiverns aktuella tillstånd */}
@@ -218,11 +222,7 @@ export function MarantzRemote({
             />
             <StatusItem
               label="Volym"
-              value={
-                volNum != null
-                  ? <span>{volNum} <span className="text-muted-foreground text-xs">({volDb! >= 0 ? "+" : ""}{volDb} dB)</span></span>
-                  : "—"
-              }
+              value={currentVolume}
             />
             <StatusItem
               label="Mute"
@@ -248,14 +248,12 @@ export function MarantzRemote({
 
       {/* Power */}
       <Card className="p-4">
-        <Label className="text-xs uppercase tracking-wider text-muted-foreground mb-3 block">
-          Power
-        </Label>
+        <SettingHeader label="Power" value={currentPower} />
         <div className="grid grid-cols-2 gap-2">
           <Button
             size="lg"
-            variant="default"
-            className="h-14 bg-emerald-600/90 hover:bg-emerald-600 text-white"
+            variant={marantzStatus?.power === "on" ? "default" : "secondary"}
+            className={`h-14 ${marantzStatus?.power === "on" ? "shadow-[var(--cinema-glow)]" : ""}`}
             onClick={() => handlePower("on")}
             disabled={busy === "pw-on"}
           >
@@ -268,8 +266,8 @@ export function MarantzRemote({
           </Button>
           <Button
             size="lg"
-            variant="destructive"
-            className="h-14"
+            variant={marantzStatus?.power === "off" ? "default" : "destructive"}
+            className={`h-14 ${marantzStatus?.power === "off" ? "shadow-[var(--cinema-glow)]" : ""}`}
             onClick={() => handlePower("off")}
             disabled={busy === "pw-off"}
           >
@@ -285,9 +283,7 @@ export function MarantzRemote({
 
       {/* Volume */}
       <Card className="p-4">
-        <Label className="text-xs uppercase tracking-wider text-muted-foreground mb-3 block">
-          Volume
-        </Label>
+        <SettingHeader label="Volume" value={`${currentVolume}${muted ? " · Muted" : ""}`} />
         <div className="grid grid-cols-3 gap-2">
           <Button
             size="lg"
