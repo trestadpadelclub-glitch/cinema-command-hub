@@ -1905,6 +1905,7 @@ class ChromecastMonitor(threading.Thread):
     def _on_cast_status(self, status: Any) -> None:
         """Anropas när cast-appen byts (Netflix, YouTube, backdrop = idle)."""
         try:
+            self._last_cast_status = status
             app_id = getattr(status, "app_id", None)
             display = getattr(status, "display_name", "") or ""
             idle = (app_id is None) or (display.lower() == "backdrop")
@@ -1927,6 +1928,7 @@ class ChromecastMonitor(threading.Thread):
     def _on_media_status(self, status: Any) -> None:
         """Anropas när media-state ändras (play/pause/stop/buffering)."""
         try:
+            self._last_media_status = status
             ps = (getattr(status, "player_state", "") or "").upper()
             if ps == "PLAYING":
                 play = "playing"
@@ -2044,6 +2046,10 @@ class ChromecastMonitor(threading.Thread):
                 # Reset baseline så vi inte missar att rapportera state efter reconnect
                 self._app_active = None
                 self._play_state = None
+                with self._cast_lock:
+                    self._cast = None
+                self._last_cast_status = None
+                self._last_media_status = None
 
         _log("CC monitor stopped")
 
