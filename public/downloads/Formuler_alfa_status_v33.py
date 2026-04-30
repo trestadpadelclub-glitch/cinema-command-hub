@@ -2479,7 +2479,13 @@ def main() -> None:
         _log("formuler      (avstängd — sätt FORMULER_HOST=<ip>)")
     cc_target = SETTINGS["chromecast_name"] or "(första hittade)"
     _log(f"chromecast    {cc_target} -> {SETTINGS['trigger_url']}")
-    ChromecastMonitor().start()
+    global _chromecast_monitor
+    _chromecast_monitor = ChromecastMonitor()
+    _chromecast_monitor.start()
+    # v33: Tuya status-poller (för GET /api/lights/status)
+    if SETTINGS["lights_status_poll"] > 0 and SETTINGS["tuya_api_key"]:
+        _log(f"tuya status   poll={SETTINGS['lights_status_poll']}s (devices: dynamiskt från UI)")
+        TuyaStatusPoller().start()
     if SETTINGS["marantz_host"]:
         MarantzMonitor().start()
     try:
