@@ -158,8 +158,94 @@ export function MarantzRemote({
     send(`SPPR ${n}`, `Speaker Preset ${n}`, `spk`);
   };
 
+  const inputLabel = (() => {
+    if (!marantzStatus?.input) return null;
+    const match = inputs.find((i) => i.marantz_code === marantzStatus.input);
+    return match ? `${match.label} (${match.marantz_code})` : marantzStatus.input;
+  })();
+
+  const volNum = marantzStatus?.volume;
+  const volDb = typeof volNum === "number" ? marantzMvToDb(volNum) : null;
+
   return (
     <div className="space-y-4">
+      {/* Status — speglar receiverns aktuella tillstånd */}
+      <Card className="p-4">
+        <div className="flex items-center justify-between mb-3">
+          <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+            Aktuell status
+          </Label>
+          <div className="flex items-center gap-2">
+            {marantzReachable === false ? (
+              <Badge variant="destructive" className="gap-1">
+                <CircleOff className="h-3 w-3" /> Offline
+              </Badge>
+            ) : marantzReachable === true ? (
+              <Badge variant="secondary" className="gap-1 bg-emerald-600/15 text-emerald-400 border-emerald-600/30">
+                <CircleDot className="h-3 w-3" /> Online
+              </Badge>
+            ) : (
+              <Badge variant="secondary">…</Badge>
+            )}
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 px-2"
+              onClick={refreshStatus}
+              disabled={refreshing}
+              aria-label="Uppdatera status"
+            >
+              <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+            </Button>
+          </div>
+        </div>
+
+        {marantzReachable === false ? (
+          <p className="text-xs text-muted-foreground">
+            Kunde inte nå bryggan. Kontrollera att <code>Formuler_alfa_status_v33.py</code> körs och att Marantz är på samma nät.
+          </p>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
+            <StatusItem
+              label="Power"
+              value={
+                marantzStatus?.power === "on"
+                  ? <span className="text-emerald-400">● ON</span>
+                  : marantzStatus?.power === "off"
+                    ? <span className="text-muted-foreground">○ Standby</span>
+                    : "—"
+              }
+            />
+            <StatusItem
+              label="Volym"
+              value={
+                volNum != null
+                  ? <span>{volNum} <span className="text-muted-foreground text-xs">({volDb! >= 0 ? "+" : ""}{volDb} dB)</span></span>
+                  : "—"
+              }
+            />
+            <StatusItem
+              label="Mute"
+              value={muted ? <span className="text-destructive">MUTED</span> : "Av"}
+            />
+            <StatusItem label="Källa" value={inputLabel ?? marantzStatus?.input ?? "—"} />
+            <StatusItem label="Sound mode" value={marantzStatus?.sound_mode ?? "—"} />
+            <StatusItem
+              label="Smart Select"
+              value={marantzStatus?.smart_select != null ? `Smart ${marantzStatus.smart_select}` : "—"}
+            />
+            <StatusItem
+              label="Dirac"
+              value={marantzStatus?.dirac ? (marantzStatus.dirac === "OFF" ? "Av" : `Slot ${marantzStatus.dirac}`) : "—"}
+            />
+            <StatusItem
+              label="Högtalare"
+              value={marantzStatus?.speaker_preset != null ? `Preset ${marantzStatus.speaker_preset}` : "—"}
+            />
+          </div>
+        )}
+      </Card>
+
       {/* Power */}
       <Card className="p-4">
         <Label className="text-xs uppercase tracking-wider text-muted-foreground mb-3 block">
