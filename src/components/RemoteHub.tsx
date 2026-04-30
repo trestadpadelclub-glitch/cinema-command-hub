@@ -58,7 +58,12 @@ export function RemoteHub({
         <ManualControls settings={settings} onChange={onSettingsChange} />
       </TabsContent>
       <TabsContent value="marantz" className="mt-4">
-        <MarantzRemote householdCode={householdCode} />
+        <MarantzRemote
+          householdCode={householdCode}
+          marantzStatus={marantzStatus}
+          marantzReachable={marantzReachable}
+          onMarantzRefresh={onMarantzRefresh}
+        />
       </TabsContent>
       <TabsContent value="formuler" className="mt-4">
         <FormulerRemote
