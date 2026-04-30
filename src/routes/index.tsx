@@ -111,9 +111,16 @@ function Index() {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await syncStatus("full", true);
-    setRefreshing(false);
+    try {
+      await Promise.all([syncStatus("full", true), marantz.refetch()]);
+    } finally {
+      setRefreshing(false);
+    }
   };
+
+  useEffect(() => {
+    if (marantz.status?.input) setActiveInput(marantz.status.input);
+  }, [marantz.status?.input]);
 
   // Initial sync + load polling config
   useEffect(() => {
@@ -233,7 +240,7 @@ function Index() {
                 />
                 <button
                   type="button"
-                  onClick={() => syncStatus("full", true)}
+                  onClick={handleRefresh}
                   title="Hämta alla aktuella inställningar nu"
                   className="inline-flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                 >
@@ -308,7 +315,7 @@ function Index() {
             <main className="grid gap-6 lg:grid-cols-[1fr_360px]">
               <div className="space-y-6">
                 <Section title="Marantz Cinema 50">
-                  <MarantzPanel householdCode={household} activeInput={activeInput} />
+                  <MarantzPanel householdCode={household} activeInput={marantz.status?.input ?? activeInput} />
                 </Section>
                 <Section title="Lights — dina lampor">
                   <LightsManager householdCode={household} />
@@ -341,7 +348,7 @@ function Index() {
               <PollingControl
                 householdCode={household}
                 onChange={refetchPollSettings}
-                onManualPoll={() => syncStatus("full", true)}
+                  onManualPoll={handleRefresh}
               />
             </Section>
             <Section title="Scen-triggers (auto-körning)">

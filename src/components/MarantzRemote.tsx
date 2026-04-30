@@ -74,8 +74,15 @@ export function MarantzRemote({
   const [diracSlot, setDiracSlot] = useState<string>("");
   const [speakerPreset, setSpeakerPreset] = useState<string>("");
 
-  // Mute kommer från bryggan (status pollas).
+  // Status kommer från bryggan (pollas) och används både för visning och aktiva val.
   const muted = marantzStatus?.mute ?? false;
+  const currentPower = marantzStatus?.power === "on" ? "ON" : marantzStatus?.power === "off" ? "Standby" : "—";
+  const currentVolume = (() => {
+    const volNum = marantzStatus?.volume;
+    if (typeof volNum !== "number") return "—";
+    const volDb = marantzMvToDb(volNum);
+    return `${volNum} (${volDb >= 0 ? "+" : ""}${volDb} dB)`;
+  })();
 
   useEffect(() => {
     fetchInputs(householdCode).then(setInputs);
@@ -163,9 +170,13 @@ export function MarantzRemote({
     const match = inputs.find((i) => i.marantz_code === marantzStatus.input);
     return match ? `${match.label} (${match.marantz_code})` : marantzStatus.input;
   })();
-
-  const volNum = marantzStatus?.volume;
-  const volDb = typeof volNum === "number" ? marantzMvToDb(volNum) : null;
+  const soundModeLabel = (() => {
+    if (!marantzStatus?.sound_mode) return "—";
+    return SOUND_MODES.find((m) => m.code === marantzStatus.sound_mode)?.label ?? marantzStatus.sound_mode;
+  })();
+  const diracLabel = marantzStatus?.dirac ? (marantzStatus.dirac === "OFF" ? "Av" : `Slot ${marantzStatus.dirac}`) : "—";
+  const speakerLabel = marantzStatus?.speaker_preset != null ? `Preset ${marantzStatus.speaker_preset}` : "—";
+  const smartLabel = marantzStatus?.smart_select != null ? `Smart ${marantzStatus.smart_select}` : "—";
 
   return (
     <div className="space-y-4">
@@ -218,11 +229,7 @@ export function MarantzRemote({
             />
             <StatusItem
               label="Volym"
-              value={
-                volNum != null
-                  ? <span>{volNum} <span className="text-muted-foreground text-xs">({volDb! >= 0 ? "+" : ""}{volDb} dB)</span></span>
-                  : "—"
-              }
+              value={currentVolume}
             />
             <StatusItem
               label="Mute"
@@ -248,14 +255,12 @@ export function MarantzRemote({
 
       {/* Power */}
       <Card className="p-4">
-        <Label className="text-xs uppercase tracking-wider text-muted-foreground mb-3 block">
-          Power
-        </Label>
+        <SettingHeader label="Power" value={currentPower} />
         <div className="grid grid-cols-2 gap-2">
           <Button
             size="lg"
-            variant="default"
-            className="h-14 bg-emerald-600/90 hover:bg-emerald-600 text-white"
+            variant={marantzStatus?.power === "on" ? "default" : "secondary"}
+            className={`h-14 ${marantzStatus?.power === "on" ? "shadow-[var(--cinema-glow)]" : ""}`}
             onClick={() => handlePower("on")}
             disabled={busy === "pw-on"}
           >
@@ -268,8 +273,8 @@ export function MarantzRemote({
           </Button>
           <Button
             size="lg"
-            variant="destructive"
-            className="h-14"
+            variant={marantzStatus?.power === "off" ? "default" : "destructive"}
+            className={`h-14 ${marantzStatus?.power === "off" ? "shadow-[var(--cinema-glow)]" : ""}`}
             onClick={() => handlePower("off")}
             disabled={busy === "pw-off"}
           >
@@ -285,9 +290,7 @@ export function MarantzRemote({
 
       {/* Volume */}
       <Card className="p-4">
-        <Label className="text-xs uppercase tracking-wider text-muted-foreground mb-3 block">
-          Volume
-        </Label>
+        <SettingHeader label="Volume" value={`${currentVolume}${muted ? " · Muted" : ""}`} />
         <div className="grid grid-cols-3 gap-2">
           <Button
             size="lg"
@@ -328,9 +331,7 @@ export function MarantzRemote({
 
       {/* Input source dropdown */}
       <Card className="p-4">
-        <Label className="text-xs uppercase tracking-wider text-muted-foreground mb-3 block">
-          Input Source
-        </Label>
+        <SettingHeader label="Input Source" value={inputLabel ?? marantzStatus?.input ?? "—"} />
         <Select value={selectedInput} onValueChange={handleInput}>
           <SelectTrigger className="h-12">
             <SelectValue placeholder="Välj källa…" />
@@ -355,9 +356,7 @@ export function MarantzRemote({
 
       {/* Smart Select */}
       <Card className="p-4">
-        <Label className="text-xs uppercase tracking-wider text-muted-foreground mb-3 block">
-          Smart Select
-        </Label>
+        <SettingHeader label="Smart Select" value={smartLabel} />
         <RadioGroup
           value={smartSelect}
           onValueChange={handleSmart}
@@ -389,9 +388,7 @@ export function MarantzRemote({
 
       {/* Sound Mode */}
       <Card className="p-4">
-        <Label className="text-xs uppercase tracking-wider text-muted-foreground mb-3 block">
-          Sound Mode
-        </Label>
+        <SettingHeader label="Sound Mode" value={soundModeLabel} />
         <RadioGroup
           value={soundMode}
           onValueChange={handleSoundMode}
@@ -419,9 +416,7 @@ export function MarantzRemote({
 
       {/* Dirac Live slot */}
       <Card className="p-4">
-        <Label className="text-xs uppercase tracking-wider text-muted-foreground mb-3 block">
-          Dirac Live
-        </Label>
+        <SettingHeader label="Dirac Live" value={diracLabel} />
         <RadioGroup
           value={diracSlot}
           onValueChange={handleDirac}
@@ -453,9 +448,7 @@ export function MarantzRemote({
 
       {/* Speaker preset */}
       <Card className="p-4">
-        <Label className="text-xs uppercase tracking-wider text-muted-foreground mb-3 block">
-          Speaker Preset
-        </Label>
+        <SettingHeader label="Speaker Preset" value={speakerLabel} />
         <RadioGroup
           value={speakerPreset}
           onValueChange={handleSpeaker}
@@ -499,6 +492,19 @@ function StatusItem({ label, value }: { label: string; value: ReactNode }) {
         {label}
       </span>
       <span className="text-sm font-medium truncate">{value}</span>
+    </div>
+  );
+}
+
+function SettingHeader({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <div className="mb-3 flex items-center justify-between gap-3">
+      <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+        {label}
+      </Label>
+      <span className="max-w-[65%] truncate rounded-md border border-primary/30 bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
+        {value}
+      </span>
     </div>
   );
 }
