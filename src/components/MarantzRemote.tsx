@@ -6,10 +6,14 @@ import {
   Plus,
   Minus,
   Loader2,
+  RefreshCw,
+  CircleDot,
+  CircleOff,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -18,12 +22,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { sendMarantz } from "@/lib/projector";
+import { sendMarantz, marantzMvToDb, type MarantzStatus } from "@/lib/projector";
 import { fetchInputs, type MarantzInput } from "@/lib/scenes";
 import { toast } from "sonner";
 
 interface Props {
   householdCode: string;
+  marantzStatus: MarantzStatus | null;
+  marantzReachable: boolean | null;
+  onMarantzRefresh: () => Promise<void>;
 }
 
 const SMART_SELECTS = [1, 2, 3, 4] as const;
