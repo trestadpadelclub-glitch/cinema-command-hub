@@ -347,6 +347,143 @@ def tuya_apply_lights(lights: list) -> Dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# TUYA STATUS — läsning av aktuellt tillstånd per lampa (cache:as)
+# ---------------------------------------------------------------------------
+# tinytuya.Cloud.getstatus(device_id) returnerar {"result": [ {"code": "switch_led", "value": True}, ... ]}
+# Vi normaliserar detta till ett UI-vänligt objekt.
+
+_lights_status_cache: Dict[str, Dict[str, Any]] = {}
+_lights_status_lock = threading.Lock()
+
+
+def _temp_value_to_kelvin(tv: int) -> int:
+    """Mappa tinytuya 0..1000 -> 2700..6500 K (omvänt mot _kelvin_to_temp_value)."""
+    n = max(0, min(1000, int(tv)))
+    return int(round(2700 + (n / 1000.0) * (6500 - 2700)))
+
+
+def _tuya_brightness_to_percent(raw: int) -> int:
+    """10..1000 -> 0..100% med invers gamma."""
+    n = max(TUYA_BRIGHTNESS_MIN, min(TUYA_BRIGHTNESS_MAX, int(raw)))
+    linear = n / TUYA_BRIGHTNESS_MAX
+    if linear <= 0:
+        return 0
+    pct = (linear ** (1.0 / TUYA_BRIGHTNESS_GAMMA)) * 100.0
+    return max(0, min(100, int(round(pct))))
+
+
+def _hsv_to_hex(h: int, s: int, v: int) -> str:
+    """colour_data_v2 {h:0..360, s:0..1000, v:0..1000} -> '#rrggbb'."""
+    sf = max(0, min(1000, int(s))) / 1000.0
+    vf = max(0, min(1000, int(v))) / 1000.0
+    hf = max(0, min(360, int(h))) / 60.0
+    c = vf * sf
+    x = c * (1 - abs((hf % 2) - 1))
+    m = vf - c
+    if 0 <= hf < 1:   r, g, b = c, x, 0
+    elif 1 <= hf < 2: r, g, b = x, c, 0
+    elif 2 <= hf < 3: r, g, b = 0, c, x
+    elif 3 <= hf < 4: r, g, b = 0, x, c
+    elif 4 <= hf < 5: r, g, b = x, 0, c
+    else:             r, g, b = c, 0, x
+    rr = int(round((r + m) * 255))
+    gg = int(round((g + m) * 255))
+    bb = int(round((b + m) * 255))
+    return f"#{rr:02x}{gg:02x}{bb:02x}"
+
+
+def tuya_read_status(device_id: str) -> Dict[str, Any]:
+    """Hämta aktuell status för en Tuya-lampa. Returnerar normaliserat objekt."""
+    cloud = _get_tuya_cloud()
+    if cloud is None:
+        return {"online": False, "error": "tuya_cloud_unavailable"}
+    try:
+        with _tuya_lock:
+            raw = cloud.getstatus(device_id)
+    except Exception as e:
+        return {"online": False, "error": str(e)}
+
+    if not raw or not isinstance(raw, dict):
+        return {"online": False, "error": "empty_reply"}
+    if raw.get("success") is False:
+        return {"online": False, "error": str(raw.get("msg") or raw)}
+
+    items = raw.get("result") or []
+    if not isinstance(items, list):
+        return {"online": False, "error": "bad_format"}
+
+    out: Dict[str, Any] = {"online": True, "last_seen": int(time.time())}
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        code = item.get("code")
+        val = item.get("value")
+        if code == "switch_led":
+            out["on"] = bool(val)
+        elif code in ("bright_value", "bright_value_v2") and isinstance(val, (int, float)):
+            out["brightness"] = _tuya_brightness_to_percent(int(val))
+        elif code in ("temp_value", "temp_value_v2") and isinstance(val, (int, float)):
+            out["kelvin"] = _temp_value_to_kelvin(int(val))
+        elif code == "work_mode" and isinstance(val, str):
+            out["work_mode"] = val
+        elif code == "colour_data_v2" and isinstance(val, dict):
+            try:
+                out["color_hex"] = _hsv_to_hex(int(val.get("h", 0)), int(val.get("s", 0)), int(val.get("v", 0)))
+            except (TypeError, ValueError):
+                pass
+    return out
+
+
+def lights_status_get_all() -> Dict[str, Dict[str, Any]]:
+    """Returnera cache:ad status för alla pollade lampor."""
+    with _lights_status_lock:
+        return dict(_lights_status_cache)
+
+
+def lights_status_set_devices(device_ids: list) -> None:
+    """Uppdatera vilka device_ids som ska pollas. Anropas från GET /api/lights/status."""
+    clean = [d for d in (str(x).strip() for x in device_ids) if d]
+    SETTINGS["lights_status_devices"] = clean
+    with _lights_status_lock:
+        for k in list(_lights_status_cache.keys()):
+            if k not in clean:
+                _lights_status_cache.pop(k, None)
+
+
+class TuyaStatusPoller(threading.Thread):
+    """Bakgrundstråd som pollar Tuya Cloud för varje konfigurerad lampa."""
+
+    def __init__(self) -> None:
+        super().__init__(daemon=True, name="TuyaStatusPoller")
+        self._stop = threading.Event()
+
+    def stop(self) -> None:
+        self._stop.set()
+
+    def run(self) -> None:
+        interval = SETTINGS["lights_status_poll"]
+        if interval <= 0:
+            _log("TUYA STATUS poller disabled (LIGHTS_STATUS_POLL_SEC=0)")
+            return
+        _log(f"TUYA STATUS poller start interval={interval}s")
+        while not self._stop.is_set():
+            devices = list(SETTINGS["lights_status_devices"])
+            if not devices:
+                self._stop.wait(min(interval, 5.0))
+                continue
+            for device_id in devices:
+                if self._stop.is_set():
+                    break
+                status = tuya_read_status(device_id)
+                with _lights_status_lock:
+                    prev = _lights_status_cache.get(device_id, {})
+                    merged = {**prev, **status, "device_id": device_id}
+                    _lights_status_cache[device_id] = merged
+            self._stop.wait(interval)
+        _log("TUYA STATUS poller stopped")
+
+
+# ---------------------------------------------------------------------------
 # ACTION → ADCP-kommando
 # ---------------------------------------------------------------------------
 #
