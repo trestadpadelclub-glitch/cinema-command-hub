@@ -1,9 +1,11 @@
-import { Tv2, Volume2, Gamepad2, Lightbulb } from "lucide-react";
+import { Tv2, Volume2, Gamepad2, Lightbulb, Cast, Disc } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ManualControls } from "@/components/ManualControls";
 import { MarantzRemote } from "@/components/MarantzRemote";
 import { FormulerRemote } from "@/components/FormulerRemote";
 import { LightsRemote } from "@/components/LightsRemote";
+import { ChromecastRemote } from "@/components/ChromecastRemote";
+import { BlurayRemote } from "@/components/BlurayRemote";
 import type { ProjectorSettings, MarantzStatus } from "@/lib/projector";
 
 interface Props {
@@ -25,22 +27,30 @@ export function RemoteHub({
 }: Props) {
   return (
     <Tabs defaultValue="sony" className="w-full">
-      <TabsList className="grid w-full grid-cols-4 h-auto">
+      <TabsList className="grid w-full grid-cols-6 h-auto">
         <TabsTrigger value="sony" className="flex-col gap-1 py-2">
           <Tv2 className="h-4 w-4" />
-          <span className="text-xs">Sony</span>
+          <span className="text-[10px]">Sony</span>
         </TabsTrigger>
         <TabsTrigger value="marantz" className="flex-col gap-1 py-2">
           <Volume2 className="h-4 w-4" />
-          <span className="text-xs">Marantz</span>
+          <span className="text-[10px]">Marantz</span>
         </TabsTrigger>
         <TabsTrigger value="formuler" className="flex-col gap-1 py-2">
           <Gamepad2 className="h-4 w-4" />
-          <span className="text-xs">Formuler</span>
+          <span className="text-[10px]">Formuler</span>
         </TabsTrigger>
         <TabsTrigger value="lights" className="flex-col gap-1 py-2">
           <Lightbulb className="h-4 w-4" />
-          <span className="text-xs">Lights</span>
+          <span className="text-[10px]">Lights</span>
+        </TabsTrigger>
+        <TabsTrigger value="cast" className="flex-col gap-1 py-2">
+          <Cast className="h-4 w-4" />
+          <span className="text-[10px]">Cast</span>
+        </TabsTrigger>
+        <TabsTrigger value="bluray" className="flex-col gap-1 py-2">
+          <Disc className="h-4 w-4" />
+          <span className="text-[10px]">Blu-ray</span>
         </TabsTrigger>
       </TabsList>
 
@@ -60,6 +70,12 @@ export function RemoteHub({
       </TabsContent>
       <TabsContent value="lights" className="mt-4">
         <LightsRemote householdCode={householdCode} />
+      </TabsContent>
+      <TabsContent value="cast" className="mt-4">
+        <ChromecastRemote />
+      </TabsContent>
+      <TabsContent value="bluray" className="mt-4">
+        <BlurayRemote householdCode={householdCode} />
       </TabsContent>
     </Tabs>
   );
