@@ -57,21 +57,61 @@ const DIRAC_SLOTS: { value: string; label: string }[] = [
 
 const SPEAKER_PRESETS = [1, 2] as const;
 
-export function MarantzRemote({ householdCode }: Props) {
+export function MarantzRemote({
+  householdCode,
+  marantzStatus,
+  marantzReachable,
+  onMarantzRefresh,
+}: Props) {
   const [inputs, setInputs] = useState<MarantzInput[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Lokal UI-state — bridge skickar inte tillbaka allt detta i status-pollen.
+  // Lokal UI-state — speglar senast skickade kommando, men synkas mot status nedan.
   const [selectedInput, setSelectedInput] = useState<string>("");
   const [smartSelect, setSmartSelect] = useState<string>("");
   const [soundMode, setSoundMode] = useState<string>("");
   const [diracSlot, setDiracSlot] = useState<string>("");
   const [speakerPreset, setSpeakerPreset] = useState<string>("");
-  const [muted, setMuted] = useState(false);
+
+  // Mute kommer från bryggan (status pollas).
+  const muted = marantzStatus?.mute ?? false;
 
   useEffect(() => {
     fetchInputs(householdCode).then(setInputs);
   }, [householdCode]);
+
+  // Synka radio-knappar / dropdown med faktisk receiver-status när den uppdateras.
+  useEffect(() => {
+    if (!marantzStatus) return;
+    if (marantzStatus.input) setSelectedInput(marantzStatus.input);
+    if (typeof marantzStatus.smart_select === "number") {
+      setSmartSelect(String(marantzStatus.smart_select));
+    }
+    if (marantzStatus.sound_mode) {
+      const match = SOUND_MODES.find((m) => m.code === marantzStatus.sound_mode);
+      setSoundMode(match ? match.code : marantzStatus.sound_mode);
+    }
+    if (marantzStatus.dirac) setDiracSlot(marantzStatus.dirac);
+    if (typeof marantzStatus.speaker_preset === "number") {
+      setSpeakerPreset(String(marantzStatus.speaker_preset));
+    }
+  }, [
+    marantzStatus?.input,
+    marantzStatus?.smart_select,
+    marantzStatus?.sound_mode,
+    marantzStatus?.dirac,
+    marantzStatus?.speaker_preset,
+  ]);
+
+  const refreshStatus = async () => {
+    setRefreshing(true);
+    try {
+      await onMarantzRefresh();
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const send = async (cmd: string, label: string, key: string) => {
     setBusy(key);
@@ -84,6 +124,8 @@ export function MarantzRemote({ householdCode }: Props) {
       return false;
     }
     toast.success(`${label} skickat`);
+    // Refresha status efter ~600ms så användaren ser uppdaterat värde.
+    setTimeout(() => { onMarantzRefresh().catch(() => {}); }, 600);
     return true;
   };
 
