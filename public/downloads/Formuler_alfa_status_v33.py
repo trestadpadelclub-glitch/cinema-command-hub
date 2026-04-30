@@ -1759,6 +1759,9 @@ class FormulerMonitor(threading.Thread):
 #   pip install pychromecast
 
 
+_chromecast_monitor: Optional["ChromecastMonitor"] = None
+
+
 class ChromecastMonitor(threading.Thread):
     """Bakgrundstråd som lyssnar på en Chromecast och postar triggers."""
 
@@ -1771,9 +1774,107 @@ class ChromecastMonitor(threading.Thread):
         # State som hålls mellan events:
         self._app_active: Optional[bool] = None      # None = okänt vid start
         self._play_state: Optional[str] = None       # "playing" | "paused" | "stopped"
+        # v33: spara aktivt cast-objekt + senaste status så HTTP-handlers
+        # kan styra det och GET /api/chromecast/status kan svara snabbt.
+        self._cast: Any = None
+        self._last_cast_status: Any = None
+        self._last_media_status: Any = None
+        self._cast_lock = threading.Lock()
 
     def stop(self) -> None:
         self._stop.set()
+
+    # -- Public control surface (anropas från HTTP-handlers) --------------
+
+    def get_cast(self) -> Any:
+        with self._cast_lock:
+            return self._cast
+
+    def snapshot(self) -> Dict[str, Any]:
+        """Returnera en JSON-vänlig ögonblicksbild för GET /api/chromecast/status."""
+        cast = self.get_cast()
+        if cast is None:
+            return {"connected": False}
+        try:
+            cs = self._last_cast_status
+            ms = self._last_media_status
+            mc = cast.media_controller
+            mc_status = getattr(mc, "status", None)
+            # mc.status uppdateras kontinuerligt av pychromecast — bind till det
+            # OM vi inte fått ett färskare event.
+            if mc_status is not None and ms is None:
+                ms = mc_status
+
+            display = (getattr(cs, "display_name", "") or "") if cs else ""
+            app_id = getattr(cs, "app_id", None) if cs else None
+            volume_level = getattr(cs, "volume_level", 0.0) if cs else 0.0
+            volume_muted = bool(getattr(cs, "volume_muted", False)) if cs else False
+
+            player_state = (getattr(ms, "player_state", "") or "") if ms else ""
+            title = (getattr(ms, "title", "") or "") if ms else ""
+            artist = (getattr(ms, "artist", "") or "") if ms else ""
+            album = (getattr(ms, "album_name", "") or "") if ms else ""
+            duration = getattr(ms, "duration", None) if ms else None
+            position = getattr(ms, "current_time", None) if ms else None
+            images = getattr(ms, "images", []) if ms else []
+            image_url = ""
+            if images:
+                try:
+                    image_url = getattr(images[0], "url", "") or ""
+                except Exception:
+                    image_url = ""
+
+            return {
+                "connected": True,
+                "device_name": getattr(cast, "name", "") or "",
+                "app_name": display,
+                "app_id": app_id,
+                "media_state": player_state,
+                "title": title,
+                "artist": artist,
+                "album": album,
+                "image_url": image_url,
+                "volume": int(round(float(volume_level) * 100)),
+                "muted": volume_muted,
+                "position": float(position) if isinstance(position, (int, float)) else None,
+                "duration": float(duration) if isinstance(duration, (int, float)) else None,
+            }
+        except Exception as e:
+            return {"connected": True, "error": str(e)}
+
+    def control(self, action: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Skicka ett kommando till casten. Returnerar {ok, error?}."""
+        cast = self.get_cast()
+        if cast is None:
+            return {"ok": False, "error": "no_chromecast_connected"}
+        try:
+            mc = cast.media_controller
+            a = (action or "").lower().strip()
+            if a == "play":
+                mc.play()
+            elif a == "pause":
+                mc.pause()
+            elif a == "stop":
+                mc.stop()
+            elif a == "next":
+                mc.queue_next()
+            elif a == "previous":
+                mc.queue_prev()
+            elif a == "quit_app":
+                cast.quit_app()
+            elif a == "volume":
+                level = float(payload.get("level", 0))
+                level = max(0.0, min(100.0, level)) / 100.0
+                cast.set_volume(level)
+            elif a == "mute":
+                cast.set_volume_muted(bool(payload.get("muted", False)))
+            else:
+                return {"ok": False, "error": f"unknown_action:{a}"}
+            return {"ok": True, "action": a}
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
+
+
 
     # -- Trigger posting (samma kontrakt som FormulerMonitor) --------------
 
