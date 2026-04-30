@@ -1019,6 +1019,51 @@ def marantz_status() -> Dict[str, Any]:
             if line.startswith("SI") and len(line) > 2:
                 out["input"] = line[2:].strip()
                 break
+
+        # MS? -> sound mode + ev. MSSMART<n> + MSQUICK<n>
+        # Receivern svarar t.ex. "MSDOLBY DIGITAL\rMSSMART2\r"
+        try:
+            ms = marantz_send("MS?")
+            for line in ms.splitlines():
+                line = line.strip()
+                if line.startswith("MSSMART") and len(line) > 7:
+                    n = line[7:].strip()
+                    if n.isdigit():
+                        out["smart_select"] = int(n)
+                elif line.startswith("MSQUICK") and len(line) > 7:
+                    n = line[7:].strip()
+                    if n.isdigit():
+                        out["smart_select"] = int(n)
+                elif line.startswith("MS") and len(line) > 2 and "sound_mode" not in out:
+                    out["sound_mode"] = line[2:].strip()
+        except (socket.error, MarantzError):
+            pass
+
+        # PSDIRAC ? -> "PSDIRAC 1" / "PSDIRAC OFF"
+        try:
+            ps = marantz_send("PSDIRAC ?")
+            for line in ps.splitlines():
+                line = line.strip().upper()
+                if line.startswith("PSDIRAC"):
+                    val = line[len("PSDIRAC"):].strip()
+                    if val:
+                        out["dirac"] = val  # "1" / "2" / "3" / "OFF"
+                        break
+        except (socket.error, MarantzError):
+            pass
+
+        # SPPR ? -> "SPPR 1" / "SPPR 2"
+        try:
+            sp = marantz_send("SPPR ?")
+            for line in sp.splitlines():
+                line = line.strip().upper()
+                if line.startswith("SPPR"):
+                    val = line[len("SPPR"):].strip()
+                    if val.isdigit():
+                        out["speaker_preset"] = int(val)
+                        break
+        except (socket.error, MarantzError):
+            pass
     except (socket.error, MarantzError) as e:
         out.setdefault("power", "unknown")
         out["error"] = str(e)

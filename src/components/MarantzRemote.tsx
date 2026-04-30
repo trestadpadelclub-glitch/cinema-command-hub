@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   Power,
   Volume2,
@@ -6,10 +6,14 @@ import {
   Plus,
   Minus,
   Loader2,
+  RefreshCw,
+  CircleDot,
+  CircleOff,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -18,12 +22,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { sendMarantz } from "@/lib/projector";
+import { sendMarantz, marantzMvToDb, type MarantzStatus } from "@/lib/projector";
 import { fetchInputs, type MarantzInput } from "@/lib/scenes";
 import { toast } from "sonner";
 
 interface Props {
   householdCode: string;
+  marantzStatus: MarantzStatus | null;
+  marantzReachable: boolean | null;
+  onMarantzRefresh: () => Promise<void>;
 }
 
 const SMART_SELECTS = [1, 2, 3, 4] as const;
@@ -50,21 +57,61 @@ const DIRAC_SLOTS: { value: string; label: string }[] = [
 
 const SPEAKER_PRESETS = [1, 2] as const;
 
-export function MarantzRemote({ householdCode }: Props) {
+export function MarantzRemote({
+  householdCode,
+  marantzStatus,
+  marantzReachable,
+  onMarantzRefresh,
+}: Props) {
   const [inputs, setInputs] = useState<MarantzInput[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Lokal UI-state — bridge skickar inte tillbaka allt detta i status-pollen.
+  // Lokal UI-state — speglar senast skickade kommando, men synkas mot status nedan.
   const [selectedInput, setSelectedInput] = useState<string>("");
   const [smartSelect, setSmartSelect] = useState<string>("");
   const [soundMode, setSoundMode] = useState<string>("");
   const [diracSlot, setDiracSlot] = useState<string>("");
   const [speakerPreset, setSpeakerPreset] = useState<string>("");
-  const [muted, setMuted] = useState(false);
+
+  // Mute kommer från bryggan (status pollas).
+  const muted = marantzStatus?.mute ?? false;
 
   useEffect(() => {
     fetchInputs(householdCode).then(setInputs);
   }, [householdCode]);
+
+  // Synka radio-knappar / dropdown med faktisk receiver-status när den uppdateras.
+  useEffect(() => {
+    if (!marantzStatus) return;
+    if (marantzStatus.input) setSelectedInput(marantzStatus.input);
+    if (typeof marantzStatus.smart_select === "number") {
+      setSmartSelect(String(marantzStatus.smart_select));
+    }
+    if (marantzStatus.sound_mode) {
+      const match = SOUND_MODES.find((m) => m.code === marantzStatus.sound_mode);
+      setSoundMode(match ? match.code : marantzStatus.sound_mode);
+    }
+    if (marantzStatus.dirac) setDiracSlot(marantzStatus.dirac);
+    if (typeof marantzStatus.speaker_preset === "number") {
+      setSpeakerPreset(String(marantzStatus.speaker_preset));
+    }
+  }, [
+    marantzStatus?.input,
+    marantzStatus?.smart_select,
+    marantzStatus?.sound_mode,
+    marantzStatus?.dirac,
+    marantzStatus?.speaker_preset,
+  ]);
+
+  const refreshStatus = async () => {
+    setRefreshing(true);
+    try {
+      await onMarantzRefresh();
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const send = async (cmd: string, label: string, key: string) => {
     setBusy(key);
@@ -77,6 +124,8 @@ export function MarantzRemote({ householdCode }: Props) {
       return false;
     }
     toast.success(`${label} skickat`);
+    // Refresha status efter ~600ms så användaren ser uppdaterat värde.
+    setTimeout(() => { onMarantzRefresh().catch(() => {}); }, 600);
     return true;
   };
 
@@ -109,8 +158,94 @@ export function MarantzRemote({ householdCode }: Props) {
     send(`SPPR ${n}`, `Speaker Preset ${n}`, `spk`);
   };
 
+  const inputLabel = (() => {
+    if (!marantzStatus?.input) return null;
+    const match = inputs.find((i) => i.marantz_code === marantzStatus.input);
+    return match ? `${match.label} (${match.marantz_code})` : marantzStatus.input;
+  })();
+
+  const volNum = marantzStatus?.volume;
+  const volDb = typeof volNum === "number" ? marantzMvToDb(volNum) : null;
+
   return (
     <div className="space-y-4">
+      {/* Status — speglar receiverns aktuella tillstånd */}
+      <Card className="p-4">
+        <div className="flex items-center justify-between mb-3">
+          <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+            Aktuell status
+          </Label>
+          <div className="flex items-center gap-2">
+            {marantzReachable === false ? (
+              <Badge variant="destructive" className="gap-1">
+                <CircleOff className="h-3 w-3" /> Offline
+              </Badge>
+            ) : marantzReachable === true ? (
+              <Badge variant="secondary" className="gap-1 bg-emerald-600/15 text-emerald-400 border-emerald-600/30">
+                <CircleDot className="h-3 w-3" /> Online
+              </Badge>
+            ) : (
+              <Badge variant="secondary">…</Badge>
+            )}
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 px-2"
+              onClick={refreshStatus}
+              disabled={refreshing}
+              aria-label="Uppdatera status"
+            >
+              <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+            </Button>
+          </div>
+        </div>
+
+        {marantzReachable === false ? (
+          <p className="text-xs text-muted-foreground">
+            Kunde inte nå bryggan. Kontrollera att <code>Formuler_alfa_status_v33.py</code> körs och att Marantz är på samma nät.
+          </p>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
+            <StatusItem
+              label="Power"
+              value={
+                marantzStatus?.power === "on"
+                  ? <span className="text-emerald-400">● ON</span>
+                  : marantzStatus?.power === "off"
+                    ? <span className="text-muted-foreground">○ Standby</span>
+                    : "—"
+              }
+            />
+            <StatusItem
+              label="Volym"
+              value={
+                volNum != null
+                  ? <span>{volNum} <span className="text-muted-foreground text-xs">({volDb! >= 0 ? "+" : ""}{volDb} dB)</span></span>
+                  : "—"
+              }
+            />
+            <StatusItem
+              label="Mute"
+              value={muted ? <span className="text-destructive">MUTED</span> : "Av"}
+            />
+            <StatusItem label="Källa" value={inputLabel ?? marantzStatus?.input ?? "—"} />
+            <StatusItem label="Sound mode" value={marantzStatus?.sound_mode ?? "—"} />
+            <StatusItem
+              label="Smart Select"
+              value={marantzStatus?.smart_select != null ? `Smart ${marantzStatus.smart_select}` : "—"}
+            />
+            <StatusItem
+              label="Dirac"
+              value={marantzStatus?.dirac ? (marantzStatus.dirac === "OFF" ? "Av" : `Slot ${marantzStatus.dirac}`) : "—"}
+            />
+            <StatusItem
+              label="Högtalare"
+              value={marantzStatus?.speaker_preset != null ? `Preset ${marantzStatus.speaker_preset}` : "—"}
+            />
+          </div>
+        )}
+      </Card>
+
       {/* Power */}
       <Card className="p-4">
         <Label className="text-xs uppercase tracking-wider text-muted-foreground mb-3 block">
@@ -169,12 +304,11 @@ export function MarantzRemote({ householdCode }: Props) {
             className="h-16 text-lg"
             onClick={async () => {
               const next = !muted;
-              const ok = await send(
+              await send(
                 `MU${next ? "ON" : "OFF"}`,
                 `Mute ${next ? "ON" : "OFF"}`,
                 "mute",
               );
-              if (ok) setMuted(next);
             }}
             disabled={busy === "mute"}
           >
@@ -354,6 +488,17 @@ export function MarantzRemote({ householdCode }: Props) {
           <code className="text-primary/80">SPPR 2</code>.
         </p>
       </Card>
+    </div>
+  );
+}
+
+function StatusItem({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-0.5 min-w-0">
+      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+        {label}
+      </span>
+      <span className="text-sm font-medium truncate">{value}</span>
     </div>
   );
 }

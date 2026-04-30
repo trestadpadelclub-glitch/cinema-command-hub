@@ -850,6 +850,14 @@ export interface MarantzStatus {
   volume?: number;
   mute?: boolean;
   input?: string;
+  /** MS-värde, t.ex. "MOVIE", "DOLBY DIGITAL", "STEREO". */
+  sound_mode?: string;
+  /** Smart Select 1-4 (även MSQUICK på Denon). */
+  smart_select?: number;
+  /** Dirac slot: "1" | "2" | "3" | "OFF". */
+  dirac?: string;
+  /** Speaker preset 1 eller 2. */
+  speaker_preset?: number;
 }
 
 export async function getMarantzStatus(): Promise<CommandResult> {
@@ -898,6 +906,20 @@ export function parseMarantzStatus(raw: unknown): MarantzStatus {
 
   const si = r.input;
   if (typeof si === "string" && si.trim()) out.input = si.trim().toUpperCase();
+
+  const sm = r.sound_mode;
+  if (typeof sm === "string" && sm.trim()) out.sound_mode = sm.trim().toUpperCase();
+
+  const ss = r.smart_select;
+  if (typeof ss === "number") out.smart_select = ss;
+  else if (typeof ss === "string" && ss.trim() && !isNaN(Number(ss))) out.smart_select = Number(ss);
+
+  const dr = r.dirac;
+  if (typeof dr === "string" && dr.trim()) out.dirac = dr.trim().toUpperCase();
+
+  const sp = r.speaker_preset;
+  if (typeof sp === "number") out.speaker_preset = sp;
+  else if (typeof sp === "string" && sp.trim() && !isNaN(Number(sp))) out.speaker_preset = Number(sp);
 
   return out;
 }
