@@ -1,8 +1,24 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Formuler_alfa_status_v20.py
+Formuler_alfa_status_v33.py
 ==========================
+
+v33: NYHETER mot v32 (additivt — alla v32-endpoints fungerar oförändrat):
+v33:   * GET  /api/lights/status         -> aktuell status för varje konfigurerad
+v33:                                        Tuya-lampa (cache:ad, polling 3s).
+v33:   * GET  /api/chromecast/status     -> {connected, app, media_state, title,
+v33:                                        artist, album_art, volume, muted,
+v33:                                        position, duration}.
+v33:   * POST /api/chromecast/play|pause|stop|next|previous
+v33:   * POST /api/chromecast/volume     body {"level": 0..100}
+v33:   * POST /api/chromecast/mute       body {"muted": true|false}
+v33:   * POST /api/chromecast/quit_app
+v33: v33: Nytt beroende: pychromecast (för media-styrning + monitor som redan
+v33: v33: fanns i v32). Tuya status använder befintlig tinytuya.Cloud.
+v33: v33: Bryggan publicerar fortfarande samma triggers (chromecast_*, movie_*,
+v33: v33: marantz_*, formuler_*) — UI-Blu-ray-fliken triggar bluray_play /
+v33: v33: bluray_pause / bluray_stop indirekt via Chromecast/Marantz.
 
 v20: Stöd för exakt Android-komponent (paket/aktivitet) från Hitta appar.
 v20: `launch_app` kan nu ta t.ex. com.pkg/.MainActivity och provar även
