@@ -491,3 +491,14 @@ export function MarantzRemote({
     </div>
   );
 }
+
+function StatusItem({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-0.5 min-w-0">
+      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+        {label}
+      </span>
+      <span className="text-sm font-medium truncate">{value}</span>
+    </div>
+  );
+}
