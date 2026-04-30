@@ -98,6 +98,9 @@ export function SettingsDialog() {
               Skriv <strong>basadressen</strong> (utan <code>/status</code>) — t.ex.{" "}
               <code className="text-primary/80">http://192.168.86.40:5000/api/projector</code>.
             </p>
+            <p className="text-xs text-muted-foreground">
+              Obs: Bridge URL sparas per webbadress. Om du använder publicerad sida behöver den sparas där också.
+            </p>
             {typeof window !== "undefined" &&
               window.location.protocol === "https:" &&
               url.trim().toLowerCase().startsWith("http://") && (
