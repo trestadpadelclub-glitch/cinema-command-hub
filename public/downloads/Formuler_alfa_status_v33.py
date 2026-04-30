@@ -2001,6 +2001,8 @@ class ChromecastMonitor(threading.Thread):
                 host = getattr(getattr(cast, "cast_info", None), "host", "?")
                 _log(f"CC ansluter till '{cast.name}' ({host})")
                 cast.wait()
+                with self._cast_lock:
+                    self._cast = cast
 
                 # Registrera lyssnare via lättviktiga adapter-objekt så vi slipper
                 # importera pychromecasts protokoll-klasser (vissa versioner
