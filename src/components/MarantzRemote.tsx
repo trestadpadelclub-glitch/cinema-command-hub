@@ -218,12 +218,11 @@ export function MarantzRemote({
             className="h-16 text-lg"
             onClick={async () => {
               const next = !muted;
-              const ok = await send(
+              await send(
                 `MU${next ? "ON" : "OFF"}`,
                 `Mute ${next ? "ON" : "OFF"}`,
                 "mute",
               );
-              if (ok) setMuted(next);
             }}
             disabled={busy === "mute"}
           >
