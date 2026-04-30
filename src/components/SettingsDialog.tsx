@@ -106,11 +106,19 @@ export function SettingsDialog() {
                   <span>
                     Sidan körs på <strong>HTTPS</strong> men bridgen är{" "}
                     <strong>HTTP</strong>. Webbläsaren blockerar anropet (Mixed
-                    Content). Öppna appen via HTTP, kör den lokalt, eller exponera
-                    bridgen via HTTPS (t.ex. <code>ngrok http 5000</code>).
+                    Content). För LAN-läge: kör <code>bun dev --host</code> på
+                    datorn och öppna appen via <code>http://&lt;datorns-IP&gt;:5173</code>{" "}
+                    på alla enheter (samma WiFi).
                   </span>
                 </div>
               )}
+            <div className="rounded-md border border-border/50 bg-muted/30 p-3 text-xs text-muted-foreground space-y-1">
+              <p className="font-medium text-foreground">Lokalt LAN-läge (iPhone/iPad på samma WiFi)</p>
+              <p>1. Starta bridgen: <code>python Formuler_alfa_status_v32.py</code></p>
+              <p>2. Starta appen: <code>bun dev --host</code></p>
+              <p>3. Öppna <code>http://&lt;datorns-IP&gt;:5173</code> i Safari på iPad/iPhone.</p>
+              <p>4. Sätt Bridge URL ovan till <code>http://&lt;datorns-IP&gt;:5000/api/projector</code>.</p>
+            </div>
           </div>
 
           <div className="flex items-center gap-2">
