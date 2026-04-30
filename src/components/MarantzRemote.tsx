@@ -495,3 +495,16 @@ function StatusItem({ label, value }: { label: string; value: ReactNode }) {
     </div>
   );
 }
+
+function SettingHeader({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <div className="mb-3 flex items-center justify-between gap-3">
+      <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+        {label}
+      </Label>
+      <span className="max-w-[65%] truncate rounded-md border border-primary/30 bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
+        {value}
+      </span>
+    </div>
+  );
+}
