@@ -161,6 +161,16 @@ SETTINGS = {
     "chromecast_retry_sec": float(os.environ.get("CHROMECAST_RETRY_SEC", "30")),
     # --- Marantz polling for trigger posting ---
     "marantz_poll": float(os.environ.get("MARANTZ_POLL_SEC", "5.0")),
+    # --- Lights status polling (Tuya Cloud) ---
+    # Bryggan pollar Tuya Cloud var X sekund och cache:ar status så att
+    # GET /api/lights/status svarar snabbt utan att slå mot molnet varje gång.
+    # 0 = stäng av polling helt (lights_status returnerar då tom lista).
+    "lights_status_poll": float(os.environ.get("LIGHTS_STATUS_POLL_SEC", "5.0")),
+    # Vilka device_ids som ska pollas. Tom = ingen polling. Sätts från
+    # Lovable-appen vid första /api/lights/status-anropet (cache:as).
+    "lights_status_devices": [
+        s.strip() for s in os.environ.get("LIGHTS_STATUS_DEVICES", "").split(",") if s.strip()
+    ],
 }
 
 
