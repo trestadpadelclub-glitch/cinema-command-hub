@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Power, Lightbulb, Loader2 } from "lucide-react";
+import { Power, Lightbulb, Loader2, Wifi, WifiOff } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { useLightsStatus } from "@/hooks/useLightsStatus";
 import {
   Select,
   SelectContent,
@@ -44,6 +46,12 @@ export function LightsRemote({ householdCode }: Props) {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<"on" | "off" | null>(null);
   const [offset, setOffset] = useState(0); // -50..+50
+
+  // Realtidsstatus från bryggan (v33). Pollar var 5s.
+  const { lights: lightStatus, reachable: statusReachable } = useLightsStatus({
+    enabled: true,
+    intervalSeconds: 5,
+  });
 
   // Debounce timer för live-skickning under draggning
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -380,6 +388,102 @@ export function LightsRemote({ householdCode }: Props) {
             återställ till 0
           </button>
           <span>+90%</span>
+        </div>
+      </Card>
+
+      {/* Live-status per lampa (v33) */}
+      <Card className="p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-medium">Aktuell status</h3>
+            {statusReachable === false ? (
+              <Badge variant="outline" className="text-[10px] gap-1">
+                <WifiOff className="h-3 w-3" /> v33 krävs
+              </Badge>
+            ) : statusReachable ? (
+              <Badge variant="outline" className="text-[10px] gap-1 border-emerald-500/50 text-emerald-400">
+                <Wifi className="h-3 w-3" /> live
+              </Badge>
+            ) : null}
+          </div>
+          <span className="text-[10px] text-muted-foreground">{lights.length} konfigurerade</span>
+        </div>
+
+        {statusReachable === false && (
+          <p className="text-[11px] text-muted-foreground">
+            Bryggan svarar inte på <code>/api/lights/status</code>. Uppdatera till Python v33 för
+            statusfeedback.
+          </p>
+        )}
+
+        <div className="grid gap-2">
+          {lights.map((light) => {
+            const st = lightStatus.find((s) => s.device_id === light.tuya_device_id);
+            const isOn = st?.on === true;
+            return (
+              <div
+                key={light.id}
+                className="flex items-center gap-3 rounded-md border p-2.5 text-xs"
+              >
+                <div
+                  className={`h-2 w-2 rounded-full flex-shrink-0 ${
+                    st?.online ? "bg-emerald-400" : "bg-muted-foreground/40"
+                  }`}
+                  title={st?.online ? "online" : "offline"}
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium truncate">{light.name}</span>
+                    <Badge variant="outline" className="text-[9px] uppercase">
+                      {light.light_type}
+                    </Badge>
+                    {st && (
+                      <Badge
+                        variant="outline"
+                        className={`text-[9px] ${
+                          isOn ? "border-amber-500/50 text-amber-400" : "text-muted-foreground"
+                        }`}
+                      >
+                        {isOn ? "ON" : "OFF"}
+                      </Badge>
+                    )}
+                  </div>
+                  {isOn && (
+                    <div className="mt-1 flex items-center gap-3 text-[10px] text-muted-foreground">
+                      {typeof st?.brightness === "number" && (
+                        <span className="flex items-center gap-1">
+                          <div className="w-12 h-1 rounded bg-muted overflow-hidden">
+                            <div
+                              className="h-full bg-amber-400"
+                              style={{ width: `${Math.max(0, Math.min(100, st.brightness))}%` }}
+                            />
+                          </div>
+                          {st.brightness}%
+                        </span>
+                      )}
+                      {typeof st?.kelvin === "number" && (
+                        <span>{st.kelvin}K</span>
+                      )}
+                      {st?.color_hex && (
+                        <span className="flex items-center gap-1">
+                          <span
+                            className="inline-block h-3 w-3 rounded border border-border"
+                            style={{ backgroundColor: st.color_hex }}
+                          />
+                          {st.color_hex}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+          {lights.length === 0 && (
+            <p className="text-[11px] text-muted-foreground italic">
+              Inga lampor konfigurerade. Lägg till under Lights Manager.
+            </p>
+          )}
         </div>
       </Card>
     </div>
