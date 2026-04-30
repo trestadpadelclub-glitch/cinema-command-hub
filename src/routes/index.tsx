@@ -327,7 +327,12 @@ function Index() {
           {/* MARANTZ REMOTE */}
           <TabsContent value="marantz" className="mt-0">
             <Section title="Marantz Cinema 50 — Fjärrkontroll">
-              <MarantzRemote householdCode={household} />
+              <MarantzRemote
+                householdCode={household}
+                marantzStatus={marantz.status}
+                marantzReachable={marantz.reachable}
+                onMarantzRefresh={marantz.refetch}
+              />
             </Section>
           </TabsContent>
 
