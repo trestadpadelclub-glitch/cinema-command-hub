@@ -2116,6 +2116,41 @@ class Handler(BaseHTTPRequestHandler):
             except Exception as e:
                 self._send_json(200, {"error": str(e)})
             return
+        # v33: Lights status — query-param ?devices=id1,id2 uppdaterar pollen
+        if path == "/api/lights/status":
+            try:
+                # Tillåt query-param "devices=id1,id2" så UI:t kan instruera
+                # bryggan vilka device_ids som ska pollas.
+                qs = ""
+                if "?" in self.path:
+                    qs = self.path.split("?", 1)[1]
+                if qs:
+                    for kv in qs.split("&"):
+                        if "=" not in kv:
+                            continue
+                        k, v = kv.split("=", 1)
+                        if k.strip().lower() == "devices" and v.strip():
+                            ids = [d for d in v.split(",") if d.strip()]
+                            lights_status_set_devices(ids)
+                            break
+                cache = lights_status_get_all()
+                self._send_json(200, {"ok": True, "lights": list(cache.values())})
+            except Exception as e:
+                _log(f"lights status error: {e}")
+                self._send_json(200, {"ok": False, "error": str(e), "lights": []})
+            return
+        # v33: Chromecast status (cache:ad i ChromecastMonitor)
+        if path == "/api/chromecast/status":
+            try:
+                mon = _chromecast_monitor
+                if mon is None:
+                    self._send_json(200, {"connected": False, "error": "monitor_not_running"})
+                    return
+                self._send_json(200, mon.snapshot())
+            except Exception as e:
+                _log(f"chromecast status error: {e}")
+                self._send_json(200, {"connected": False, "error": str(e)})
+            return
         self._send_json(404, {"error": "not_found", "path": self.path})
 
     def do_POST(self) -> None:
@@ -2136,8 +2171,25 @@ class Handler(BaseHTTPRequestHandler):
             self._handle_marantz(body)
         elif path == "/api/formuler":
             self._handle_formuler(body)
+        elif path.startswith("/api/chromecast/"):
+            # v33: /api/chromecast/play | pause | stop | next | previous
+            #      /api/chromecast/volume   body {level: 0-100}
+            #      /api/chromecast/mute     body {muted: true/false}
+            #      /api/chromecast/quit_app
+            self._handle_chromecast(path[len("/api/chromecast/"):], body)
         else:
             self._send_json(404, {"error": "not_found", "path": self.path})
+
+    def _handle_chromecast(self, action: str, body: Dict[str, Any]) -> None:
+        """v33: styra Chromecast via pychromecast."""
+        mon = _chromecast_monitor
+        if mon is None:
+            self._send_json(503, {"ok": False, "error": "monitor_not_running"})
+            return
+        result = mon.control(action, body or {})
+        code = 200 if result.get("ok") else 502
+        _log(f"CC control {action!r} -> {result}")
+        self._send_json(code, result)
 
     def _handle_lights(self, body: Dict[str, Any]) -> None:
         """Tuya Cloud-proxy. Stödjer två format från appen:
