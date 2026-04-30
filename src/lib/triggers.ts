@@ -3,18 +3,24 @@ import { supabase } from "@/integrations/supabase/client";
 export type TriggerKey =
   | "chromecast_on"
   | "chromecast_off"
+  | "chromecast_playing"
+  | "chromecast_paused"
+  | "chromecast_stopped"
   | "marantz_on"
   | "marantz_off"
   | "formuler_on"
   | "formuler_off"
   | "movie_playing"
   | "movie_paused"
-  | "movie_stopped";
+  | "movie_stopped"
+  | "bluray_play"
+  | "bluray_pause"
+  | "bluray_stop";
 
 export interface TriggerCatalogEntry {
   key: TriggerKey;
   label: string;
-  group: "Källor" | "Uppspelning";
+  group: "Källor" | "Uppspelning" | "Chromecast" | "Blu-ray";
   description: string;
 }
 
@@ -29,6 +35,12 @@ export const TRIGGER_CATALOG: TriggerCatalogEntry[] = [
   { key: "movie_playing", label: "Film spelas", group: "Uppspelning", description: "Uppspelning startar/återupptas" },
   { key: "movie_paused", label: "Film pausad", group: "Uppspelning", description: "Uppspelning pausad" },
   { key: "movie_stopped", label: "Film stoppad", group: "Uppspelning", description: "Uppspelning stoppad" },
+  { key: "chromecast_playing", label: "Chromecast spelar", group: "Chromecast", description: "Cast media-state PLAYING (v33)" },
+  { key: "chromecast_paused", label: "Chromecast pausad", group: "Chromecast", description: "Cast media-state PAUSED (v33)" },
+  { key: "chromecast_stopped", label: "Chromecast stoppad", group: "Chromecast", description: "Cast media-state IDLE/avslutad (v33)" },
+  { key: "bluray_play", label: "Blu-ray spelar", group: "Blu-ray", description: "Manuell trigger från Blu-ray-fjärren" },
+  { key: "bluray_pause", label: "Blu-ray pausad", group: "Blu-ray", description: "Manuell trigger från Blu-ray-fjärren" },
+  { key: "bluray_stop", label: "Blu-ray stoppad", group: "Blu-ray", description: "Manuell trigger från Blu-ray-fjärren" },
 ];
 
 export interface SceneTrigger {

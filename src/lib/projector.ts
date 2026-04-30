@@ -956,6 +956,100 @@ export async function listFormulerApps(): Promise<{
   }
 }
 
+// ---------- Lights status (v33) ----------
+
+export interface LightStatus {
+  device_id: string;
+  name?: string;
+  type?: "dimmer" | "cct" | "rgb" | "rgbcct";
+  online: boolean;
+  on?: boolean;
+  brightness?: number;
+  kelvin?: number;
+  color_hex?: string;
+  last_seen?: string;
+  error?: string;
+}
+
+export async function getLightsStatus(): Promise<{ ok: boolean; lights: LightStatus[]; error?: string }> {
+  try {
+    const url = lightsUrl() + "/status";
+    const res = await fetch(url, {
+      headers: { Accept: "application/json", "ngrok-skip-browser-warning": "true" },
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { ok: false, lights: [], error: (data as { error?: string })?.error || `Status ${res.status}` };
+    const lights = Array.isArray((data as { lights?: unknown }).lights)
+      ? ((data as { lights: LightStatus[] }).lights)
+      : [];
+    return { ok: true, lights };
+  } catch (e) {
+    return { ok: false, lights: [], error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+// ---------- Chromecast (v33) ----------
+
+export type ChromecastMediaState = "PLAYING" | "PAUSED" | "BUFFERING" | "IDLE" | "UNKNOWN";
+
+export interface ChromecastStatus {
+  connected: boolean;
+  device_name?: string;
+  app_name?: string;
+  media_state?: ChromecastMediaState;
+  title?: string;
+  artist?: string;
+  album?: string;
+  album_art?: string;
+  volume?: number; // 0..100
+  muted?: boolean;
+  position?: number;
+  duration?: number;
+}
+
+export async function getChromecastStatus(): Promise<{ ok: boolean; status: ChromecastStatus | null; error?: string }> {
+  try {
+    const base = getBridgeUrl().replace(/\/api\/projector$/i, "");
+    const url = base.replace(/\/+$/, "") + "/api/chromecast/status";
+    const res = await fetch(url, {
+      headers: { Accept: "application/json", "ngrok-skip-browser-warning": "true" },
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { ok: false, status: null, error: (data as { error?: string })?.error || `Status ${res.status}` };
+    return { ok: true, status: data as ChromecastStatus };
+  } catch (e) {
+    return { ok: false, status: null, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+export type ChromecastAction = "play" | "pause" | "stop" | "next" | "previous" | "quit_app";
+
+export async function sendChromecastCommand(action: ChromecastAction): Promise<CommandResult> {
+  const base = getBridgeUrl().replace(/\/api\/projector$/i, "");
+  const url = base.replace(/\/+$/, "") + `/api/chromecast/${action}`;
+  return postJson(url, {}, { action: "remote_key" as Action, value: `cast_${action}` });
+}
+
+export async function setChromecastVolume(level: number): Promise<CommandResult> {
+  const base = getBridgeUrl().replace(/\/api\/projector$/i, "");
+  const url = base.replace(/\/+$/, "") + "/api/chromecast/volume";
+  return postJson(
+    url,
+    { level: Math.max(0, Math.min(100, Math.round(level))) },
+    { action: "remote_key" as Action, value: `cast_volume_${Math.round(level)}` },
+  );
+}
+
+export async function setChromecastMute(muted: boolean): Promise<CommandResult> {
+  const base = getBridgeUrl().replace(/\/api\/projector$/i, "");
+  const url = base.replace(/\/+$/, "") + "/api/chromecast/mute";
+  return postJson(
+    url,
+    { muted },
+    { action: "remote_key" as Action, value: muted ? "cast_mute" : "cast_unmute" },
+  );
+}
+
 /** Toggle / explicit set lights — POST /api/lights {action:"lights", value}. */
 export async function sendLights(value: "toggle" | "on" | "off"): Promise<CommandResult> {
   return postJson(
