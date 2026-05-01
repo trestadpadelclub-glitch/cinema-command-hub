@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { Settings as SettingsIcon, Check, AlertCircle } from "lucide-react";
+import { Settings as SettingsIcon, Check, AlertCircle, Lock } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { getKioskEnabled, setKioskEnabled } from "@/hooks/useKioskMode";
 import {
   Dialog,
   DialogContent,
@@ -27,13 +29,20 @@ export function SettingsDialog() {
     ok: boolean;
     msg: string;
   } | null>(null);
+  const [kiosk, setKiosk] = useState(false);
 
   useEffect(() => {
     if (open) {
       setUrl(getBridgeUrl());
       setTestResult(null);
+      setKiosk(getKioskEnabled());
     }
   }, [open]);
+
+  const handleKioskToggle = (v: boolean) => {
+    setKiosk(v);
+    setKioskEnabled(v);
+  };
 
   const handleSave = () => {
     setBridgeUrl(url.trim() || DEFAULT_BRIDGE_URL);
