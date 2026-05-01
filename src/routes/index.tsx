@@ -211,9 +211,29 @@ function Index() {
     );
   }
 
+  if (kiosk.locked) {
+    return (
+      <>
+        <FavoriteRemote
+          marantzStatus={marantz.status}
+          onUnlock={kiosk.unlock}
+          onMarantzRefresh={marantz.refetch}
+        />
+        <Toaster theme="dark" position="top-center" richColors />
+      </>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[image:var(--gradient-screen)] text-foreground">
-      <div className="mx-auto max-w-6xl px-4 py-6 sm:py-8">
+      {kiosk.enabled && kiosk.isMobile && (
+        <div className="bg-amber-500/20 border-b border-amber-500/40 px-3 py-1.5 text-[11px] text-amber-200 flex items-center justify-between">
+          <span>Kiosk-läge upplåst (tillfälligt)</span>
+          <button onClick={kiosk.relock} className="underline font-medium">
+            Lås igen
+          </button>
+        </div>
+      )}
         {/* Header */}
         <header className="flex items-center justify-between mb-6 gap-3 flex-wrap">
           <div className="flex items-center gap-3">
