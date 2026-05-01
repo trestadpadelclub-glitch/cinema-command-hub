@@ -16,6 +16,8 @@ import { MarantzRemote } from "@/components/MarantzRemote";
 import { LightsManager } from "@/components/LightsManager";
 import { TriggerTester } from "@/components/TriggerTester";
 import { PollingControl } from "@/components/PollingControl";
+import { FavoriteRemote } from "@/components/FavoriteRemote";
+import { useKioskMode } from "@/hooks/useKioskMode";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   sendCommand,
@@ -66,6 +68,7 @@ interface TriggerEventPayload {
 
 function Index() {
   const { code: household, ready } = useHousehold();
+  const kiosk = useKioskMode();
   const [settings, setSettings] = useState<ProjectorSettings>(DEFAULT_SETTINGS);
   const [power, setPower] = useState<"on" | "off" | "unknown">("unknown");
   const [activeInput, setActiveInput] = useState<string | null>(null);
@@ -208,8 +211,29 @@ function Index() {
     );
   }
 
+  if (kiosk.locked) {
+    return (
+      <>
+        <FavoriteRemote
+          marantzStatus={marantz.status}
+          onUnlock={kiosk.unlock}
+          onMarantzRefresh={marantz.refetch}
+        />
+        <Toaster theme="dark" position="top-center" richColors />
+      </>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[image:var(--gradient-screen)] text-foreground">
+      {kiosk.enabled && kiosk.isMobile && (
+        <div className="bg-amber-500/20 border-b border-amber-500/40 px-3 py-1.5 text-[11px] text-amber-200 flex items-center justify-between">
+          <span>Kiosk-läge upplåst (tillfälligt)</span>
+          <button onClick={kiosk.relock} className="underline font-medium">
+            Lås igen
+          </button>
+        </div>
+      )}
       <div className="mx-auto max-w-6xl px-4 py-6 sm:py-8">
         {/* Header */}
         <header className="flex items-center justify-between mb-6 gap-3 flex-wrap">
