@@ -16,6 +16,8 @@ import { MarantzRemote } from "@/components/MarantzRemote";
 import { LightsManager } from "@/components/LightsManager";
 import { TriggerTester } from "@/components/TriggerTester";
 import { PollingControl } from "@/components/PollingControl";
+import { FavoriteRemote } from "@/components/FavoriteRemote";
+import { useKioskMode } from "@/hooks/useKioskMode";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   sendCommand,
@@ -66,6 +68,7 @@ interface TriggerEventPayload {
 
 function Index() {
   const { code: household, ready } = useHousehold();
+  const kiosk = useKioskMode();
   const [settings, setSettings] = useState<ProjectorSettings>(DEFAULT_SETTINGS);
   const [power, setPower] = useState<"on" | "off" | "unknown">("unknown");
   const [activeInput, setActiveInput] = useState<string | null>(null);
