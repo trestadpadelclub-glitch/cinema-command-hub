@@ -234,6 +234,7 @@ function Index() {
           </button>
         </div>
       )}
+      <div className="mx-auto max-w-6xl px-4 py-6 sm:py-8">
         {/* Header */}
         <header className="flex items-center justify-between mb-6 gap-3 flex-wrap">
           <div className="flex items-center gap-3">
