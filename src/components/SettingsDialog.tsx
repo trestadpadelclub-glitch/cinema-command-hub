@@ -141,6 +141,23 @@ export function SettingsDialog() {
             </div>
           </div>
 
+          {/* Kiosk-läge */}
+          <div className="rounded-lg border border-border/60 bg-muted/20 p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Lock className="h-4 w-4 text-primary" />
+                <Label htmlFor="kiosk-toggle" className="font-medium cursor-pointer">
+                  Kiosk-läge på telefon
+                </Label>
+              </div>
+              <Switch id="kiosk-toggle" checked={kiosk} onCheckedChange={handleKioskToggle} />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Visar en låst favorit-fjärrkontroll när appen öppnas på en telefon (skärm &lt; 768px). Ingen scroll, ingen meny.
+              <strong className="text-foreground"> Dubbeltryck på rubriken</strong> för att låsa upp tillfälligt.
+            </p>
+          </div>
+
           <div className="flex items-center gap-2">
             <Button
               variant="secondary"
