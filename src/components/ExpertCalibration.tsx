@@ -121,13 +121,23 @@ function loadJSON<T>(key: string, fallback: T): T {
   }
 }
 
+function downloadTextFile(filename: string, text: string) {
+  const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 export function ExpertCalibration() {
   const [scenario, setScenario] = useState<Scenario>(DEFAULT_SCENARIO);
   const [json, setJson] = useState("");
   const [applying, setApplying] = useState(false);
-  const [progress, setProgress] = useState<{ done: number; total: number } | null>(
-    null,
-  );
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [presetName, setPresetName] = useState("");
   const [presets, setPresets] = useState<ExpertPreset[]>(() =>
     loadJSON<ExpertPreset[]>(PRESETS_KEY, []),
@@ -157,13 +167,20 @@ export function ExpertCalibration() {
 
   const handleExport = async () => {
     const text = formatScenario(scenario);
+    const title = scenario.title.trim() || "Expert calibration scenario";
     try {
+      if (navigator.share) {
+        await navigator.share({ title, text });
+        toast.success("Scenario öppnat för delning");
+        return;
+      }
       await navigator.clipboard.writeText(text);
       toast.success("Scenario copied! Send this to your expert.", {
         description: text,
       });
     } catch {
-      toast.error("Kunde inte kopiera till urklipp", { description: text });
+      downloadTextFile(`expert-scenario-${Date.now()}.txt`, text);
+      toast.success("Kunde inte kopiera — laddade ner textfil istället");
     }
   };
 
@@ -228,10 +245,7 @@ export function ExpertCalibration() {
     toast.success("Historik rensad");
   };
 
-  const callBrain = async (
-    chatHistory: ChatMessage[],
-    liveSettings?: Record<string, unknown>,
-  ) => {
+  const callBrain = async (chatHistory: ChatMessage[], liveSettings?: Record<string, unknown>) => {
     let currentSettings: Record<string, unknown> = {};
     try {
       if (json.trim()) currentSettings = JSON.parse(json);
@@ -483,9 +497,7 @@ export function ExpertCalibration() {
               >
                 <SelectTrigger className="flex-1">
                   <SelectValue
-                    placeholder={
-                      presets.length === 0 ? "Inga sparade presets" : "Välj preset…"
-                    }
+                    placeholder={presets.length === 0 ? "Inga sparade presets" : "Välj preset…"}
                   />
                 </SelectTrigger>
                 <SelectContent>
@@ -612,11 +624,7 @@ export function ExpertCalibration() {
             />
           </Field>
 
-          <Field
-            label="Priority"
-            icon={<Gauge className="h-4 w-4" />}
-            className="sm:col-span-2"
-          >
+          <Field label="Priority" icon={<Gauge className="h-4 w-4" />} className="sm:col-span-2">
             <RadioGroup
               value={scenario.priority}
               onValueChange={(v) => update("priority", v as Priority)}
@@ -693,7 +701,10 @@ export function ExpertCalibration() {
         <div className="space-y-3">
           <RecipeDiffView json={json} baseline={liveBaseline} />
 
-          <Label htmlFor="expert-json" className="text-xs uppercase tracking-wider text-muted-foreground">
+          <Label
+            htmlFor="expert-json"
+            className="text-xs uppercase tracking-wider text-muted-foreground"
+          >
             JSON Payload
           </Label>
           <Textarea
@@ -707,9 +718,8 @@ export function ExpertCalibration() {
 
           <div className="flex items-center justify-between gap-3">
             <p className="text-xs text-muted-foreground">
-              Skickar via{" "}
-              <code className="text-primary/80">{`{ command: "key value" }`}</code>{" "}
-              med 100ms paus mellan varje.
+              Skickar via <code className="text-primary/80">{`{ command: "key value" }`}</code> med
+              100ms paus mellan varje.
             </p>
             <Button onClick={handleApply} disabled={applying || !json.trim()}>
               {applying ? (
@@ -737,8 +747,8 @@ export function ExpertCalibration() {
           <div className="flex-1">
             <h3 className="text-base font-semibold">Refinement Chat</h3>
             <p className="text-xs text-muted-foreground">
-              Chatta med Cinema Brain — beskriv vad du vill justera, AI:n uppdaterar
-              endast det som behövs i JSON ovan.
+              Chatta med Cinema Brain — beskriv vad du vill justera, AI:n uppdaterar endast det som
+              behövs i JSON ovan.
             </p>
           </div>
           <Button
@@ -786,9 +796,7 @@ export function ExpertCalibration() {
                   }`}
                 >
                   {m.role === "assistant" ? (
-                    <pre className="whitespace-pre-wrap font-mono text-xs">
-                      {m.content}
-                    </pre>
+                    <pre className="whitespace-pre-wrap font-mono text-xs">{m.content}</pre>
                   ) : (
                     <p className="whitespace-pre-wrap">{m.content}</p>
                   )}
@@ -820,11 +828,7 @@ export function ExpertCalibration() {
             onClick={handleRefine}
             disabled={refining || !chatInput.trim() || chat.length === 0}
           >
-            {refining ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
+            {refining ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </Button>
         </div>
       </section>
@@ -874,11 +878,7 @@ export function ExpertCalibration() {
                   <TableCell>{h.scenario.resolution}</TableCell>
                   <TableCell>{h.scenario.format}</TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleReuseHistory(h)}
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => handleReuseHistory(h)}>
                       <RotateCcw className="h-4 w-4 mr-1.5" />
                       Re-use
                     </Button>
@@ -956,9 +956,7 @@ function PriorityCard({
   return (
     <Label
       className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors ${
-        checked
-          ? "border-primary/60 bg-primary/5"
-          : "border-border/60 hover:bg-accent/30"
+        checked ? "border-primary/60 bg-primary/5" : "border-border/60 hover:bg-accent/30"
       }`}
     >
       <RadioGroupItem value={value} className="mt-0.5" />
@@ -1008,8 +1006,7 @@ function RecipeDiffView({
   }
   if (!parsed) return null;
 
-  const fmt = (v: unknown) =>
-    v === undefined || v === null || v === "" ? "—" : String(v);
+  const fmt = (v: unknown) => (v === undefined || v === null || v === "" ? "—" : String(v));
 
   return (
     <div className="rounded-lg border border-border/60 bg-background/40 p-3">
@@ -1018,9 +1015,7 @@ function RecipeDiffView({
           Recipe (changes shown in italic)
         </p>
         {baseline ? (
-          <span className="text-[10px] text-muted-foreground">
-            vs live baseline
-          </span>
+          <span className="text-[10px] text-muted-foreground">vs live baseline</span>
         ) : (
           <span className="text-[10px] text-muted-foreground italic">
             no live baseline — diff disabled
@@ -1033,9 +1028,7 @@ function RecipeDiffView({
           const newVal = parsed![key];
           const oldVal = baseline ? baseline[key] : undefined;
           const changed =
-            baseline !== null &&
-            oldVal !== undefined &&
-            String(oldVal) !== String(newVal);
+            baseline !== null && oldVal !== undefined && String(oldVal) !== String(newVal);
           return (
             <div
               key={key}
@@ -1044,13 +1037,9 @@ function RecipeDiffView({
               <span className="text-muted-foreground">{label}</span>
               <span
                 className={
-                  changed
-                    ? "italic font-semibold text-primary"
-                    : "font-mono text-foreground"
+                  changed ? "italic font-semibold text-primary" : "font-mono text-foreground"
                 }
-                title={
-                  changed ? `was: ${fmt(oldVal)} → now: ${fmt(newVal)}` : undefined
-                }
+                title={changed ? `was: ${fmt(oldVal)} → now: ${fmt(newVal)}` : undefined}
               >
                 {changed ? (
                   <>

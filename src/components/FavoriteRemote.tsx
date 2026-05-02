@@ -31,17 +31,28 @@ import {
   sendFormulerCommand,
   launchFormulerApp,
   sendMarantz,
-  sendLights,
+  sendSceneLights,
   marantzMvToDb,
+  type SceneLightCommand,
   type MarantzStatus,
 } from "@/lib/projector";
 import { useLightsStatus } from "@/hooks/useLightsStatus";
+import {
+  fetchLights,
+  fetchScenes,
+  fetchSceneLights,
+  updateScene,
+  type Light,
+  type Scene,
+} from "@/lib/scenes";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import logoYoutube from "@/assets/logo-youtube.png";
 import logoRedbull from "@/assets/logo-redbull.png";
 import logoSpotify from "@/assets/logo-spotify.png";
 
 interface Props {
+  householdCode: string;
   marantzStatus: MarantzStatus | null;
   onUnlock: () => void;
   onMarantzRefresh: () => Promise<void>;
@@ -57,7 +68,12 @@ const APP_PACKAGES: Record<AppKey, string[]> = {
 };
 
 const APPS: { key: AppKey; label: string; logo?: string; icon?: React.ReactNode; bg: string }[] = [
-  { key: "mytvonline3", label: "MyTVOnline3", icon: <Tv className="h-6 w-6" />, bg: "bg-orange-500/90 text-white" },
+  {
+    key: "mytvonline3",
+    label: "MyTVOnline3",
+    icon: <Tv className="h-6 w-6" />,
+    bg: "bg-orange-500/90 text-white",
+  },
   { key: "youtube", label: "YouTube", logo: logoYoutube, bg: "bg-card" },
   { key: "redbull", label: "Red Bull TV", logo: logoRedbull, bg: "bg-card" },
   { key: "spotify", label: "Spotify", logo: logoSpotify, bg: "bg-card" },
@@ -66,6 +82,9 @@ const APPS: { key: AppKey; label: string; logo?: string; icon?: React.ReactNode;
 const PKG_STORAGE_KEY = "formuler_app_packages";
 const ACTIVE_APP_KEY = "formuler_active_app";
 const FAV_LIGHTS_PCT_KEY = "favorite_remote_lights_pct";
+const LS_ON_KEY = (h: string) => `lights_remote_on_scene_${h}`;
+const LS_OFF_KEY = (h: string) => `lights_remote_off_scene_${h}`;
+const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
 
 function loadPackages(): Record<AppKey, string> {
   if (typeof window === "undefined") return {} as Record<AppKey, string>;
@@ -77,7 +96,12 @@ function loadPackages(): Record<AppKey, string> {
   }
 }
 
-export function FavoriteRemote({ marantzStatus, onUnlock, onMarantzRefresh }: Props) {
+export function FavoriteRemote({
+  householdCode,
+  marantzStatus,
+  onUnlock,
+  onMarantzRefresh,
+}: Props) {
   const [activeApp, setActiveApp] = useState<AppKey | null>(() => {
     if (typeof window === "undefined") return null;
     return (localStorage.getItem(ACTIVE_APP_KEY) as AppKey | null) ?? "mytvonline3";
@@ -88,8 +112,34 @@ export function FavoriteRemote({ marantzStatus, onUnlock, onMarantzRefresh }: Pr
     const v = localStorage.getItem(FAV_LIGHTS_PCT_KEY);
     return v ? parseInt(v, 10) : 50;
   });
+  const [scenes, setScenes] = useState<Scene[]>([]);
+  const [lights, setLights] = useState<Light[]>([]);
+  const [volDraft, setVolDraft] = useState<number>(() => marantzStatus?.volume ?? 40);
+  const lightsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const volumeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const draggingVol = useRef(false);
 
   const { lights: lightStatus } = useLightsStatus({ enabled: true, intervalSeconds: 8 });
+
+  useEffect(() => {
+    let alive = true;
+    Promise.all([fetchScenes(householdCode), fetchLights(householdCode)])
+      .then(([s, l]) => {
+        if (!alive) return;
+        setScenes(s);
+        setLights(l);
+      })
+      .catch((e) => toast.error("Kunde inte ladda ljus/filmscener", { description: String(e) }));
+    return () => {
+      alive = false;
+    };
+  }, [householdCode]);
+
+  useEffect(() => {
+    if (!draggingVol.current && typeof marantzStatus?.volume === "number") {
+      setVolDraft(marantzStatus.volume);
+    }
+  }, [marantzStatus?.volume]);
 
   // Double-tap to unlock
   const lastTapRef = useRef<number>(0);
@@ -111,12 +161,13 @@ export function FavoriteRemote({ marantzStatus, onUnlock, onMarantzRefresh }: Pr
     }
   };
 
-  const sendKey = (id: string, keycode: string) =>
-    send(id, () => sendFormulerCommand(keycode));
+  const sendKey = (id: string, keycode: string) => send(id, () => sendFormulerCommand(keycode));
 
   const launchApp = async (key: AppKey) => {
     const stored = loadPackages();
-    const candidates = Array.from(new Set([stored[key], ...APP_PACKAGES[key]].filter(Boolean) as string[]));
+    const candidates = Array.from(
+      new Set([stored[key], ...APP_PACKAGES[key]].filter(Boolean) as string[]),
+    );
     setActiveApp(key);
     localStorage.setItem(ACTIVE_APP_KEY, key);
     setBusy(`app-${key}`);
@@ -135,16 +186,107 @@ export function FavoriteRemote({ marantzStatus, onUnlock, onMarantzRefresh }: Pr
   };
 
   const lightsOn = lightStatus.some((l) => l.on);
-  const anyLightOnline = lightStatus.length > 0;
+  const movieScenes = scenes.filter((s) => s.scene_number === 4 || s.scene_number === 5);
+  const movieAutoOn = movieScenes.length === 2 && movieScenes.every((s) => s.enabled);
+
+  const buildLightsPayload = async (
+    state: "on" | "off",
+    pct?: number,
+  ): Promise<SceneLightCommand[]> => {
+    const sceneId = localStorage.getItem(
+      state === "on" ? LS_ON_KEY(householdCode) : LS_OFF_KEY(householdCode),
+    );
+    const scene = scenes.find((s) => s.id === sceneId);
+    if (!scene) throw new Error(`Välj en ${state.toUpperCase()}-scen i Lights Remote först`);
+    const sceneLights = await fetchSceneLights(scene.id);
+    const payload: SceneLightCommand[] = [];
+    for (const sl of sceneLights) {
+      if (!sl.in_scene) continue;
+      const light = lights.find((l) => l.id === sl.light_id);
+      if (!light) continue;
+      const baseBrightness = sl.brightness ?? 0;
+      const treatAsOff = sl.on_state && baseBrightness === 0;
+      const on = state === "on" ? !treatAsOff && sl.on_state : treatAsOff ? false : sl.on_state;
+      const cmd: SceneLightCommand = {
+        device_id: light.tuya_device_id,
+        name: light.name,
+        type: light.light_type,
+        on,
+        delay_ms: state === "on" ? 0 : (sl.delay_ms ?? 0),
+        fade_ms: sl.fade_ms ?? 0,
+      };
+      if (on) {
+        cmd.brightness = state === "on" ? clamp(pct ?? lightsPct, 10, 90) : baseBrightness || 100;
+        if ((light.light_type === "cct" || light.light_type === "rgbcct") && sl.kelvin !== null)
+          cmd.kelvin = sl.kelvin;
+        if ((light.light_type === "rgb" || light.light_type === "rgbcct") && sl.color_hex)
+          cmd.color = sl.color_hex;
+      }
+      payload.push(cmd);
+    }
+    if (payload.length === 0) throw new Error(`Scenen "${scene.name}" har inga lampor`);
+    return payload;
+  };
+
+  const handleLights = async (state: "on" | "off") => {
+    await send(`lights-${state}`, async () => {
+      const res = await sendSceneLights(await buildLightsPayload(state));
+      if (!res.ok)
+        toast.error(`Ljus ${state.toUpperCase()} misslyckades`, {
+          description: res.error || `Status ${res.status}`,
+        });
+    }).catch((e) => toast.error(`Ljus ${state.toUpperCase()} fel`, { description: String(e) }));
+  };
 
   const handleLightsBrightness = (pct: number) => {
-    setLightsPct(pct);
-    localStorage.setItem(FAV_LIGHTS_PCT_KEY, String(pct));
+    const next = clamp(pct, 10, 90);
+    setLightsPct(next);
+    localStorage.setItem(FAV_LIGHTS_PCT_KEY, String(next));
+    if (lightsDebounceRef.current) clearTimeout(lightsDebounceRef.current);
+    lightsDebounceRef.current = setTimeout(async () => {
+      try {
+        const res = await sendSceneLights(await buildLightsPayload("on", next));
+        if (!res.ok)
+          toast.error("Ljusintensitet misslyckades", {
+            description: res.error || `Status ${res.status}`,
+          });
+      } catch {
+        /* visas vid ON/OFF, inte under dragning */
+      }
+    }, 180);
+  };
+
+  const toggleMovieAuto = async (next: boolean) => {
+    if (movieScenes.length !== 2) {
+      toast.error("Hittar inte scen 4 och 5");
+      return;
+    }
+    await send("autofilm", async () => {
+      await Promise.all(movieScenes.map((s) => updateScene(s.id, { enabled: next })));
+      setScenes((prev) =>
+        prev.map((s) =>
+          s.scene_number === 4 || s.scene_number === 5 ? { ...s, enabled: next } : s,
+        ),
+      );
+      toast.success(next ? "AutoFilm på" : "AutoFilm av");
+    });
+  };
+
+  const pushVolume = (mv: number) => {
+    const v = clamp(mv, 0, 98);
+    if (volumeDebounceRef.current) clearTimeout(volumeDebounceRef.current);
+    volumeDebounceRef.current = setTimeout(() => {
+      sendMarantz(`MV${String(v).padStart(2, "0")}`).then((r) => {
+        if (!r.ok)
+          toast.error("Marantz volym misslyckades", {
+            description: r.error || `Status ${r.status}`,
+          });
+      });
+    }, 120);
   };
 
   // Marantz volume
-  const mv = marantzStatus?.volume ?? null;
-  const mvDb = mv !== null ? marantzMvToDb(mv) : null;
+  const volDb = marantzMvToDb(volDraft);
   const muted = marantzStatus?.mute === true;
 
   return (
@@ -214,17 +356,15 @@ export function FavoriteRemote({ marantzStatus, onUnlock, onMarantzRefresh }: Pr
 
         {/* MAIN GRID — Lights | Navigation | Marantz */}
         <Card className="p-3 bg-card/60 flex-1 min-h-0 overflow-hidden">
-          <div className="grid grid-cols-[60px_1fr_56px] gap-3 h-full">
+          <div className="grid grid-cols-[64px_1fr_64px] gap-3 h-full">
             {/* LJUS column */}
             <div className="flex flex-col items-center gap-2 min-h-0">
-              <div className="text-[9px] uppercase tracking-wider text-muted-foreground">
-                Ljus
-              </div>
+              <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Ljus</div>
               <Button
                 size="icon"
                 variant={lightsOn ? "default" : "outline"}
-                onClick={() => send("lights-toggle", () => sendLights("toggle"))}
-                disabled={busy !== null || !anyLightOnline}
+                onClick={() => handleLights("on")}
+                disabled={busy !== null}
                 className="h-9 w-9"
               >
                 <Lightbulb className="h-4 w-4" />
@@ -232,7 +372,7 @@ export function FavoriteRemote({ marantzStatus, onUnlock, onMarantzRefresh }: Pr
               <Button
                 size="icon"
                 variant="outline"
-                onClick={() => send("lights-off", () => sendLights("off"))}
+                onClick={() => handleLights("off")}
                 disabled={busy !== null}
                 className="h-9 w-9"
               >
@@ -242,14 +382,28 @@ export function FavoriteRemote({ marantzStatus, onUnlock, onMarantzRefresh }: Pr
               <div className="flex-1 flex items-center justify-center w-full min-h-0 py-1">
                 <Slider
                   orientation="vertical"
-                  min={0}
-                  max={100}
+                  min={10}
+                  max={90}
+                  step={5}
                   value={[lightsPct]}
                   onValueChange={(v) => handleLightsBrightness(v[0])}
                   className="h-full"
                 />
               </div>
               <div className="text-[9px] text-muted-foreground">10–90%</div>
+              <div className="flex flex-col items-center gap-1 border-t border-border/50 pt-2 w-full">
+                <div className="text-[9px] uppercase tracking-wider text-muted-foreground text-center leading-tight">
+                  Auto
+                  <br />
+                  film
+                </div>
+                <Switch
+                  checked={movieAutoOn}
+                  onCheckedChange={toggleMovieAuto}
+                  disabled={busy !== null || movieScenes.length !== 2}
+                  aria-label="AutoFilm av/på"
+                />
+              </div>
             </div>
 
             {/* NAVIGATION column */}
@@ -434,13 +588,16 @@ export function FavoriteRemote({ marantzStatus, onUnlock, onMarantzRefresh }: Pr
 
             {/* MARANTZ VOLUME column */}
             <div className="flex flex-col items-center gap-2 min-h-0">
-              <div className="text-[9px] uppercase tracking-wider text-muted-foreground">
-                Volym
-              </div>
+              <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Volym</div>
               <Button
                 size="icon"
                 variant={muted ? "destructive" : "outline"}
-                onClick={() => send("mute", () => sendMarantz("MUTOFF").then(() => muted ? sendMarantz("MUOFF") : sendMarantz("MUON")))}
+                onClick={() =>
+                  send("mute", async () => {
+                    await sendMarantz(muted ? "MUOFF" : "MUON");
+                    setTimeout(() => onMarantzRefresh(), 250);
+                  })
+                }
                 disabled={busy !== null}
                 className="h-9 w-9"
                 title="Mute"
@@ -450,21 +607,55 @@ export function FavoriteRemote({ marantzStatus, onUnlock, onMarantzRefresh }: Pr
               <Button
                 size="icon"
                 variant="outline"
-                onClick={() => send("vup", () => sendMarantz("MVUP"))}
+                onClick={() => {
+                  const next = clamp(volDraft + 1, 0, 98);
+                  setVolDraft(next);
+                  pushVolume(next);
+                }}
                 disabled={busy !== null}
                 className="h-9 w-9"
               >
                 <Plus className="h-4 w-4" />
               </Button>
-              <div className="text-[11px] font-mono font-bold text-center">
-                {mvDb !== null ? `${mvDb > 0 ? "+" : ""}${mvDb}` : "—"}
-                <div className="text-[8px] text-muted-foreground font-normal">dB</div>
+              <div className="text-[10px] font-mono font-bold text-center tabular-nums">
+                MV{String(volDraft).padStart(2, "0")}
+                <div className="text-[8px] text-muted-foreground font-normal">
+                  {volDb > 0 ? "+" : ""}
+                  {volDb.toFixed(1)} dB
+                </div>
               </div>
-              <div className="flex-1" />
+              <div className="flex-1 flex items-center justify-center w-full min-h-0 py-1">
+                <Slider
+                  orientation="vertical"
+                  min={0}
+                  max={98}
+                  step={1}
+                  value={[volDraft]}
+                  onValueChange={(v) => {
+                    const next = v[0] ?? volDraft;
+                    draggingVol.current = true;
+                    setVolDraft(next);
+                    pushVolume(next);
+                  }}
+                  onValueCommit={(v) => {
+                    const next = v[0] ?? volDraft;
+                    draggingVol.current = false;
+                    setVolDraft(next);
+                    pushVolume(next);
+                    setTimeout(() => onMarantzRefresh(), 400);
+                  }}
+                  className="h-full"
+                  aria-label="Marantz volym"
+                />
+              </div>
               <Button
                 size="icon"
                 variant="outline"
-                onClick={() => send("vdn", () => sendMarantz("MVDOWN"))}
+                onClick={() => {
+                  const next = clamp(volDraft - 1, 0, 98);
+                  setVolDraft(next);
+                  pushVolume(next);
+                }}
                 disabled={busy !== null}
                 className="h-9 w-9"
               >

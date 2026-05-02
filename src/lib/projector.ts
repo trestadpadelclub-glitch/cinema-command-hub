@@ -33,14 +33,7 @@ export const PIC_MODE_LABELS: Record<PicMode, string> = {
 
 export type InputSource = "hdmi1" | "hdmi2";
 export type BlankState = "on" | "off";
-export type RemoteKey =
-  | "menu"
-  | "up"
-  | "down"
-  | "left"
-  | "right"
-  | "enter"
-  | "reset";
+export type RemoteKey = "menu" | "up" | "down" | "left" | "right" | "enter" | "reset";
 
 export type HdrEnhancer = "off" | "low" | "middle" | "high";
 export type DynamicControl = "off" | "limited" | "middle" | "full";
@@ -135,7 +128,6 @@ export type Action =
   | "marantz"
   | "lights"
   | "scene_lights";
-
 
 export interface SingleCommand {
   action: Action;
@@ -245,7 +237,8 @@ function endpointUrl(endpoint: BridgeEndpoint): string {
 function summarizeCommand(body: Record<string, unknown>): SingleCommand {
   const action = typeof body.action === "string" ? (body.action as Action) : ("scene" as Action);
   const rawValue = body.value;
-  if (typeof rawValue === "string" || typeof rawValue === "number") return { action, value: rawValue };
+  if (typeof rawValue === "string" || typeof rawValue === "number")
+    return { action, value: rawValue };
   if (rawValue && typeof rawValue === "object" && "lights" in rawValue) {
     const lights = (rawValue as { lights?: unknown }).lights;
     return { action, value: Array.isArray(lights) ? lights.length : 0 };
@@ -253,7 +246,11 @@ function summarizeCommand(body: Record<string, unknown>): SingleCommand {
   return { action, value: "" };
 }
 
-async function postJson(url: string, body: unknown, command: SingleCommand): Promise<CommandResult> {
+async function postJson(
+  url: string,
+  body: unknown,
+  command: SingleCommand,
+): Promise<CommandResult> {
   try {
     const res = await fetch(url, {
       method: "POST",
@@ -262,7 +259,11 @@ async function postJson(url: string, body: unknown, command: SingleCommand): Pro
     });
     const text = await res.text();
     let data: unknown = text;
-    try { data = text ? JSON.parse(text) : undefined; } catch { /* keep raw */ }
+    try {
+      data = text ? JSON.parse(text) : undefined;
+    } catch {
+      /* keep raw */
+    }
     return { ok: res.ok, status: res.status, data, command };
   } catch (err) {
     return {
@@ -365,12 +366,10 @@ export function parseStatus(raw: unknown): ProjectorStatus {
   if (!raw || typeof raw !== "object") return out;
   const r = raw as Record<string, unknown>;
 
-  const str = (v: unknown) =>
-    typeof v === "string" ? v.replace(/^"|"$/g, "").trim() : undefined;
+  const str = (v: unknown) => (typeof v === "string" ? v.replace(/^"|"$/g, "").trim() : undefined);
   const num = (v: unknown) => {
     if (typeof v === "number") return v;
-    if (typeof v === "string" && v.trim() !== "" && !isNaN(Number(v)))
-      return Number(v);
+    if (typeof v === "string" && v.trim() !== "" && !isNaN(Number(v))) return Number(v);
     return undefined;
   };
 
@@ -396,8 +395,7 @@ export function parseStatus(raw: unknown): ProjectorStatus {
   }
 
   const laser = num(r.laser_level ?? r.laser_output ?? r.light_output_val);
-  if (laser !== undefined)
-    out.laser_output = Math.round(laser > 100 ? laser / 10 : laser);
+  if (laser !== undefined) out.laser_output = Math.round(laser > 100 ? laser / 10 : laser);
 
   const dyn = str(r.dynamic_control ?? r.light_output_dyn);
   if (dyn) out.dynamic_control = dyn as DynamicControl;
@@ -463,9 +461,7 @@ export function parseStatus(raw: unknown): ProjectorStatus {
  *   - `reality_creation_val` : integer level
  * Returns array of per-command results.
  */
-export async function applySettings(
-  settings: ProjectorSettings,
-): Promise<CommandResult[]> {
+export async function applySettings(settings: ProjectorSettings): Promise<CommandResult[]> {
   const results: CommandResult[] = [];
   // Power FIRST — om scenen säger "off" så är det ingen idé att skicka övriga inställningar
   if (settings.power === "on" || settings.power === "off") {
@@ -619,17 +615,12 @@ const PRESET_KEYS: (keyof Preset["settings"])[] = [
 ];
 
 /** True if any preset-tracked field in `current` deviates from `baseline`. */
-export function isModifiedFrom(
-  current: ProjectorSettings,
-  baseline: ProjectorSettings,
-): boolean {
+export function isModifiedFrom(current: ProjectorSettings, baseline: ProjectorSettings): boolean {
   return PRESET_KEYS.some((k) => current[k] !== baseline[k]);
 }
 
 /** Extract only the preset-tracked fields from a settings object. */
-export function extractPresetSettings(
-  s: ProjectorSettings,
-): Preset["settings"] {
+export function extractPresetSettings(s: ProjectorSettings): Preset["settings"] {
   return {
     pic_mode: s.pic_mode ?? "cinema_film_1",
     laser_output: s.laser_output ?? 75,
@@ -660,17 +651,12 @@ function bumpHdr(current: HdrEnhancer | undefined, dir: 1 | -1): HdrEnhancer {
   return HDR_ORDER[next];
 }
 
-export function analyzeInstruction(
-  text: string,
-  current: ProjectorSettings,
-): AiSuggestion[] {
+export function analyzeInstruction(text: string, current: ProjectorSettings): AiSuggestion[] {
   const t = text.toLowerCase();
   const out: AiSuggestion[] = [];
   const has = (...words: string[]) => words.some((w) => t.includes(w));
 
-  if (
-    has("för mörk", "mörk i skugg", "skuggor", "black crush", "too dark", "shadows")
-  ) {
+  if (has("för mörk", "mörk i skugg", "skuggor", "black crush", "too dark", "shadows")) {
     out.push({
       reason: "Höjer brightness till 51 för att lyfta skuggdetaljer.",
       changes: { brightness: 51 },
@@ -783,9 +769,7 @@ export async function sendScene(p: SceneCommandPayload): Promise<CommandResult[]
   };
 
   await waitProjector();
-  results.push(
-    await sendCommand({ action: "scene" as Action, value: p.scenePayload }),
-  );
+  results.push(await sendCommand({ action: "scene" as Action, value: p.scenePayload }));
   if (p.lightsOn === true || p.lightsOn === false) {
     await waitLights();
     results.push(
@@ -872,7 +856,11 @@ export async function getMarantzStatus(): Promise<CommandResult> {
     });
     const text = await res.text();
     let data: unknown = text;
-    try { data = text ? JSON.parse(text) : undefined; } catch { /* keep raw */ }
+    try {
+      data = text ? JSON.parse(text) : undefined;
+    } catch {
+      /* keep raw */
+    }
     return { ok: res.ok, status: res.status, data };
   } catch (err) {
     return {
@@ -902,7 +890,8 @@ export function parseMarantzStatus(raw: unknown): MarantzStatus {
 
   const mu = r.mute;
   if (typeof mu === "boolean") out.mute = mu;
-  else if (typeof mu === "string") out.mute = mu.toLowerCase() === "on" || mu.toLowerCase() === "true";
+  else if (typeof mu === "string")
+    out.mute = mu.toLowerCase() === "on" || mu.toLowerCase() === "true";
 
   const si = r.input;
   if (typeof si === "string" && si.trim()) out.input = si.trim().toUpperCase();
@@ -919,7 +908,8 @@ export function parseMarantzStatus(raw: unknown): MarantzStatus {
 
   const sp = r.speaker_preset;
   if (typeof sp === "number") out.speaker_preset = sp;
-  else if (typeof sp === "string" && sp.trim() && !isNaN(Number(sp))) out.speaker_preset = Number(sp);
+  else if (typeof sp === "string" && sp.trim() && !isNaN(Number(sp)))
+    out.speaker_preset = Number(sp);
 
   return out;
 }
@@ -993,16 +983,25 @@ export interface LightStatus {
   error?: string;
 }
 
-export async function getLightsStatus(): Promise<{ ok: boolean; lights: LightStatus[]; error?: string }> {
+export async function getLightsStatus(): Promise<{
+  ok: boolean;
+  lights: LightStatus[];
+  error?: string;
+}> {
   try {
     const url = lightsUrl() + "/status";
     const res = await fetch(url, {
       headers: { Accept: "application/json", "ngrok-skip-browser-warning": "true" },
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) return { ok: false, lights: [], error: (data as { error?: string })?.error || `Status ${res.status}` };
+    if (!res.ok)
+      return {
+        ok: false,
+        lights: [],
+        error: (data as { error?: string })?.error || `Status ${res.status}`,
+      };
     const lights = Array.isArray((data as { lights?: unknown }).lights)
-      ? ((data as { lights: LightStatus[] }).lights)
+      ? (data as { lights: LightStatus[] }).lights
       : [];
     return { ok: true, lights };
   } catch (e) {
@@ -1029,7 +1028,11 @@ export interface ChromecastStatus {
   duration?: number;
 }
 
-export async function getChromecastStatus(): Promise<{ ok: boolean; status: ChromecastStatus | null; error?: string }> {
+export async function getChromecastStatus(): Promise<{
+  ok: boolean;
+  status: ChromecastStatus | null;
+  error?: string;
+}> {
   try {
     const base = getBridgeUrl().replace(/\/api\/projector$/i, "");
     const url = base.replace(/\/+$/, "") + "/api/chromecast/status";
@@ -1037,7 +1040,12 @@ export async function getChromecastStatus(): Promise<{ ok: boolean; status: Chro
       headers: { Accept: "application/json", "ngrok-skip-browser-warning": "true" },
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) return { ok: false, status: null, error: (data as { error?: string })?.error || `Status ${res.status}` };
+    if (!res.ok)
+      return {
+        ok: false,
+        status: null,
+        error: (data as { error?: string })?.error || `Status ${res.status}`,
+      };
     return { ok: true, status: data as ChromecastStatus };
   } catch (e) {
     return { ok: false, status: null, error: e instanceof Error ? e.message : String(e) };
@@ -1074,15 +1082,22 @@ export async function setChromecastMute(muted: boolean): Promise<CommandResult> 
 
 /** Toggle / explicit set lights — POST /api/lights {action:"lights", value}. */
 export async function sendLights(value: "toggle" | "on" | "off"): Promise<CommandResult> {
+  return postJson(lightsUrl(), { action: "lights", value }, { action: "lights" as Action, value });
+}
+
+/** Apply an explicit list of light states — supported by bridge v33+. */
+export async function sendSceneLights(lights: SceneLightCommand[]): Promise<CommandResult> {
   return postJson(
     lightsUrl(),
-    { action: "lights", value },
-    { action: "lights" as Action, value },
+    { action: "scene_lights", value: { lights } },
+    { action: "scene_lights" as Action, value: lights.length },
   );
 }
 
 /** Kör en färdig kommandosekvens från /api/public/trigger mot samma bridge-endpoints som UI-knapparna. */
-export async function runBridgeCommands(commands: BridgeEndpointCommand[]): Promise<CommandResult[]> {
+export async function runBridgeCommands(
+  commands: BridgeEndpointCommand[],
+): Promise<CommandResult[]> {
   const results: CommandResult[] = [];
   for (const cmd of commands) {
     if (cmd.delay_ms && cmd.delay_ms > 0) await sleep(cmd.delay_ms);
@@ -1090,4 +1105,3 @@ export async function runBridgeCommands(commands: BridgeEndpointCommand[]): Prom
   }
   return results;
 }
-
