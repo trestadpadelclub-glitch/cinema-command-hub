@@ -121,6 +121,18 @@ function loadJSON<T>(key: string, fallback: T): T {
   }
 }
 
+function downloadTextFile(filename: string, text: string) {
+  const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 export function ExpertCalibration() {
   const [scenario, setScenario] = useState<Scenario>(DEFAULT_SCENARIO);
   const [json, setJson] = useState("");
@@ -157,13 +169,20 @@ export function ExpertCalibration() {
 
   const handleExport = async () => {
     const text = formatScenario(scenario);
+    const title = scenario.title.trim() || "Expert calibration scenario";
     try {
+      if (navigator.share) {
+        await navigator.share({ title, text });
+        toast.success("Scenario öppnat för delning");
+        return;
+      }
       await navigator.clipboard.writeText(text);
       toast.success("Scenario copied! Send this to your expert.", {
         description: text,
       });
     } catch {
-      toast.error("Kunde inte kopiera till urklipp", { description: text });
+      downloadTextFile(`expert-scenario-${Date.now()}.txt`, text);
+      toast.success("Kunde inte kopiera — laddade ner textfil istället");
     }
   };
 
