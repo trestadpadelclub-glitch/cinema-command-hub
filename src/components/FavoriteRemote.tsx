@@ -318,7 +318,7 @@ export function FavoriteRemote({ householdCode, marantzStatus, onUnlock, onMaran
 
         {/* MAIN GRID — Lights | Navigation | Marantz */}
         <Card className="p-3 bg-card/60 flex-1 min-h-0 overflow-hidden">
-          <div className="grid grid-cols-[60px_1fr_56px] gap-3 h-full">
+          <div className="grid grid-cols-[64px_1fr_64px] gap-3 h-full">
             {/* LJUS column */}
             <div className="flex flex-col items-center gap-2 min-h-0">
               <div className="text-[9px] uppercase tracking-wider text-muted-foreground">
@@ -327,8 +327,8 @@ export function FavoriteRemote({ householdCode, marantzStatus, onUnlock, onMaran
               <Button
                 size="icon"
                 variant={lightsOn ? "default" : "outline"}
-                onClick={() => send("lights-toggle", () => sendLights("toggle"))}
-                disabled={busy !== null || !anyLightOnline}
+                onClick={() => handleLights("on")}
+                disabled={busy !== null}
                 className="h-9 w-9"
               >
                 <Lightbulb className="h-4 w-4" />
@@ -336,7 +336,7 @@ export function FavoriteRemote({ householdCode, marantzStatus, onUnlock, onMaran
               <Button
                 size="icon"
                 variant="outline"
-                onClick={() => send("lights-off", () => sendLights("off"))}
+                onClick={() => handleLights("off")}
                 disabled={busy !== null}
                 className="h-9 w-9"
               >
@@ -346,14 +346,24 @@ export function FavoriteRemote({ householdCode, marantzStatus, onUnlock, onMaran
               <div className="flex-1 flex items-center justify-center w-full min-h-0 py-1">
                 <Slider
                   orientation="vertical"
-                  min={0}
-                  max={100}
+                  min={10}
+                  max={90}
+                  step={5}
                   value={[lightsPct]}
                   onValueChange={(v) => handleLightsBrightness(v[0])}
                   className="h-full"
                 />
               </div>
               <div className="text-[9px] text-muted-foreground">10–90%</div>
+              <div className="flex flex-col items-center gap-1 border-t border-border/50 pt-2 w-full">
+                <div className="text-[9px] uppercase tracking-wider text-muted-foreground text-center leading-tight">Auto<br />film</div>
+                <Switch
+                  checked={movieAutoOn}
+                  onCheckedChange={toggleMovieAuto}
+                  disabled={busy !== null || movieScenes.length !== 2}
+                  aria-label="AutoFilm av/på"
+                />
+              </div>
             </div>
 
             {/* NAVIGATION column */}
