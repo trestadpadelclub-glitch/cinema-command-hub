@@ -31,17 +31,21 @@ import {
   sendFormulerCommand,
   launchFormulerApp,
   sendMarantz,
-  sendLights,
+  sendSceneLights,
   marantzMvToDb,
+  type SceneLightCommand,
   type MarantzStatus,
 } from "@/lib/projector";
 import { useLightsStatus } from "@/hooks/useLightsStatus";
+import { fetchLights, fetchScenes, fetchSceneLights, updateScene, type Light, type Scene } from "@/lib/scenes";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import logoYoutube from "@/assets/logo-youtube.png";
 import logoRedbull from "@/assets/logo-redbull.png";
 import logoSpotify from "@/assets/logo-spotify.png";
 
 interface Props {
+  householdCode: string;
   marantzStatus: MarantzStatus | null;
   onUnlock: () => void;
   onMarantzRefresh: () => Promise<void>;
@@ -66,6 +70,9 @@ const APPS: { key: AppKey; label: string; logo?: string; icon?: React.ReactNode;
 const PKG_STORAGE_KEY = "formuler_app_packages";
 const ACTIVE_APP_KEY = "formuler_active_app";
 const FAV_LIGHTS_PCT_KEY = "favorite_remote_lights_pct";
+const LS_ON_KEY = (h: string) => `lights_remote_on_scene_${h}`;
+const LS_OFF_KEY = (h: string) => `lights_remote_off_scene_${h}`;
+const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
 
 function loadPackages(): Record<AppKey, string> {
   if (typeof window === "undefined") return {} as Record<AppKey, string>;
@@ -77,7 +84,7 @@ function loadPackages(): Record<AppKey, string> {
   }
 }
 
-export function FavoriteRemote({ marantzStatus, onUnlock, onMarantzRefresh }: Props) {
+export function FavoriteRemote({ householdCode, marantzStatus, onUnlock, onMarantzRefresh }: Props) {
   const [activeApp, setActiveApp] = useState<AppKey | null>(() => {
     if (typeof window === "undefined") return null;
     return (localStorage.getItem(ACTIVE_APP_KEY) as AppKey | null) ?? "mytvonline3";
@@ -88,8 +95,34 @@ export function FavoriteRemote({ marantzStatus, onUnlock, onMarantzRefresh }: Pr
     const v = localStorage.getItem(FAV_LIGHTS_PCT_KEY);
     return v ? parseInt(v, 10) : 50;
   });
+  const [scenes, setScenes] = useState<Scene[]>([]);
+  const [lights, setLights] = useState<Light[]>([]);
+  const [volDraft, setVolDraft] = useState<number>(() => marantzStatus?.volume ?? 40);
+  const lightsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const volumeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const draggingVol = useRef(false);
 
   const { lights: lightStatus } = useLightsStatus({ enabled: true, intervalSeconds: 8 });
+
+  useEffect(() => {
+    let alive = true;
+    Promise.all([fetchScenes(householdCode), fetchLights(householdCode)])
+      .then(([s, l]) => {
+        if (!alive) return;
+        setScenes(s);
+        setLights(l);
+      })
+      .catch((e) => toast.error("Kunde inte ladda ljus/filmscener", { description: String(e) }));
+    return () => {
+      alive = false;
+    };
+  }, [householdCode]);
+
+  useEffect(() => {
+    if (!draggingVol.current && typeof marantzStatus?.volume === "number") {
+      setVolDraft(marantzStatus.volume);
+    }
+  }, [marantzStatus?.volume]);
 
   // Double-tap to unlock
   const lastTapRef = useRef<number>(0);
