@@ -1081,6 +1081,15 @@ export async function sendLights(value: "toggle" | "on" | "off"): Promise<Comman
   );
 }
 
+/** Apply an explicit list of light states — supported by bridge v33+. */
+export async function sendSceneLights(lights: SceneLightCommand[]): Promise<CommandResult> {
+  return postJson(
+    lightsUrl(),
+    { action: "scene_lights", value: { lights } },
+    { action: "scene_lights" as Action, value: lights.length },
+  );
+}
+
 /** Kör en färdig kommandosekvens från /api/public/trigger mot samma bridge-endpoints som UI-knapparna. */
 export async function runBridgeCommands(commands: BridgeEndpointCommand[]): Promise<CommandResult[]> {
   const results: CommandResult[] = [];
