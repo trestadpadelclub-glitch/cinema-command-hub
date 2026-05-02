@@ -215,6 +215,7 @@ function Index() {
     return (
       <>
         <FavoriteRemote
+          householdCode={household}
           marantzStatus={marantz.status}
           onUnlock={kiosk.unlock}
           onMarantzRefresh={marantz.refetch}
