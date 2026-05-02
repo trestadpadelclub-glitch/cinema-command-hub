@@ -168,16 +168,87 @@ export function FavoriteRemote({ householdCode, marantzStatus, onUnlock, onMaran
   };
 
   const lightsOn = lightStatus.some((l) => l.on);
-  const anyLightOnline = lightStatus.length > 0;
+  const movieScenes = scenes.filter((s) => s.scene_number === 4 || s.scene_number === 5);
+  const movieAutoOn = movieScenes.length === 2 && movieScenes.every((s) => s.enabled);
+
+  const buildLightsPayload = async (state: "on" | "off", pct?: number): Promise<SceneLightCommand[]> => {
+    const sceneId = localStorage.getItem(state === "on" ? LS_ON_KEY(householdCode) : LS_OFF_KEY(householdCode));
+    const scene = scenes.find((s) => s.id === sceneId);
+    if (!scene) throw new Error(`Välj en ${state.toUpperCase()}-scen i Lights Remote först`);
+    const sceneLights = await fetchSceneLights(scene.id);
+    const payload: SceneLightCommand[] = [];
+    for (const sl of sceneLights) {
+      if (!sl.in_scene) continue;
+      const light = lights.find((l) => l.id === sl.light_id);
+      if (!light) continue;
+      const baseBrightness = sl.brightness ?? 0;
+      const treatAsOff = sl.on_state && baseBrightness === 0;
+      const on = state === "on" ? !treatAsOff && sl.on_state : treatAsOff ? false : sl.on_state;
+      const cmd: SceneLightCommand = {
+        device_id: light.tuya_device_id,
+        name: light.name,
+        type: light.light_type,
+        on,
+        delay_ms: state === "on" ? 0 : sl.delay_ms ?? 0,
+        fade_ms: sl.fade_ms ?? 0,
+      };
+      if (on) {
+        cmd.brightness = state === "on" ? clamp(pct ?? lightsPct, 10, 90) : baseBrightness || 100;
+        if ((light.light_type === "cct" || light.light_type === "rgbcct") && sl.kelvin !== null) cmd.kelvin = sl.kelvin;
+        if ((light.light_type === "rgb" || light.light_type === "rgbcct") && sl.color_hex) cmd.color = sl.color_hex;
+      }
+      payload.push(cmd);
+    }
+    if (payload.length === 0) throw new Error(`Scenen "${scene.name}" har inga lampor`);
+    return payload;
+  };
+
+  const handleLights = async (state: "on" | "off") => {
+    await send(`lights-${state}`, async () => {
+      const res = await sendSceneLights(await buildLightsPayload(state));
+      if (!res.ok) toast.error(`Ljus ${state.toUpperCase()} misslyckades`, { description: res.error || `Status ${res.status}` });
+    }).catch((e) => toast.error(`Ljus ${state.toUpperCase()} fel`, { description: String(e) }));
+  };
 
   const handleLightsBrightness = (pct: number) => {
-    setLightsPct(pct);
-    localStorage.setItem(FAV_LIGHTS_PCT_KEY, String(pct));
+    const next = clamp(pct, 10, 90);
+    setLightsPct(next);
+    localStorage.setItem(FAV_LIGHTS_PCT_KEY, String(next));
+    if (lightsDebounceRef.current) clearTimeout(lightsDebounceRef.current);
+    lightsDebounceRef.current = setTimeout(async () => {
+      try {
+        const res = await sendSceneLights(await buildLightsPayload("on", next));
+        if (!res.ok) toast.error("Ljusintensitet misslyckades", { description: res.error || `Status ${res.status}` });
+      } catch {
+        /* visas vid ON/OFF, inte under dragning */
+      }
+    }, 180);
+  };
+
+  const toggleMovieAuto = async (next: boolean) => {
+    if (movieScenes.length !== 2) {
+      toast.error("Hittar inte scen 4 och 5");
+      return;
+    }
+    await send("autofilm", async () => {
+      await Promise.all(movieScenes.map((s) => updateScene(s.id, { enabled: next })));
+      setScenes((prev) => prev.map((s) => (s.scene_number === 4 || s.scene_number === 5 ? { ...s, enabled: next } : s)));
+      toast.success(next ? "AutoFilm på" : "AutoFilm av");
+    });
+  };
+
+  const pushVolume = (mv: number) => {
+    const v = clamp(mv, 0, 98);
+    if (volumeDebounceRef.current) clearTimeout(volumeDebounceRef.current);
+    volumeDebounceRef.current = setTimeout(() => {
+      sendMarantz(`MV${String(v).padStart(2, "0")}`).then((r) => {
+        if (!r.ok) toast.error("Marantz volym misslyckades", { description: r.error || `Status ${r.status}` });
+      });
+    }, 120);
   };
 
   // Marantz volume
-  const mv = marantzStatus?.volume ?? null;
-  const mvDb = mv !== null ? marantzMvToDb(mv) : null;
+  const volDb = marantzMvToDb(volDraft);
   const muted = marantzStatus?.mute === true;
 
   return (
