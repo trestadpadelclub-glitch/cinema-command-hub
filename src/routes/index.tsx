@@ -25,7 +25,6 @@ import {
   getStatus,
   parseStatus,
   runBridgeCommands,
-  
   type BridgeEndpointCommand,
   type ProjectorSettings,
 } from "@/lib/projector";
@@ -73,7 +72,7 @@ function Index() {
   const [power, setPower] = useState<"on" | "off" | "unknown">("unknown");
   const [activeInput, setActiveInput] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  
+
   const [pollIntervalS, setPollIntervalS] = useState(5);
   const [pollEnabled, setPollEnabled] = useState(true);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -142,10 +141,7 @@ function Index() {
       intervalRef.current = null;
     }
     if (pollEnabled && pollIntervalS > 0) {
-      intervalRef.current = setInterval(
-        () => syncStatus("power", false),
-        pollIntervalS * 1000,
-      );
+      intervalRef.current = setInterval(() => syncStatus("power", false), pollIntervalS * 1000);
     }
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
@@ -244,9 +240,7 @@ function Index() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
-                  Master Control Hub
-                </h1>
+                <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Master Control Hub</h1>
                 <span
                   title={
                     power === "on"
@@ -340,7 +334,10 @@ function Index() {
             <main className="grid gap-6 lg:grid-cols-[1fr_360px]">
               <div className="space-y-6">
                 <Section title="Marantz Cinema 50">
-                  <MarantzPanel householdCode={household} activeInput={marantz.status?.input ?? activeInput} />
+                  <MarantzPanel
+                    householdCode={household}
+                    activeInput={marantz.status?.input ?? activeInput}
+                  />
                 </Section>
                 <Section title="Lights — dina lampor">
                   <LightsManager householdCode={household} />
@@ -373,7 +370,7 @@ function Index() {
               <PollingControl
                 householdCode={household}
                 onChange={refetchPollSettings}
-                  onManualPoll={handleRefresh}
+                onManualPoll={handleRefresh}
               />
             </Section>
             <Section title="Scen-triggers (auto-körning)">

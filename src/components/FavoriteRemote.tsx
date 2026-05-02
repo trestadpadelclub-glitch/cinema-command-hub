@@ -37,7 +37,14 @@ import {
   type MarantzStatus,
 } from "@/lib/projector";
 import { useLightsStatus } from "@/hooks/useLightsStatus";
-import { fetchLights, fetchScenes, fetchSceneLights, updateScene, type Light, type Scene } from "@/lib/scenes";
+import {
+  fetchLights,
+  fetchScenes,
+  fetchSceneLights,
+  updateScene,
+  type Light,
+  type Scene,
+} from "@/lib/scenes";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import logoYoutube from "@/assets/logo-youtube.png";
@@ -61,7 +68,12 @@ const APP_PACKAGES: Record<AppKey, string[]> = {
 };
 
 const APPS: { key: AppKey; label: string; logo?: string; icon?: React.ReactNode; bg: string }[] = [
-  { key: "mytvonline3", label: "MyTVOnline3", icon: <Tv className="h-6 w-6" />, bg: "bg-orange-500/90 text-white" },
+  {
+    key: "mytvonline3",
+    label: "MyTVOnline3",
+    icon: <Tv className="h-6 w-6" />,
+    bg: "bg-orange-500/90 text-white",
+  },
   { key: "youtube", label: "YouTube", logo: logoYoutube, bg: "bg-card" },
   { key: "redbull", label: "Red Bull TV", logo: logoRedbull, bg: "bg-card" },
   { key: "spotify", label: "Spotify", logo: logoSpotify, bg: "bg-card" },
@@ -84,7 +96,12 @@ function loadPackages(): Record<AppKey, string> {
   }
 }
 
-export function FavoriteRemote({ householdCode, marantzStatus, onUnlock, onMarantzRefresh }: Props) {
+export function FavoriteRemote({
+  householdCode,
+  marantzStatus,
+  onUnlock,
+  onMarantzRefresh,
+}: Props) {
   const [activeApp, setActiveApp] = useState<AppKey | null>(() => {
     if (typeof window === "undefined") return null;
     return (localStorage.getItem(ACTIVE_APP_KEY) as AppKey | null) ?? "mytvonline3";
@@ -144,12 +161,13 @@ export function FavoriteRemote({ householdCode, marantzStatus, onUnlock, onMaran
     }
   };
 
-  const sendKey = (id: string, keycode: string) =>
-    send(id, () => sendFormulerCommand(keycode));
+  const sendKey = (id: string, keycode: string) => send(id, () => sendFormulerCommand(keycode));
 
   const launchApp = async (key: AppKey) => {
     const stored = loadPackages();
-    const candidates = Array.from(new Set([stored[key], ...APP_PACKAGES[key]].filter(Boolean) as string[]));
+    const candidates = Array.from(
+      new Set([stored[key], ...APP_PACKAGES[key]].filter(Boolean) as string[]),
+    );
     setActiveApp(key);
     localStorage.setItem(ACTIVE_APP_KEY, key);
     setBusy(`app-${key}`);
@@ -171,8 +189,13 @@ export function FavoriteRemote({ householdCode, marantzStatus, onUnlock, onMaran
   const movieScenes = scenes.filter((s) => s.scene_number === 4 || s.scene_number === 5);
   const movieAutoOn = movieScenes.length === 2 && movieScenes.every((s) => s.enabled);
 
-  const buildLightsPayload = async (state: "on" | "off", pct?: number): Promise<SceneLightCommand[]> => {
-    const sceneId = localStorage.getItem(state === "on" ? LS_ON_KEY(householdCode) : LS_OFF_KEY(householdCode));
+  const buildLightsPayload = async (
+    state: "on" | "off",
+    pct?: number,
+  ): Promise<SceneLightCommand[]> => {
+    const sceneId = localStorage.getItem(
+      state === "on" ? LS_ON_KEY(householdCode) : LS_OFF_KEY(householdCode),
+    );
     const scene = scenes.find((s) => s.id === sceneId);
     if (!scene) throw new Error(`Välj en ${state.toUpperCase()}-scen i Lights Remote först`);
     const sceneLights = await fetchSceneLights(scene.id);
@@ -189,13 +212,15 @@ export function FavoriteRemote({ householdCode, marantzStatus, onUnlock, onMaran
         name: light.name,
         type: light.light_type,
         on,
-        delay_ms: state === "on" ? 0 : sl.delay_ms ?? 0,
+        delay_ms: state === "on" ? 0 : (sl.delay_ms ?? 0),
         fade_ms: sl.fade_ms ?? 0,
       };
       if (on) {
         cmd.brightness = state === "on" ? clamp(pct ?? lightsPct, 10, 90) : baseBrightness || 100;
-        if ((light.light_type === "cct" || light.light_type === "rgbcct") && sl.kelvin !== null) cmd.kelvin = sl.kelvin;
-        if ((light.light_type === "rgb" || light.light_type === "rgbcct") && sl.color_hex) cmd.color = sl.color_hex;
+        if ((light.light_type === "cct" || light.light_type === "rgbcct") && sl.kelvin !== null)
+          cmd.kelvin = sl.kelvin;
+        if ((light.light_type === "rgb" || light.light_type === "rgbcct") && sl.color_hex)
+          cmd.color = sl.color_hex;
       }
       payload.push(cmd);
     }
@@ -206,7 +231,10 @@ export function FavoriteRemote({ householdCode, marantzStatus, onUnlock, onMaran
   const handleLights = async (state: "on" | "off") => {
     await send(`lights-${state}`, async () => {
       const res = await sendSceneLights(await buildLightsPayload(state));
-      if (!res.ok) toast.error(`Ljus ${state.toUpperCase()} misslyckades`, { description: res.error || `Status ${res.status}` });
+      if (!res.ok)
+        toast.error(`Ljus ${state.toUpperCase()} misslyckades`, {
+          description: res.error || `Status ${res.status}`,
+        });
     }).catch((e) => toast.error(`Ljus ${state.toUpperCase()} fel`, { description: String(e) }));
   };
 
@@ -218,7 +246,10 @@ export function FavoriteRemote({ householdCode, marantzStatus, onUnlock, onMaran
     lightsDebounceRef.current = setTimeout(async () => {
       try {
         const res = await sendSceneLights(await buildLightsPayload("on", next));
-        if (!res.ok) toast.error("Ljusintensitet misslyckades", { description: res.error || `Status ${res.status}` });
+        if (!res.ok)
+          toast.error("Ljusintensitet misslyckades", {
+            description: res.error || `Status ${res.status}`,
+          });
       } catch {
         /* visas vid ON/OFF, inte under dragning */
       }
@@ -232,7 +263,11 @@ export function FavoriteRemote({ householdCode, marantzStatus, onUnlock, onMaran
     }
     await send("autofilm", async () => {
       await Promise.all(movieScenes.map((s) => updateScene(s.id, { enabled: next })));
-      setScenes((prev) => prev.map((s) => (s.scene_number === 4 || s.scene_number === 5 ? { ...s, enabled: next } : s)));
+      setScenes((prev) =>
+        prev.map((s) =>
+          s.scene_number === 4 || s.scene_number === 5 ? { ...s, enabled: next } : s,
+        ),
+      );
       toast.success(next ? "AutoFilm på" : "AutoFilm av");
     });
   };
@@ -242,7 +277,10 @@ export function FavoriteRemote({ householdCode, marantzStatus, onUnlock, onMaran
     if (volumeDebounceRef.current) clearTimeout(volumeDebounceRef.current);
     volumeDebounceRef.current = setTimeout(() => {
       sendMarantz(`MV${String(v).padStart(2, "0")}`).then((r) => {
-        if (!r.ok) toast.error("Marantz volym misslyckades", { description: r.error || `Status ${r.status}` });
+        if (!r.ok)
+          toast.error("Marantz volym misslyckades", {
+            description: r.error || `Status ${r.status}`,
+          });
       });
     }, 120);
   };
@@ -321,9 +359,7 @@ export function FavoriteRemote({ householdCode, marantzStatus, onUnlock, onMaran
           <div className="grid grid-cols-[64px_1fr_64px] gap-3 h-full">
             {/* LJUS column */}
             <div className="flex flex-col items-center gap-2 min-h-0">
-              <div className="text-[9px] uppercase tracking-wider text-muted-foreground">
-                Ljus
-              </div>
+              <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Ljus</div>
               <Button
                 size="icon"
                 variant={lightsOn ? "default" : "outline"}
@@ -356,7 +392,11 @@ export function FavoriteRemote({ householdCode, marantzStatus, onUnlock, onMaran
               </div>
               <div className="text-[9px] text-muted-foreground">10–90%</div>
               <div className="flex flex-col items-center gap-1 border-t border-border/50 pt-2 w-full">
-                <div className="text-[9px] uppercase tracking-wider text-muted-foreground text-center leading-tight">Auto<br />film</div>
+                <div className="text-[9px] uppercase tracking-wider text-muted-foreground text-center leading-tight">
+                  Auto
+                  <br />
+                  film
+                </div>
                 <Switch
                   checked={movieAutoOn}
                   onCheckedChange={toggleMovieAuto}
@@ -548,16 +588,16 @@ export function FavoriteRemote({ householdCode, marantzStatus, onUnlock, onMaran
 
             {/* MARANTZ VOLUME column */}
             <div className="flex flex-col items-center gap-2 min-h-0">
-              <div className="text-[9px] uppercase tracking-wider text-muted-foreground">
-                Volym
-              </div>
+              <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Volym</div>
               <Button
                 size="icon"
                 variant={muted ? "destructive" : "outline"}
-                onClick={() => send("mute", async () => {
-                  await sendMarantz(muted ? "MUOFF" : "MUON");
-                  setTimeout(() => onMarantzRefresh(), 250);
-                })}
+                onClick={() =>
+                  send("mute", async () => {
+                    await sendMarantz(muted ? "MUOFF" : "MUON");
+                    setTimeout(() => onMarantzRefresh(), 250);
+                  })
+                }
                 disabled={busy !== null}
                 className="h-9 w-9"
                 title="Mute"
@@ -580,7 +620,8 @@ export function FavoriteRemote({ householdCode, marantzStatus, onUnlock, onMaran
               <div className="text-[10px] font-mono font-bold text-center tabular-nums">
                 MV{String(volDraft).padStart(2, "0")}
                 <div className="text-[8px] text-muted-foreground font-normal">
-                  {volDb > 0 ? "+" : ""}{volDb.toFixed(1)} dB
+                  {volDb > 0 ? "+" : ""}
+                  {volDb.toFixed(1)} dB
                 </div>
               </div>
               <div className="flex-1 flex items-center justify-center w-full min-h-0 py-1">
