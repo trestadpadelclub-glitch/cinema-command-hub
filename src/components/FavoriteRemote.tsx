@@ -554,7 +554,10 @@ export function FavoriteRemote({ householdCode, marantzStatus, onUnlock, onMaran
               <Button
                 size="icon"
                 variant={muted ? "destructive" : "outline"}
-                onClick={() => send("mute", () => sendMarantz("MUTOFF").then(() => muted ? sendMarantz("MUOFF") : sendMarantz("MUON")))}
+                onClick={() => send("mute", async () => {
+                  await sendMarantz(muted ? "MUOFF" : "MUON");
+                  setTimeout(() => onMarantzRefresh(), 250);
+                })}
                 disabled={busy !== null}
                 className="h-9 w-9"
                 title="Mute"
@@ -564,21 +567,54 @@ export function FavoriteRemote({ householdCode, marantzStatus, onUnlock, onMaran
               <Button
                 size="icon"
                 variant="outline"
-                onClick={() => send("vup", () => sendMarantz("MVUP"))}
+                onClick={() => {
+                  const next = clamp(volDraft + 1, 0, 98);
+                  setVolDraft(next);
+                  pushVolume(next);
+                }}
                 disabled={busy !== null}
                 className="h-9 w-9"
               >
                 <Plus className="h-4 w-4" />
               </Button>
-              <div className="text-[11px] font-mono font-bold text-center">
-                {mvDb !== null ? `${mvDb > 0 ? "+" : ""}${mvDb}` : "—"}
-                <div className="text-[8px] text-muted-foreground font-normal">dB</div>
+              <div className="text-[10px] font-mono font-bold text-center tabular-nums">
+                MV{String(volDraft).padStart(2, "0")}
+                <div className="text-[8px] text-muted-foreground font-normal">
+                  {volDb > 0 ? "+" : ""}{volDb.toFixed(1)} dB
+                </div>
               </div>
-              <div className="flex-1" />
+              <div className="flex-1 flex items-center justify-center w-full min-h-0 py-1">
+                <Slider
+                  orientation="vertical"
+                  min={0}
+                  max={98}
+                  step={1}
+                  value={[volDraft]}
+                  onValueChange={(v) => {
+                    const next = v[0] ?? volDraft;
+                    draggingVol.current = true;
+                    setVolDraft(next);
+                    pushVolume(next);
+                  }}
+                  onValueCommit={(v) => {
+                    const next = v[0] ?? volDraft;
+                    draggingVol.current = false;
+                    setVolDraft(next);
+                    pushVolume(next);
+                    setTimeout(() => onMarantzRefresh(), 400);
+                  }}
+                  className="h-full"
+                  aria-label="Marantz volym"
+                />
+              </div>
               <Button
                 size="icon"
                 variant="outline"
-                onClick={() => send("vdn", () => sendMarantz("MVDOWN"))}
+                onClick={() => {
+                  const next = clamp(volDraft - 1, 0, 98);
+                  setVolDraft(next);
+                  pushVolume(next);
+                }}
                 disabled={busy !== null}
                 className="h-9 w-9"
               >
