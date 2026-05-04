@@ -106,7 +106,7 @@ const SETTINGS_TOOL = {
 
 type ChatTurn = { role: "user" | "assistant"; content: string };
 
-export const Route = createFileRoute("/api/cinema-brain")({
+export const Route = createFileRoute("/api/public/cinema-brain")({
   server: {
     handlers: {
       POST: async ({ request }) => {
