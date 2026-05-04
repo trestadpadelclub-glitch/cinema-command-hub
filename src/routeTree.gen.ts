@@ -10,17 +10,12 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ApiCinemaBrainRouteImport } from './routes/api.cinema-brain'
 import { Route as ApiPublicTriggerRouteImport } from './routes/api/public/trigger'
+import { Route as ApiPublicCinemaBrainRouteImport } from './routes/api/public/cinema-brain'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiCinemaBrainRoute = ApiCinemaBrainRouteImport.update({
-  id: '/api/cinema-brain',
-  path: '/api/cinema-brain',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicTriggerRoute = ApiPublicTriggerRouteImport.update({
@@ -28,34 +23,39 @@ const ApiPublicTriggerRoute = ApiPublicTriggerRouteImport.update({
   path: '/api/public/trigger',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCinemaBrainRoute = ApiPublicCinemaBrainRouteImport.update({
+  id: '/api/public/cinema-brain',
+  path: '/api/public/cinema-brain',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/api/cinema-brain': typeof ApiCinemaBrainRoute
+  '/api/public/cinema-brain': typeof ApiPublicCinemaBrainRoute
   '/api/public/trigger': typeof ApiPublicTriggerRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/api/cinema-brain': typeof ApiCinemaBrainRoute
+  '/api/public/cinema-brain': typeof ApiPublicCinemaBrainRoute
   '/api/public/trigger': typeof ApiPublicTriggerRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/api/cinema-brain': typeof ApiCinemaBrainRoute
+  '/api/public/cinema-brain': typeof ApiPublicCinemaBrainRoute
   '/api/public/trigger': typeof ApiPublicTriggerRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/cinema-brain' | '/api/public/trigger'
+  fullPaths: '/' | '/api/public/cinema-brain' | '/api/public/trigger'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/cinema-brain' | '/api/public/trigger'
-  id: '__root__' | '/' | '/api/cinema-brain' | '/api/public/trigger'
+  to: '/' | '/api/public/cinema-brain' | '/api/public/trigger'
+  id: '__root__' | '/' | '/api/public/cinema-brain' | '/api/public/trigger'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  ApiCinemaBrainRoute: typeof ApiCinemaBrainRoute
+  ApiPublicCinemaBrainRoute: typeof ApiPublicCinemaBrainRoute
   ApiPublicTriggerRoute: typeof ApiPublicTriggerRoute
 }
 
@@ -68,13 +68,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/cinema-brain': {
-      id: '/api/cinema-brain'
-      path: '/api/cinema-brain'
-      fullPath: '/api/cinema-brain'
-      preLoaderRoute: typeof ApiCinemaBrainRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/public/trigger': {
       id: '/api/public/trigger'
       path: '/api/public/trigger'
@@ -82,12 +75,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicTriggerRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cinema-brain': {
+      id: '/api/public/cinema-brain'
+      path: '/api/public/cinema-brain'
+      fullPath: '/api/public/cinema-brain'
+      preLoaderRoute: typeof ApiPublicCinemaBrainRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  ApiCinemaBrainRoute: ApiCinemaBrainRoute,
+  ApiPublicCinemaBrainRoute: ApiPublicCinemaBrainRoute,
   ApiPublicTriggerRoute: ApiPublicTriggerRoute,
 }
 export const routeTree = rootRouteImport

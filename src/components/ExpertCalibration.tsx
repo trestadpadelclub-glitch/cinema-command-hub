@@ -252,7 +252,7 @@ export function ExpertCalibration() {
     } catch {
       /* ignore — let AI start from scratch */
     }
-    const res = await fetch("/api/cinema-brain", {
+    const res = await fetch("/api/public/cinema-brain", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -372,7 +372,7 @@ export function ExpertCalibration() {
     }
     setSavingToKb(true);
     try {
-      const res = await fetch("/api/cinema-brain", {
+      const res = await fetch("/api/public/cinema-brain", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
