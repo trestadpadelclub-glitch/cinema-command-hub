@@ -92,7 +92,7 @@ export function AiAssistant({ current, onApplied }: Props) {
       );
       chatHistory.push({ role: "user", content: userText });
 
-      const res = await fetch("/api/cinema-brain", {
+      const res = await fetch("/api/public/cinema-brain", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
