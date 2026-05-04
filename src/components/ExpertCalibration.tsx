@@ -168,20 +168,32 @@ export function ExpertCalibration() {
   const handleExport = async () => {
     const text = formatScenario(scenario);
     const title = scenario.title.trim() || "Expert calibration scenario";
+
+    // 1) Try clipboard first (works on desktop + most modern mobile browsers)
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        toast.success("Scenario kopierat till urklipp", { description: text });
+        return;
+      }
+    } catch {
+      /* fall through */
+    }
+
+    // 2) Try Web Share (mobile)
     try {
       if (navigator.share) {
         await navigator.share({ title, text });
         toast.success("Scenario öppnat för delning");
         return;
       }
-      await navigator.clipboard.writeText(text);
-      toast.success("Scenario copied! Send this to your expert.", {
-        description: text,
-      });
     } catch {
-      downloadTextFile(`expert-scenario-${Date.now()}.txt`, text);
-      toast.success("Kunde inte kopiera — laddade ner textfil istället");
+      /* fall through */
     }
+
+    // 3) Final fallback: download as .txt
+    downloadTextFile(`expert-scenario-${Date.now()}.txt`, text);
+    toast.success("Scenario nedladdat som textfil");
   };
 
   const handleSavePreset = () => {
