@@ -2,41 +2,43 @@
 // Bridge API: POST /api/projector  body: { action, value }
 // One action per request — multi-setting payloads are split client-side.
 
-const BRIDGE_URL_KEY = "sony_xw5000es_bridge_url";
+const BRIDGE_URL_KEY = "sony_hw65es_bridge_url";
 export const DEFAULT_BRIDGE_URL = "http://localhost:5000/api/projector";
 
-// Bridge-supported pic modes (XW5000ES). Values match what the bridge expects.
+// Bridge-supported pic modes (HW65ES). Values match what the bridge expects.
+// HW65ES saknar "IMAX Enhanced" (user3) men har "Photo".
 export type PicMode =
   | "cinema_film_1"
   | "cinema_film_2"
   | "reference"
   | "tv"
+  | "photo"
   | "bright_cinema"
   | "bright_tv"
   | "game"
-  | "user1"
-  | "user2"
-  | "user3";
+  | "user";
 
 export const PIC_MODE_LABELS: Record<PicMode, string> = {
   cinema_film_1: "Cinema Film 1",
   cinema_film_2: "Cinema Film 2",
   reference: "Reference",
   tv: "TV",
+  photo: "Photo",
   bright_cinema: "Bright Cinema",
   bright_tv: "Bright TV",
   game: "Game",
-  user1: "User",
-  user2: "User 2",
-  user3: "IMAX Enhanced",
+  user: "User",
 };
 
 export type InputSource = "hdmi1" | "hdmi2";
 export type BlankState = "on" | "off";
 export type RemoteKey = "menu" | "up" | "down" | "left" | "right" | "enter" | "reset";
 
-export type HdrEnhancer = "off" | "low" | "middle" | "high";
-export type DynamicControl = "off" | "limited" | "middle" | "full";
+// HW65ES har Lamp Control (Low/High) i stället för laser_output 0–100.
+export type LampControl = "low" | "high";
+
+// HW65ES Dynamic Control = bara off/full (ingen limited/middle).
+export type DynamicControl = "off" | "full";
 
 // Motionflow: bridge sends motion_flow "<value>"
 export type Motionflow =
