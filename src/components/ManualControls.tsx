@@ -120,26 +120,18 @@ const PIC_MODE_INFO: Record<PicMode, string> = {
     "Maxljust TV-profil för dagsljus / mycket omgivande ljus. Sämre svärta men bilden 'orkar' synas.",
   game:
     "Optimerad för minsta input lag. Mindre bildbehandling — använd när responstid är viktigare än bildkvalitet.",
-  user1: "Egen sparad profil. Använd för en personligt kalibrerad inställning.",
-  user2: "Egen sparad profil #2.",
-  user3: "IMAX Enhanced-profil för IMAX-mastrat innehåll.",
+  photo: "Optimerad för stillbilder/foton.",
+  user: "Egen sparad profil. Använd för en personligt kalibrerad inställning.",
 };
 
-const HDR_INFO: Record<HdrEnhancer, string> = {
-  off: "Ingen extra HDR-bearbetning. Använd vid SDR eller om HDR-källan redan ser perfekt ut.",
-  low: "Lätt lyft av highlights/skuggor. Bra på välmastrad HDR där du bara vill ha lite mer pop.",
-  middle:
-    "Standardläge för HDR-film på XW5000ES. Bra balans mellan synliga highlights och bevarad svärta.",
-  high: "Maximal tone-mapping. Använd på mörka HDR-filmer där detaljer försvinner i svart — kan ge platt bild på ljus HDR.",
+const LAMP_INFO: Record<LampControl, string> = {
+  low: "Lägre lampeffekt — djupare svärta, tystare fläkt, längre lamplivslängd. Default i mörkt rum.",
+  high: "Full lampeffekt — mer ljus i HDR / ljust rum. Kortare lamplivslängd och något högre fläktljud.",
 };
 
 const DYNAMIC_INFO: Record<DynamicControl, string> = {
-  off: "Statisk laser. Ingen scen-anpassning. Mest 'ärlig' bild, lägst kontrast-intryck.",
-  limited:
-    "Mild dynamisk justering. Rekommenderat för film — höjer upplevd kontrast utan synliga pumpningar.",
-  middle:
-    "Tydligare dynamisk effekt. Bra för blandat innehåll (TV, sport, stream).",
-  full: "Aggressivast. Maxad upplevd kontrast men risk för synliga ljusändringar mellan scener.",
+  off: "Statisk lampa. Ingen scen-anpassning. Mest 'ärlig' bild.",
+  full: "Dynamisk iris/lampstyrning per scen. Maxar upplevd kontrast men kan ge synliga ljusändringar.",
 };
 
 const MOTIONFLOW_INFO: Record<Motionflow, string> = {
