@@ -2,41 +2,43 @@
 // Bridge API: POST /api/projector  body: { action, value }
 // One action per request — multi-setting payloads are split client-side.
 
-const BRIDGE_URL_KEY = "sony_xw5000es_bridge_url";
+const BRIDGE_URL_KEY = "sony_hw65es_bridge_url";
 export const DEFAULT_BRIDGE_URL = "http://localhost:5000/api/projector";
 
-// Bridge-supported pic modes (XW5000ES). Values match what the bridge expects.
+// Bridge-supported pic modes (HW65ES). Values match what the bridge expects.
+// HW65ES saknar "IMAX Enhanced" (user3) men har "Photo".
 export type PicMode =
   | "cinema_film_1"
   | "cinema_film_2"
   | "reference"
   | "tv"
+  | "photo"
   | "bright_cinema"
   | "bright_tv"
   | "game"
-  | "user1"
-  | "user2"
-  | "user3";
+  | "user";
 
 export const PIC_MODE_LABELS: Record<PicMode, string> = {
   cinema_film_1: "Cinema Film 1",
   cinema_film_2: "Cinema Film 2",
   reference: "Reference",
   tv: "TV",
+  photo: "Photo",
   bright_cinema: "Bright Cinema",
   bright_tv: "Bright TV",
   game: "Game",
-  user1: "User",
-  user2: "User 2",
-  user3: "IMAX Enhanced",
+  user: "User",
 };
 
 export type InputSource = "hdmi1" | "hdmi2";
 export type BlankState = "on" | "off";
 export type RemoteKey = "menu" | "up" | "down" | "left" | "right" | "enter" | "reset";
 
-export type HdrEnhancer = "off" | "low" | "middle" | "high";
-export type DynamicControl = "off" | "limited" | "middle" | "full";
+// HW65ES har Lamp Control (Low/High) i stället för laser_output 0–100.
+export type LampControl = "low" | "high";
+
+// HW65ES Dynamic Control = bara off/full (ingen limited/middle).
+export type DynamicControl = "off" | "full";
 
 // Motionflow: bridge sends motion_flow "<value>"
 export type Motionflow =
@@ -89,13 +91,12 @@ export interface ProjectorSettings {
   /** Power-action att skicka när scen körs. Saknas = rör inte. */
   power?: PowerAction;
   pic_mode?: PicMode;
-  laser_output?: number; // 0-100 (bridge multiplies by 10)
+  lamp_control?: LampControl; // low | high (HW65ES — ingen 0–100 laser)
   brightness?: number; // 0-100
   contrast?: number; // 0-100
   color?: number; // 0-100
   sharpness?: number; // 0-100
   reality_creation?: number; // 0-100
-  hdr_enhancer?: HdrEnhancer;
   dynamic_control?: DynamicControl;
   motionflow?: Motionflow;
   gamma_correction?: Gamma;
@@ -107,9 +108,8 @@ export interface ProjectorSettings {
 export type Action =
   | "power"
   | "pic_mode"
-  | "hdr_enhancer"
+  | "lamp_control"
   | "dynamic_control"
-  | "laser_output"
   | "reality_creation"
   | "real_cre"
   | "reality_creation_val"
@@ -339,12 +339,11 @@ export async function getStatus(): Promise<CommandResult> {
 // which is split into two commands (real_cre on/off + reality_creation_val level).
 const SETTINGS_ACTIONS: Action[] = [
   "pic_mode",
-  "laser_output",
+  "lamp_control",
   "brightness",
   "contrast",
   "color",
   "sharpness",
-  "hdr_enhancer",
   "dynamic_control",
   "motionflow",
   "gamma_correction",
@@ -394,11 +393,18 @@ export function parseStatus(raw: unknown): ProjectorStatus {
     out.pic_mode = (map[pm] ?? pm) as PicMode;
   }
 
-  const laser = num(r.laser_level ?? r.laser_output ?? r.light_output_val);
-  if (laser !== undefined) out.laser_output = Math.round(laser > 100 ? laser / 10 : laser);
+  // HW65ES: lamp_control = "low" | "high"
+  const lamp = str(r.lamp_control ?? r.lamp_setting);
+  if (lamp) {
+    const l = lamp.toLowerCase();
+    if (l === "low" || l === "high") out.lamp_control = l as LampControl;
+  }
 
   const dyn = str(r.dynamic_control ?? r.light_output_dyn);
-  if (dyn) out.dynamic_control = dyn as DynamicControl;
+  if (dyn) {
+    const d = dyn.toLowerCase();
+    if (d === "off" || d === "full") out.dynamic_control = d as DynamicControl;
+  }
 
   const input = str(r.input);
   if (input) out.input = input as InputSource;
@@ -411,12 +417,6 @@ export function parseStatus(raw: unknown): ProjectorStatus {
   if (color !== undefined) out.color = color;
   const sharpness = num(r.sharpness);
   if (sharpness !== undefined) out.sharpness = sharpness;
-
-  const hdr = str(r.hdr_enhancer);
-  if (hdr) {
-    const hdrMap: Record<string, HdrEnhancer> = { mid: "middle" };
-    out.hdr_enhancer = (hdrMap[hdr.toLowerCase()] ?? hdr) as HdrEnhancer;
-  }
 
   // Motionflow — bridge sends `motion_flow` or `motionflow`
   const mf = str(r.motion_flow ?? r.motionflow);
@@ -508,11 +508,10 @@ export interface Preset {
     Pick<
       ProjectorSettings,
       | "pic_mode"
-      | "laser_output"
+      | "lamp_control"
       | "brightness"
       | "contrast"
       | "color"
-      | "hdr_enhancer"
       | "dynamic_control"
       | "reality_creation"
       | "motionflow"
@@ -524,37 +523,35 @@ export interface Preset {
 
 export const PRESETS: Preset[] = [
   {
-    id: "4k-hdr-movie",
-    label: "4K HDR Movie",
-    description: "Cinema 1 · Laser 100 · Brightness 50 · HDR Middle · Limited dynamic",
+    id: "hdr-movie",
+    label: "Film (mörkt rum)",
+    description: "Cinema 1 · Lamp High · Brightness 50 · Dynamic Full",
     settings: {
       pic_mode: "cinema_film_1",
-      laser_output: 100,
+      lamp_control: "high",
       brightness: 50,
       contrast: 90,
-      hdr_enhancer: "middle",
-      dynamic_control: "limited",
+      dynamic_control: "full",
       reality_creation: 20,
       color: 50,
       motionflow: "off",
-      gamma_correction: "2.2",
+      gamma_correction: "2.4",
       color_temp: "d65",
     },
   },
   {
     id: "sdr-tv-sports",
-    label: "SDR TV / Sports",
-    description: "Cinema Film 2 · Laser 75 · Brightness 50 · HDR Off · Middle dynamic",
+    label: "SDR TV / Sport",
+    description: "Cinema Film 2 · Lamp Low · Smooth Low · Dynamic Off",
     settings: {
       pic_mode: "cinema_film_2",
-      laser_output: 75,
+      lamp_control: "low",
       brightness: 50,
       contrast: 90,
-      hdr_enhancer: "off",
-      dynamic_control: "middle",
+      dynamic_control: "off",
       reality_creation: 40,
       color: 50,
-      motionflow: "off",
+      motionflow: "smooth_low",
       gamma_correction: "2.2",
       color_temp: "d65",
     },
@@ -562,14 +559,13 @@ export const PRESETS: Preset[] = [
   {
     id: "iptv-formuler",
     label: "IPTV / Formuler",
-    description: "Cinema Film 2 · Laser 75 · Brightness 50 · Reality 60 (motverkar komprimering)",
+    description: "Cinema Film 2 · Lamp Low · Reality 60 (motverkar komprimering)",
     settings: {
       pic_mode: "cinema_film_2",
-      laser_output: 75,
+      lamp_control: "low",
       brightness: 50,
       contrast: 90,
-      hdr_enhancer: "off",
-      dynamic_control: "middle",
+      dynamic_control: "off",
       reality_creation: 60,
       color: 50,
       motionflow: "smooth_low",
@@ -581,7 +577,7 @@ export const PRESETS: Preset[] = [
 
 // ----- Custom presets (localStorage) -----
 
-const CUSTOM_PRESETS_KEY = "sony_xw5000es_custom_presets";
+const CUSTOM_PRESETS_KEY = "sony_hw65es_custom_presets";
 
 export function getCustomPresets(): Preset[] {
   if (typeof window === "undefined") return [];
@@ -602,11 +598,10 @@ export function saveCustomPresets(presets: Preset[]) {
 
 const PRESET_KEYS: (keyof Preset["settings"])[] = [
   "pic_mode",
-  "laser_output",
+  "lamp_control",
   "brightness",
   "contrast",
   "color",
-  "hdr_enhancer",
   "dynamic_control",
   "reality_creation",
   "motionflow",
@@ -623,12 +618,11 @@ export function isModifiedFrom(current: ProjectorSettings, baseline: ProjectorSe
 export function extractPresetSettings(s: ProjectorSettings): Preset["settings"] {
   return {
     pic_mode: s.pic_mode ?? "cinema_film_1",
-    laser_output: s.laser_output ?? 75,
+    lamp_control: s.lamp_control ?? "high",
     brightness: s.brightness ?? 50,
     contrast: s.contrast ?? 90,
     color: s.color ?? 50,
-    hdr_enhancer: s.hdr_enhancer ?? "off",
-    dynamic_control: s.dynamic_control ?? "limited",
+    dynamic_control: s.dynamic_control ?? "off",
     reality_creation: s.reality_creation ?? 20,
     motionflow: s.motionflow ?? "off",
     gamma_correction: s.gamma_correction ?? "2.2",
@@ -643,15 +637,7 @@ export interface AiSuggestion {
   changes: ProjectorSettings;
 }
 
-const HDR_ORDER: HdrEnhancer[] = ["off", "low", "middle", "high"];
-
-function bumpHdr(current: HdrEnhancer | undefined, dir: 1 | -1): HdrEnhancer {
-  const idx = HDR_ORDER.indexOf(current ?? "off");
-  const next = Math.min(HDR_ORDER.length - 1, Math.max(0, idx + dir));
-  return HDR_ORDER[next];
-}
-
-export function analyzeInstruction(text: string, current: ProjectorSettings): AiSuggestion[] {
+export function analyzeInstruction(text: string, _current: ProjectorSettings): AiSuggestion[] {
   const t = text.toLowerCase();
   const out: AiSuggestion[] = [];
   const has = (...words: string[]) => words.some((w) => t.includes(w));
@@ -662,8 +648,8 @@ export function analyzeInstruction(text: string, current: ProjectorSettings): Ai
       changes: { brightness: 51 },
     });
     out.push({
-      reason: "Höjer HDR Enhancer ett steg för bättre skuggkontrast.",
-      changes: { hdr_enhancer: bumpHdr(current.hdr_enhancer, 1) },
+      reason: "Sätter lampan på High för mer ljus i mörka scener.",
+      changes: { lamp_control: "high" },
     });
   }
 
@@ -673,8 +659,8 @@ export function analyzeInstruction(text: string, current: ProjectorSettings): Ai
       changes: { brightness: 50 },
     });
     out.push({
-      reason: "Sänker laser till 80 för djupare svärta.",
-      changes: { laser_output: 80 },
+      reason: "Sätter lampan på Low för djupare svärta.",
+      changes: { lamp_control: "low" },
     });
   }
 
@@ -694,19 +680,19 @@ export function analyzeInstruction(text: string, current: ProjectorSettings): Ai
 
   if (has("utbränd", "clipping", "highlights", "vitt utbränt")) {
     out.push({
-      reason: "Sätter Dynamic Control till Limited för att skydda highlights.",
-      changes: { dynamic_control: "limited" },
+      reason: "Stänger av Dynamic Control för att skydda highlights.",
+      changes: { dynamic_control: "off" },
     });
     out.push({
-      reason: "Sänker HDR Enhancer ett steg.",
-      changes: { hdr_enhancer: bumpHdr(current.hdr_enhancer, -1) },
+      reason: "Sätter lampan på Low.",
+      changes: { lamp_control: "low" },
     });
   }
 
   if (has("ansträngande", "trött i ögon", "för intensiv", "eye strain")) {
     out.push({
-      reason: "Sänker laser till 60 för bekvämare ljusstyrka.",
-      changes: { laser_output: 60 },
+      reason: "Sätter lampan på Low för bekvämare ljusstyrka.",
+      changes: { lamp_control: "low" },
     });
   }
 
