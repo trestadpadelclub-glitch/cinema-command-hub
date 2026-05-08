@@ -91,13 +91,12 @@ export interface ProjectorSettings {
   /** Power-action att skicka när scen körs. Saknas = rör inte. */
   power?: PowerAction;
   pic_mode?: PicMode;
-  laser_output?: number; // 0-100 (bridge multiplies by 10)
+  lamp_control?: LampControl; // low | high (HW65ES — ingen 0–100 laser)
   brightness?: number; // 0-100
   contrast?: number; // 0-100
   color?: number; // 0-100
   sharpness?: number; // 0-100
   reality_creation?: number; // 0-100
-  hdr_enhancer?: HdrEnhancer;
   dynamic_control?: DynamicControl;
   motionflow?: Motionflow;
   gamma_correction?: Gamma;
@@ -109,9 +108,8 @@ export interface ProjectorSettings {
 export type Action =
   | "power"
   | "pic_mode"
-  | "hdr_enhancer"
+  | "lamp_control"
   | "dynamic_control"
-  | "laser_output"
   | "reality_creation"
   | "real_cre"
   | "reality_creation_val"
