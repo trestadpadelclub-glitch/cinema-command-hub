@@ -339,12 +339,11 @@ export async function getStatus(): Promise<CommandResult> {
 // which is split into two commands (real_cre on/off + reality_creation_val level).
 const SETTINGS_ACTIONS: Action[] = [
   "pic_mode",
-  "laser_output",
+  "lamp_control",
   "brightness",
   "contrast",
   "color",
   "sharpness",
-  "hdr_enhancer",
   "dynamic_control",
   "motionflow",
   "gamma_correction",
