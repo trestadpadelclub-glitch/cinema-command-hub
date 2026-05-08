@@ -508,11 +508,10 @@ export interface Preset {
     Pick<
       ProjectorSettings,
       | "pic_mode"
-      | "laser_output"
+      | "lamp_control"
       | "brightness"
       | "contrast"
       | "color"
-      | "hdr_enhancer"
       | "dynamic_control"
       | "reality_creation"
       | "motionflow"
@@ -524,37 +523,35 @@ export interface Preset {
 
 export const PRESETS: Preset[] = [
   {
-    id: "4k-hdr-movie",
-    label: "4K HDR Movie",
-    description: "Cinema 1 · Laser 100 · Brightness 50 · HDR Middle · Limited dynamic",
+    id: "hdr-movie",
+    label: "Film (mörkt rum)",
+    description: "Cinema 1 · Lamp High · Brightness 50 · Dynamic Full",
     settings: {
       pic_mode: "cinema_film_1",
-      laser_output: 100,
+      lamp_control: "high",
       brightness: 50,
       contrast: 90,
-      hdr_enhancer: "middle",
-      dynamic_control: "limited",
+      dynamic_control: "full",
       reality_creation: 20,
       color: 50,
       motionflow: "off",
-      gamma_correction: "2.2",
+      gamma_correction: "2.4",
       color_temp: "d65",
     },
   },
   {
     id: "sdr-tv-sports",
-    label: "SDR TV / Sports",
-    description: "Cinema Film 2 · Laser 75 · Brightness 50 · HDR Off · Middle dynamic",
+    label: "SDR TV / Sport",
+    description: "Cinema Film 2 · Lamp Low · Smooth Low · Dynamic Off",
     settings: {
       pic_mode: "cinema_film_2",
-      laser_output: 75,
+      lamp_control: "low",
       brightness: 50,
       contrast: 90,
-      hdr_enhancer: "off",
-      dynamic_control: "middle",
+      dynamic_control: "off",
       reality_creation: 40,
       color: 50,
-      motionflow: "off",
+      motionflow: "smooth_low",
       gamma_correction: "2.2",
       color_temp: "d65",
     },
@@ -562,14 +559,13 @@ export const PRESETS: Preset[] = [
   {
     id: "iptv-formuler",
     label: "IPTV / Formuler",
-    description: "Cinema Film 2 · Laser 75 · Brightness 50 · Reality 60 (motverkar komprimering)",
+    description: "Cinema Film 2 · Lamp Low · Reality 60 (motverkar komprimering)",
     settings: {
       pic_mode: "cinema_film_2",
-      laser_output: 75,
+      lamp_control: "low",
       brightness: 50,
       contrast: 90,
-      hdr_enhancer: "off",
-      dynamic_control: "middle",
+      dynamic_control: "off",
       reality_creation: 60,
       color: 50,
       motionflow: "smooth_low",
@@ -581,7 +577,7 @@ export const PRESETS: Preset[] = [
 
 // ----- Custom presets (localStorage) -----
 
-const CUSTOM_PRESETS_KEY = "sony_xw5000es_custom_presets";
+const CUSTOM_PRESETS_KEY = "sony_hw65es_custom_presets";
 
 export function getCustomPresets(): Preset[] {
   if (typeof window === "undefined") return [];
@@ -602,11 +598,10 @@ export function saveCustomPresets(presets: Preset[]) {
 
 const PRESET_KEYS: (keyof Preset["settings"])[] = [
   "pic_mode",
-  "laser_output",
+  "lamp_control",
   "brightness",
   "contrast",
   "color",
-  "hdr_enhancer",
   "dynamic_control",
   "reality_creation",
   "motionflow",
@@ -623,12 +618,11 @@ export function isModifiedFrom(current: ProjectorSettings, baseline: ProjectorSe
 export function extractPresetSettings(s: ProjectorSettings): Preset["settings"] {
   return {
     pic_mode: s.pic_mode ?? "cinema_film_1",
-    laser_output: s.laser_output ?? 75,
+    lamp_control: s.lamp_control ?? "high",
     brightness: s.brightness ?? 50,
     contrast: s.contrast ?? 90,
     color: s.color ?? 50,
-    hdr_enhancer: s.hdr_enhancer ?? "off",
-    dynamic_control: s.dynamic_control ?? "limited",
+    dynamic_control: s.dynamic_control ?? "off",
     reality_creation: s.reality_creation ?? 20,
     motionflow: s.motionflow ?? "off",
     gamma_correction: s.gamma_correction ?? "2.2",
