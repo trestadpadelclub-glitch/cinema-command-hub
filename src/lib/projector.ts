@@ -637,15 +637,7 @@ export interface AiSuggestion {
   changes: ProjectorSettings;
 }
 
-const HDR_ORDER: HdrEnhancer[] = ["off", "low", "middle", "high"];
-
-function bumpHdr(current: HdrEnhancer | undefined, dir: 1 | -1): HdrEnhancer {
-  const idx = HDR_ORDER.indexOf(current ?? "off");
-  const next = Math.min(HDR_ORDER.length - 1, Math.max(0, idx + dir));
-  return HDR_ORDER[next];
-}
-
-export function analyzeInstruction(text: string, current: ProjectorSettings): AiSuggestion[] {
+export function analyzeInstruction(text: string, _current: ProjectorSettings): AiSuggestion[] {
   const t = text.toLowerCase();
   const out: AiSuggestion[] = [];
   const has = (...words: string[]) => words.some((w) => t.includes(w));
@@ -656,8 +648,8 @@ export function analyzeInstruction(text: string, current: ProjectorSettings): Ai
       changes: { brightness: 51 },
     });
     out.push({
-      reason: "Höjer HDR Enhancer ett steg för bättre skuggkontrast.",
-      changes: { hdr_enhancer: bumpHdr(current.hdr_enhancer, 1) },
+      reason: "Sätter lampan på High för mer ljus i mörka scener.",
+      changes: { lamp_control: "high" },
     });
   }
 
@@ -667,8 +659,8 @@ export function analyzeInstruction(text: string, current: ProjectorSettings): Ai
       changes: { brightness: 50 },
     });
     out.push({
-      reason: "Sänker laser till 80 för djupare svärta.",
-      changes: { laser_output: 80 },
+      reason: "Sätter lampan på Low för djupare svärta.",
+      changes: { lamp_control: "low" },
     });
   }
 
@@ -688,19 +680,19 @@ export function analyzeInstruction(text: string, current: ProjectorSettings): Ai
 
   if (has("utbränd", "clipping", "highlights", "vitt utbränt")) {
     out.push({
-      reason: "Sätter Dynamic Control till Limited för att skydda highlights.",
-      changes: { dynamic_control: "limited" },
+      reason: "Stänger av Dynamic Control för att skydda highlights.",
+      changes: { dynamic_control: "off" },
     });
     out.push({
-      reason: "Sänker HDR Enhancer ett steg.",
-      changes: { hdr_enhancer: bumpHdr(current.hdr_enhancer, -1) },
+      reason: "Sätter lampan på Low.",
+      changes: { lamp_control: "low" },
     });
   }
 
   if (has("ansträngande", "trött i ögon", "för intensiv", "eye strain")) {
     out.push({
-      reason: "Sänker laser till 60 för bekvämare ljusstyrka.",
-      changes: { laser_output: 60 },
+      reason: "Sätter lampan på Low för bekvämare ljusstyrka.",
+      changes: { lamp_control: "low" },
     });
   }
 
