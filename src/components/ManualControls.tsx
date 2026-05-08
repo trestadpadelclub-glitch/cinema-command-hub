@@ -14,7 +14,7 @@ import {
   PIC_MODE_LABELS,
   MOTIONFLOW_LABELS,
   COLOR_TEMP_LABELS,
-  type HdrEnhancer,
+  type LampControl,
   type DynamicControl,
   type PicMode,
   type Motionflow,
@@ -23,7 +23,6 @@ import {
   type Action,
   type ProjectorSettings,
   type InputSource,
-  type BlankState,
   type RemoteKey,
 } from "@/lib/projector";
 import { toast } from "sonner";
@@ -36,18 +35,18 @@ interface Props {
   showPowerAction?: boolean;
 }
 
-const HDR_LEVELS: HdrEnhancer[] = ["off", "low", "middle", "high"];
-const DYNAMIC_LEVELS: DynamicControl[] = ["off", "limited", "middle", "full"];
+const LAMP_LEVELS: LampControl[] = ["low", "high"];
+const DYNAMIC_LEVELS: DynamicControl[] = ["off", "full"];
 const PIC_MODES: PicMode[] = [
   "cinema_film_1",
   "cinema_film_2",
   "reference",
   "tv",
+  "photo",
   "bright_cinema",
   "bright_tv",
   "game",
-  "user1",
-  "user3",
+  "user",
 ];
 const INPUT_OPTS: InputSource[] = ["hdmi1", "hdmi2"];
 const MOTIONFLOW_OPTS: Motionflow[] = [
