@@ -393,11 +393,18 @@ export function parseStatus(raw: unknown): ProjectorStatus {
     out.pic_mode = (map[pm] ?? pm) as PicMode;
   }
 
-  const laser = num(r.laser_level ?? r.laser_output ?? r.light_output_val);
-  if (laser !== undefined) out.laser_output = Math.round(laser > 100 ? laser / 10 : laser);
+  // HW65ES: lamp_control = "low" | "high"
+  const lamp = str(r.lamp_control ?? r.lamp_setting);
+  if (lamp) {
+    const l = lamp.toLowerCase();
+    if (l === "low" || l === "high") out.lamp_control = l as LampControl;
+  }
 
   const dyn = str(r.dynamic_control ?? r.light_output_dyn);
-  if (dyn) out.dynamic_control = dyn as DynamicControl;
+  if (dyn) {
+    const d = dyn.toLowerCase();
+    if (d === "off" || d === "full") out.dynamic_control = d as DynamicControl;
+  }
 
   const input = str(r.input);
   if (input) out.input = input as InputSource;
@@ -410,12 +417,6 @@ export function parseStatus(raw: unknown): ProjectorStatus {
   if (color !== undefined) out.color = color;
   const sharpness = num(r.sharpness);
   if (sharpness !== undefined) out.sharpness = sharpness;
-
-  const hdr = str(r.hdr_enhancer);
-  if (hdr) {
-    const hdrMap: Record<string, HdrEnhancer> = { mid: "middle" };
-    out.hdr_enhancer = (hdrMap[hdr.toLowerCase()] ?? hdr) as HdrEnhancer;
-  }
 
   // Motionflow — bridge sends `motion_flow` or `motionflow`
   const mf = str(r.motion_flow ?? r.motionflow);
