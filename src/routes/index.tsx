@@ -42,7 +42,7 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Master Control Hub för hembio: scener, Marantz Cinema 50, Sony XW5000ES och ljus-automation.",
+          "Master Control Hub för hembio: scener, Marantz Cinema 50, Sony VPL-HW65ES och ljus-automation.",
       },
     ],
   }),
