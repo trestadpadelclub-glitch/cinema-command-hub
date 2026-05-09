@@ -266,7 +266,7 @@ function Index() {
                 </button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Sony XW5000ES · Marantz Cinema 50 · <span className="font-mono">{household}</span>
+                Sony VPL-HW65ES · Marantz Cinema 50 · <span className="font-mono">{household}</span>
               </p>
             </div>
           </div>
@@ -341,7 +341,7 @@ function Index() {
                 <Section title="Lights — dina lampor">
                   <LightsManager householdCode={household} />
                 </Section>
-                <Section title="Sony XW5000ES — Manual Controls">
+                <Section title="Sony VPL-HW65ES — Manual Controls">
                   <ManualControls settings={settings} onChange={setSettings} />
                 </Section>
               </div>
