@@ -379,31 +379,14 @@ export function ManualControls({ settings, onChange, showPowerAction }: Props) {
         />
 
         <Card className="p-5">
-          <SectionLabel info={SECTION_INFO.hdr_enhancer}>HDR Enhancer</SectionLabel>
-          <div className="grid grid-cols-4 gap-2">
-            {HDR_LEVELS.map((lvl) => (
-              <OptionButton
-                key={lvl}
-                active={(settings.hdr_enhancer ?? "off") === lvl}
-                onClick={() => update("hdr_enhancer", lvl, { hdr_enhancer: lvl })}
-                info={HDR_INFO[lvl]}
-                className="capitalize"
-              >
-                {lvl}
-              </OptionButton>
-            ))}
-          </div>
-        </Card>
-
-        <Card className="p-5">
           <SectionLabel info={SECTION_INFO.dynamic_control}>
             Dynamic Control
           </SectionLabel>
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             {DYNAMIC_LEVELS.map((lvl) => (
               <OptionButton
                 key={lvl}
-                active={(settings.dynamic_control ?? "limited") === lvl}
+                active={(settings.dynamic_control ?? "off") === lvl}
                 onClick={() =>
                   update("dynamic_control", lvl, { dynamic_control: lvl })
                 }
