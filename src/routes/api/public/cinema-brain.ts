@@ -3,15 +3,14 @@ import { createFileRoute } from "@tanstack/react-router";
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
 const SCHEMA_HINT = `Return ONLY a JSON object with these allowed keys (ALL keys are required — never omit any):
-- pic_mode: "cinema_film_1" | "cinema_film_2" | "reference" | "tv" | "bright_cinema" | "bright_tv" | "game" | "user1" | "user2" | "user3"
-- laser_output: integer 0-100
+- pic_mode: "cinema_film_1" | "cinema_film_2" | "reference" | "tv" | "photo" | "bright_cinema" | "bright_tv" | "game" | "user"
+- lamp_control: "low" | "high"
 - brightness: integer 0-100
 - contrast: integer 0-100
 - color: integer 0-100
 - sharpness: integer 0-100
 - reality_creation: integer 0-100
-- hdr_enhancer: "off" | "low" | "middle" | "high"
-- dynamic_control: "off" | "limited" | "middle" | "full"
+- dynamic_control: "off" | "full"
 - motionflow: "off" | "true_cinema" | "smooth_low" | "smooth_high" | "impulse" | "combination"
 - gamma_correction: "off" | "1.8" | "2.0" | "2.1" | "2.2" | "2.4" | "2.6"
 - color_temp: "d93" | "d75" | "d65" | "d55" | "custom1" | "custom2" | "custom3" | "custom4" | "custom5"
@@ -22,7 +21,7 @@ const SETTINGS_TOOL = {
   type: "function" as const,
   function: {
     name: "set_projector_settings",
-    description: "Apply calibrated projector settings to the Sony bridge.",
+    description: "Apply calibrated projector settings to the Sony VPL-HW65ES bridge.",
     parameters: {
       type: "object",
       properties: {
@@ -33,27 +32,22 @@ const SETTINGS_TOOL = {
             "cinema_film_2",
             "reference",
             "tv",
+            "photo",
             "bright_cinema",
             "bright_tv",
             "game",
-            "user1",
-            "user2",
-            "user3",
+            "user",
           ],
         },
-        laser_output: { type: "integer", minimum: 0, maximum: 100 },
+        lamp_control: { type: "string", enum: ["low", "high"] },
         brightness: { type: "integer", minimum: 0, maximum: 100 },
         contrast: { type: "integer", minimum: 0, maximum: 100 },
         color: { type: "integer", minimum: 0, maximum: 100 },
         sharpness: { type: "integer", minimum: 0, maximum: 100 },
         reality_creation: { type: "integer", minimum: 0, maximum: 100 },
-        hdr_enhancer: {
-          type: "string",
-          enum: ["off", "low", "middle", "high"],
-        },
         dynamic_control: {
           type: "string",
-          enum: ["off", "limited", "middle", "full"],
+          enum: ["off", "full"],
         },
         motionflow: {
           type: "string",
@@ -87,13 +81,12 @@ const SETTINGS_TOOL = {
       },
       required: [
         "pic_mode",
-        "laser_output",
+        "lamp_control",
         "brightness",
         "contrast",
         "color",
         "sharpness",
         "reality_creation",
-        "hdr_enhancer",
         "dynamic_control",
         "motionflow",
         "gamma_correction",
@@ -144,7 +137,7 @@ export const Route = createFileRoute("/api/public/cinema-brain")({
           const finalSettings = body.finalSettings ?? {};
           const chatHistory = body.chatHistory ?? [];
 
-          const sysPrompt = `You curate a calibration knowledge base for the Sony VPL-XW5000ES.
+          const sysPrompt = `You curate a calibration knowledge base for the Sony VPL-HW65ES.
 Given the current Master Instructions, the scenario, the chat refinements, and the final settings the user accepted, write 1-4 short bullet rules (in English) capturing what we learned that should generalize to future calibrations. Be concise, specific, and actionable. Do NOT repeat rules already present. Output ONLY the bullet lines, each starting with "- ". No preface, no closing remarks.`;
 
           const userPrompt = `EXISTING MASTER INSTRUCTIONS:
@@ -208,7 +201,7 @@ Write the new lessons to add to the knowledge base.`;
         const liveSettings = body.liveSettings ?? null;
         const chatHistory = body.chatHistory ?? [];
 
-        const systemPrompt = `You are an expert home cinema calibrator for the Sony VPL-XW5000ES laser projector.
+        const systemPrompt = `You are an expert home cinema calibrator for the Sony VPL-HW65ES SXRD lamp-based projector.
 You output projector settings as a single JSON object that matches the bridge schema below.
 You are given the projector's CURRENT LIVE SETTINGS (read directly from the device). Treat these as the actual starting point — your proposal should be a deliberate, well-motivated delta from this baseline, not an unrelated configuration. Only change values where the scenario, master instructions, or user feedback give a clear reason; keep everything else aligned with the live baseline so the user's existing tuning is respected.
 When refining, change ONLY what the user's feedback requires — keep all other values from the previous proposal stable. Move strategically toward the optimum in small, deliberate steps.
