@@ -231,12 +231,11 @@ export const Route = createFileRoute("/api/public/trigger")({
         if (projPower !== "off") {
           const SETTING_KEYS = [
             "pic_mode",
-            "laser_output",
+            "lamp_control",
             "brightness",
             "contrast",
             "color",
             "sharpness",
-            "hdr_enhancer",
             "dynamic_control",
             "motionflow",
             "gamma_correction",

@@ -19,12 +19,11 @@ import { Fragment, useState } from "react";
 
 const RECIPE_LABELS: Record<string, string> = {
   pic_mode: "Picture Mode",
-  laser_output: "Laser Output",
+  lamp_control: "Lamp Control",
   brightness: "Brightness",
   contrast: "Contrast",
   color: "Color",
   reality_creation: "Reality Creation",
-  hdr_enhancer: "HDR Enhancer",
   dynamic_control: "Dynamic Control",
   motionflow: "Motionflow",
   gamma_correction: "Gamma",
@@ -40,7 +39,7 @@ function formatRecipeValue(key: string, value: unknown): string {
       return MOTIONFLOW_LABELS[value as keyof typeof MOTIONFLOW_LABELS] ?? String(value);
     case "color_temp":
       return COLOR_TEMP_LABELS[value as keyof typeof COLOR_TEMP_LABELS] ?? String(value);
-    case "hdr_enhancer":
+    case "lamp_control":
     case "dynamic_control":
       return String(value).charAt(0).toUpperCase() + String(value).slice(1);
     default:

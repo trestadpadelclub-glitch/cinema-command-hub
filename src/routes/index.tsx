@@ -42,7 +42,7 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Master Control Hub för hembio: scener, Marantz Cinema 50, Sony XW5000ES och ljus-automation.",
+          "Master Control Hub för hembio: scener, Marantz Cinema 50, Sony VPL-HW65ES och ljus-automation.",
       },
     ],
   }),
@@ -50,13 +50,12 @@ export const Route = createFileRoute("/")({
 
 const DEFAULT_SETTINGS: ProjectorSettings = {
   pic_mode: "cinema_film_1",
-  laser_output: 75,
+  lamp_control: "high",
   brightness: 50,
   contrast: 90,
   color: 50,
   reality_creation: 20,
-  hdr_enhancer: "off",
-  dynamic_control: "limited",
+  dynamic_control: "off",
   motionflow: "off",
   gamma_correction: "2.2",
 };
@@ -267,7 +266,7 @@ function Index() {
                 </button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Sony XW5000ES · Marantz Cinema 50 · <span className="font-mono">{household}</span>
+                Sony VPL-HW65ES · Marantz Cinema 50 · <span className="font-mono">{household}</span>
               </p>
             </div>
           </div>
@@ -342,7 +341,7 @@ function Index() {
                 <Section title="Lights — dina lampor">
                   <LightsManager householdCode={household} />
                 </Section>
-                <Section title="Sony XW5000ES — Manual Controls">
+                <Section title="Sony VPL-HW65ES — Manual Controls">
                   <ManualControls settings={settings} onChange={setSettings} />
                 </Section>
               </div>

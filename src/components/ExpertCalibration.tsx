@@ -723,7 +723,7 @@ export function ExpertCalibration() {
             id="expert-json"
             value={json}
             onChange={(e) => setJson(e.target.value)}
-            placeholder={`{\n  "pic_mode": "cinema_film_1",\n  "contrast": 84,\n  "brightness": 50,\n  "laser_output": 90,\n  "hdr_enhancer": "middle"\n}`}
+            placeholder={`{\n  "pic_mode": "cinema_film_1",\n  "contrast": 90,\n  "brightness": 50,\n  "lamp_control": "high",\n  "dynamic_control": "full"\n}`}
             spellCheck={false}
             className="font-mono text-sm min-h-[180px] resize-y"
           />
@@ -987,13 +987,12 @@ const RECIPE_FIELDS: Array<{ key: string; label: string }> = [
   { key: "pic_mode", label: "Picture Mode" },
   { key: "color_temp", label: "Color Temperature" },
   { key: "gamma_correction", label: "Gamma" },
-  { key: "laser_output", label: "Laser Output" },
+  { key: "lamp_control", label: "Lamp Control" },
   { key: "brightness", label: "Brightness" },
   { key: "contrast", label: "Contrast" },
   { key: "color", label: "Color" },
   { key: "sharpness", label: "Sharpness" },
   { key: "reality_creation", label: "Reality Creation" },
-  { key: "hdr_enhancer", label: "HDR Enhancer" },
   { key: "dynamic_control", label: "Dynamic Control" },
   { key: "motionflow", label: "Motionflow" },
 ];
