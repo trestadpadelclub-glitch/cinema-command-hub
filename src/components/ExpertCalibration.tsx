@@ -723,7 +723,7 @@ export function ExpertCalibration() {
             id="expert-json"
             value={json}
             onChange={(e) => setJson(e.target.value)}
-            placeholder={`{\n  "pic_mode": "cinema_film_1",\n  "contrast": 84,\n  "brightness": 50,\n  "laser_output": 90,\n  "hdr_enhancer": "middle"\n}`}
+            placeholder={`{\n  "pic_mode": "cinema_film_1",\n  "contrast": 90,\n  "brightness": 50,\n  "lamp_control": "high",\n  "dynamic_control": "full"\n}`}
             spellCheck={false}
             className="font-mono text-sm min-h-[180px] resize-y"
           />
