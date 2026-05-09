@@ -50,13 +50,12 @@ export const Route = createFileRoute("/")({
 
 const DEFAULT_SETTINGS: ProjectorSettings = {
   pic_mode: "cinema_film_1",
-  laser_output: 75,
+  lamp_control: "high",
   brightness: 50,
   contrast: 90,
   color: 50,
   reality_creation: 20,
-  hdr_enhancer: "off",
-  dynamic_control: "limited",
+  dynamic_control: "off",
   motionflow: "off",
   gamma_correction: "2.2",
 };
