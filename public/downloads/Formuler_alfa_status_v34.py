@@ -2428,12 +2428,20 @@ class Handler(BaseHTTPRequestHandler):
 
         adcp_cmd, mapper, adcp_mode = ACTION_MAP[action]
 
-        # Saknas på XW5000ES (t.ex. motionflow) — returnera "skipped" istället
-        # för att skicka och få err_cmd.
+        # Saknas på HW65ES (t.ex. laser_output, hdr_enhancer, gamma_correction,
+        # reality_creation, dynamic_control) — returnera "skipped" istället
+        # för att skicka och få err_cmd/err_option från projektorn.
         if adcp_cmd is None:
-            reason = "not_supported_or_not_stable_on_xw5000es_adcp"
-            if action == "laser_output":
-                reason = "laser_output_set_returns_err_option_on_xw5000es"
+            reasons = {
+                "laser_output":     "hw65es_is_lamp_based_use_lamp_control",
+                "dynamic_control":  "light_output_dyn_not_on_hw65es",
+                "hdr_enhancer":     "contrast_enh_not_on_hw65es",
+                "gamma_correction": "gamma_correction_not_an_adcp_item_on_hw65es",
+                "real_cre":         "reality_creation_not_on_hw65es",
+                "reality_creation": "reality_creation_not_on_hw65es",
+                "reality_creation_val": "reality_creation_not_on_hw65es",
+            }
+            reason = reasons.get(action, "not_supported_on_hw65es")
             _log(f"ACTION {action} = {value!r} -> SKIPPED ({reason})")
             self._send_json(200, {
                 "status": "skipped",
