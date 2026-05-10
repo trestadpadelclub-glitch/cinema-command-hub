@@ -1,8 +1,35 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Formuler_alfa_status_v33.py
+Formuler_alfa_status_v34.py
 ==========================
+
+v34: STÖD FÖR SONY VPL-HW65ES (ersätter XW5000ES-mappningarna).
+v34: Samma ADCP text-protokoll på TCP 53595 och samma /api/projector + /status
+v34: endpoints — endast Sony-lagret är ombytt enligt Sonys "Protocol Manual
+v34: (SUPPORTED COMMAND LIST)" 1st Edition Rev.1, kolumn HW65ES (col 9).
+v34:
+v34: HW65ES stödjer (○):
+v34:   - power, input (hdmi1/hdmi2), blank (on/off)
+v34:   - picture_mode: cinema_film1, cinema_film2, reference, tv, photo,
+v34:     brt_cinema, brt_tv, user, game  (INTE user1/2/3, INTE cinema_digital)
+v34:   - contrast, brightness, color, sharpness  (numeric 0..100)
+v34:   - color_temp: custom1..5, d93, d75, d65, d55  (INTE dci)
+v34:   - coltemp_gain_r/g/b, coltemp_bias_r/g/b
+v34:   - lamp_control: low / high  (ersätter laser_output från XW5000ES)
+v34:   - motionflow: off, true_cinema, smooth_low, smooth_high
+v34:     (HW65ES saknar impulse + combination)
+v34:
+v34: HW65ES stödjer INTE (svarar err_cmd/err_option) — dessa returnerar nu
+v34: "skipped" utan att gå mot projektorn:
+v34:   - light_output_val (laser_output)  → ersatt av lamp_control
+v34:   - light_output_dyn (dynamic_control)
+v34:   - contrast_enh     (hdr_enhancer)
+v34:   - gamma_correction (saknas som direkt ADCP-item på HW65ES)
+v34:   - real_cre / real_cre_reso (Reality Creation)
+v34:
+v34: Allt annat (Marantz, Formuler, Lights, Chromecast, triggers) är OFÖRÄNDRAT
+v34: från v33.
 
 v33: NYHETER mot v32 (additivt — alla v32-endpoints fungerar oförändrat):
 v33:   * GET  /api/lights/status         -> aktuell status för varje konfigurerad
