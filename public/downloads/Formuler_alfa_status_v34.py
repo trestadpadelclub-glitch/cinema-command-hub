@@ -523,10 +523,10 @@ class TuyaStatusPoller(threading.Thread):
 # value_mapper är en funktion som tar appens råvärde (str|int) och returnerar
 # strängen som skickas till projektorn. None = skicka råvärdet som-är.
 
-def _laser_to_adcp(v: Any) -> str:
-    """Appens 0–100 % → ADCP light_output_val 0–1000."""
-    n = max(0, min(100, int(v)))
-    return str(n * 10)
+def _lamp_to_adcp(v: Any) -> str:
+    """HW65ES lamp_control: only 'low' eller 'high'."""
+    s = str(v).lower().strip()
+    return "high" if s in ("high", "1", "on", "true") else "low"
 
 def _ui_0_100(v: Any) -> str:
     """UI/projektor-menu 0..100 -> ADCP numeric value, utan citationstecken."""
@@ -550,55 +550,44 @@ def _power_to_adcp(v: Any) -> str:
     s = str(v).lower().strip()
     return "on" if s in ("on", "1", "true") else "off"
 
-# Picture-modes som faktiskt finns på XW5000ES enligt BPJ-manualen.
-# Sony ADCP-värden använder bl.a. brt_cinema/brt_tv och user1-3.
-_XW5000_PIC_MODES = {
+# Picture-modes som finns på VPL-HW65ES enligt Sony Protocol Manual
+# (SUPPORTED COMMAND LIST) Rev.1, col 9. Inga user1/2/3, inga cinema_digital.
+_HW65ES_PIC_MODES = {
     "cinema_film1", "cinema_film2", "reference", "tv",
-    "photo", "game", "brt_cinema", "brt_tv", "user", "user1", "user2", "user3",
+    "photo", "game", "brt_cinema", "brt_tv", "user",
 }
 
 def _picmode_to_adcp(v: Any) -> str:
-    """Normalisera och fall-back till närmaste mode som faktiskt finns."""
+    """Normalisera och fall-back till närmaste mode som faktiskt finns på HW65ES."""
     s = str(v).lower().strip()
     s = {
         "cinema_film_1": "cinema_film1",
         "cinema_film_2": "cinema_film2",
         "bright_cinema": "brt_cinema",
         "bright_tv":     "brt_tv",
+        # XW5000ES-only modes som UI fortfarande kan skicka -> mappa till HW65ES-motsvarighet
+        "user1":         "user",
+        "user2":         "user",
+        "user3":         "user",
+        "imax_enhanced": "user",
+        "cinema_digital":"cinema_film1",
     }.get(s, s)
-    if s not in _XW5000_PIC_MODES:
-        _log(f"varning: picture_mode {s!r} stöds ej på XW5000ES, faller tillbaka till 'tv'")
-        s = "tv"
+    if s not in _HW65ES_PIC_MODES:
+        _log(f"varning: picture_mode {s!r} stöds ej på HW65ES, faller tillbaka till 'cinema_film1'")
+        s = "cinema_film1"
     return s
 
-def _gamma_to_adcp(v: Any) -> str:
-    """XW5000ES gamma_correction tar 'off' eller '1.8','2.0','2.1','2.2','2.4','2.6'.
-    Inget g_-prefix — det var grejen som gav err_option."""
-    s = str(v).strip().lower()
-    if s in ("off", ""):
-        return "off"
-    s = s.replace(",", ".").lstrip("g_").replace("_", ".")
-    valid = {"1.8", "2.0", "2.1", "2.2", "2.4", "2.6"}
-    return s if s in valid else "2.2"
-
-# HDR Enhancer på XW5000ES heter `contrast_enh` i ADCP.
-# Värden: off / low / mid / high.
-def _ce_to_adcp(v: Any) -> str:
-    s = str(v).lower().strip()
-    return {"middle": "mid"}.get(s, s if s in ("off", "low", "mid", "high") else "off")
-
-# Dynamic Control (light output dynamic) — XW5000ES heter `light_output_dyn`
-# med värden off/limited/full.
-def _dyn_to_adcp(v: Any) -> str:
-    s = str(v).lower().strip()
-    # appen kan skicka "middle" som inte finns → mappa till "limited"
-    return {"middle": "limited"}.get(s, s if s in ("off", "limited", "full") else "off")
-
-
 def _motion_to_adcp(v: Any) -> str:
+    """HW65ES motionflow: off, true_cinema, smooth_low, smooth_high
+    (HW65ES saknar impulse + combination — mappa till smooth_high)."""
     s = str(v).lower().strip().replace("-", "_").replace(" ", "_")
-    valid = {"off", "smooth_high", "smooth_low", "impulse", "combination", "true_cinema"}
-    return s if s in valid else "off"
+    valid = {"off", "smooth_high", "smooth_low", "true_cinema"}
+    if s in valid:
+        return s
+    if s in ("impulse", "combination"):
+        _log(f"varning: motionflow {s!r} stöds ej på HW65ES → smooth_high")
+        return "smooth_high"
+    return "off"
 
 def _color_temp_to_adcp(v: Any) -> str:
     s = str(v).lower().strip()
@@ -614,51 +603,50 @@ def _onoff(v: Any) -> str:
     return "on" if s in ("on", "1", "true") else "off"
 
 
-# ADCP-kommandonamn enligt Sony BPJ Protocol Manual för XW5000ES.
-# Andra värdet i tuple är värdetransformation. Om kommandot är None
-# så behandlas action som "no-op" (skickas inte — returnerar skipped).
+# ADCP-kommandonamn enligt Sony Protocol Manual (SUPPORTED COMMAND LIST)
+# kolumn HW65ES. Ej-stödda actions har None som adcp_command och returneras
+# som "skipped" istället för att gå mot projektorn.
 ACTION_MAP: Dict[str, Tuple[Optional[str], Any, str]] = {
     # power/select-kommandon använder citerade värden: command "value"
     "power":               ("power",                  _power_to_adcp,    "select"),
     "pic_mode":            ("picture_mode",           _picmode_to_adcp,   "select"),
-    "hdr_enhancer":        ("contrast_enh",           _ce_to_adcp,        "select"),
-    "dynamic_control":     ("light_output_dyn",       _dyn_to_adcp,       "select"),
     "motionflow":          ("motionflow",             _motion_to_adcp,    "select"),
-    "gamma_correction":    ("gamma_correction",       _gamma_to_adcp,     "select"),
     "color_temp":          ("color_temp",             _color_temp_to_adcp,"select"),
     "input":               ("input",                  _input_to_adcp,     "select"),
     "blank":               ("blank",                  _onoff,             "select"),
-    "real_cre":            ("real_cre",               _onoff,             "select"),
+    "lamp_control":        ("lamp_control",           _lamp_to_adcp,      "select"),
 
-    # numeric-kommandon måste skickas utan citationstecken: command 50
-    "laser_output":        ("light_output_val",       _laser_to_adcp,     "numeric"),
+    # numeric-kommandon utan citationstecken: command 50
     "brightness":          ("brightness",             _ui_0_100,          "numeric"),
     "contrast":            ("contrast",               _ui_0_100,          "numeric"),
     "color":               ("color",                  _ui_0_100,          "numeric"),
     "sharpness":           ("sharpness",              _ui_0_100,          "numeric"),
-    "reality_creation":    ("real_cre_reso",          _ui_0_100,          "numeric"),
-    "reality_creation_val":("real_cre_reso",          _ui_0_100,          "numeric"),
+
+    # Ej stödda på HW65ES — returnera "skipped" så UI inte ser fel.
+    "laser_output":        (None, None, "skip"),  # ersatt av lamp_control
+    "dynamic_control":     (None, None, "skip"),
+    "hdr_enhancer":        (None, None, "skip"),
+    "gamma_correction":    (None, None, "skip"),
+    "real_cre":            (None, None, "skip"),
+    "reality_creation":    (None, None, "skip"),
+    "reality_creation_val":(None, None, "skip"),
 }
 
-# GET-kommandon för status-endpoint
+# GET-kommandon för status-endpoint (endast HW65ES-stödda items)
 STATUS_QUERIES = [
     ("power",            "power_status"),
     ("picture_mode",     "picture_mode"),
     ("input",            "input"),
-    ("laser_output",     "light_output_val"),
+    ("lamp_control",     "lamp_control"),
     ("brightness",       "brightness"),
     ("contrast",         "contrast"),
     ("color",            "color"),
     ("sharpness",        "sharpness"),
-    ("real_cre",         "real_cre"),
-    ("reality_creation", "real_cre_reso"),
     ("motionflow",       "motionflow"),
-    ("hdr_enhancer",     "contrast_enh"),
-    ("dynamic_control",  "light_output_dyn"),
-    ("gamma_correction", "gamma_correction"),
     ("color_temp",       "color_temp"),
     ("blank",            "blank"),
 ]
+
 
 
 # ---------------------------------------------------------------------------
