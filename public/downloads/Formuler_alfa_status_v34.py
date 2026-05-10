@@ -877,32 +877,16 @@ def build_status() -> Dict[str, Any]:
         else:
             out["power"] = pl
 
-    # generella string-värden
-    for ui_key in ("picture_mode", "input", "dynamic_control",
-                   "gamma_correction", "color_temp", "blank"):
+    # generella string-värden (HW65ES-stödda items)
+    for ui_key in ("picture_mode", "input", "color_temp", "blank", "lamp_control"):
         v = _parse_value(raw.get(ui_key, ""))
         if v is not None and v != "ok":
             out[ui_key] = v
 
-    # HDR Enhancer: Sony rapporterar mellanläget som "mid" medan appen använder "middle".
-    hdr = _parse_value(raw.get("hdr_enhancer", ""))
-    if hdr is not None and hdr != "ok":
-        out["hdr_enhancer"] = {"mid": "middle"}.get(hdr.lower(), hdr)
-
-    # laser_output kommer som 0..1000 i ADCP → 0..100 i UI
-    v = _parse_value(raw.get("laser_output", ""))
-    if v is not None and v.lstrip("-").isdigit():
-        n = int(v)
-        out["laser_output"] = round(n / 10) if n > 100 else n
-
-    for key in ("brightness", "contrast", "color", "sharpness", "reality_creation"):
+    for key in ("brightness", "contrast", "color", "sharpness"):
         sv = _parse_value(raw.get(key, ""))
         if sv is not None and sv.lstrip("-").isdigit():
             out[key] = int(sv)
-
-    real_cre = _parse_value(raw.get("real_cre", ""))
-    if real_cre and real_cre.lower() == "off":
-        out["reality_creation"] = 0
 
     mf = _parse_value(raw.get("motionflow", ""))
     if mf is not None and mf != "ok":
