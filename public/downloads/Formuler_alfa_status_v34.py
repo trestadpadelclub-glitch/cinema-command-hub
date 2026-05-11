@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Formuler_alfa_status_v34.py
-==========================
+Formuler_alfa_status_v34.py  (Sony VPL-HW65ES, ADCP)
+=====================================================
 
 v34: STÖD FÖR SONY VPL-HW65ES (ersätter XW5000ES-mappningarna).
 v34: Samma ADCP text-protokoll på TCP 53595 och samma /api/projector + /status
