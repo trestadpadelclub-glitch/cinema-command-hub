@@ -1456,6 +1456,63 @@ def formuler_launch_app(package: str, timeout: float = 6.0) -> Dict[str, Any]:
         }
 
 
+# ---------------------------------------------------------------------------
+# GLOBAL LOKAL EXEKVERING (headless-stöd, från bridge64.py)
+# ---------------------------------------------------------------------------
+def _execute_scene_payload(payload: Optional[Dict[str, Any]]) -> None:
+    """Kör scendatan lokalt direkt när molnet svarar på en trigger.
+
+    Detta gör att Formuler-/Chromecast-/Marantz-monitorerna kan styra
+    projektor, Marantz och Tuya-lampor utan att behöva en öppen browser
+    mot appen — appens UI/scenlogik synkar fortfarande via /api/public/trigger.
+    """
+    if not payload or not payload.get("matched"):
+        return
+
+    filters = payload.get("filters", {}) or {}
+    scene = payload.get("scene", {}) or {}
+    trigger_key = payload.get("trigger_key", "unknown")
+
+    _log(f"*** AUTOMATION TRIGGERED: '{scene.get('name', 'Unknown')}' (via {trigger_key}) ***")
+
+    # 1) Projektor — endast power körs lokalt på HW65ES (övriga ADCP-set
+    #    är opålitliga i standby; resterande inställningar låts appen sköta
+    #    via /api/projector när projektorn är på och varm).
+    if filters.get("run_projector", True):
+        proj_settings = dict(scene.get("projector_settings") or {})
+        if "power" in proj_settings:
+            val = proj_settings.pop("power")
+            try:
+                adcp_set("power", val, mode="select")
+            except Exception as e:
+                _log(f"Projector power fail: {e}")
+            time.sleep(0.5)
+
+    # 2) Marantz
+    if filters.get("run_marantz", True):
+        m_input = scene.get("marantz_input")
+        if m_input:
+            try:
+                marantz_send(f"SI{m_input}")
+            except Exception as e:
+                _log(f"Marantz input fail: {e}")
+        m_vol = scene.get("marantz_volume")
+        if m_vol is not None:
+            try:
+                marantz_send(f"MV{m_vol}")
+            except Exception as e:
+                _log(f"Marantz vol fail: {e}")
+
+    # 3) Lampor (Tuya)
+    if filters.get("run_lights", True):
+        scene_lights = payload.get("scene_lights", []) or []
+        if scene_lights:
+            try:
+                tuya_apply_lights(scene_lights)
+            except Exception as e:
+                _log(f"Lights fail: {e}")
+
+
 _formuler_monitor: Optional["FormulerMonitor"] = None
 
 
