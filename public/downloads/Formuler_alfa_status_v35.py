@@ -4,6 +4,19 @@
 Formuler_alfa_status_v35.py  (Sony VPL-HW65ES, ADCP)
 =====================================================
 
+v35 NYTT (jämfört med v34):
+  - Återinför LOKAL EXEKVERING: _execute_scene_payload() körs direkt
+    när molnet svarar på en trigger (Formuler / Chromecast / Marantz),
+    så projektor/Marantz/lampor styrs lokalt utan extra rundtur via
+    /api/* från appen. Lägre latens + funkar headless.
+  - Inga ADCP-ändringar: hårdvarurisker hos HW65ES kvarstår
+      * Power On via ADCP är opålitlig — port 53595 stängs i standby.
+        Vid återkommande fel: lägg PJ Talk (pysdcp/SDCP 53484) som
+        hybrid för power+status och låt ADCP enbart avfyra inställningar
+        när projektorn är på och varm.
+      * Tung batch-GET (status) på 53595 kan ge socket.timeout —
+        håll polling glesa eller flytta till PJ Talk.
+
 v35: STÖD FÖR SONY VPL-HW65ES (ersätter XW5000ES-mappningarna).
 v35: Samma ADCP text-protokoll på TCP 53595 och samma /api/projector + /status
 v35: endpoints — endast Sony-lagret är ombytt enligt Sonys "Protocol Manual
