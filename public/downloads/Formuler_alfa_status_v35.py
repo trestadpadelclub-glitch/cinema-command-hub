@@ -1734,8 +1734,12 @@ class FormulerMonitor(threading.Thread):
         )
         try:
             with urllib.request.urlopen(req, timeout=4.0) as r:
-                resp = r.read(2048).decode("utf-8", "replace")
+                resp = r.read(8192).decode("utf-8", "replace")
                 _log(f"FORMULER -> {trigger_key} HTTP {r.status} {resp[:140]}")
+                try:
+                    _execute_scene_payload(json.loads(resp))
+                except Exception as e:
+                    _log(f"FORMULER scene exec fail: {e}")
         except Exception as e:
             _log(f"FORMULER -> {trigger_key} POST FAIL: {e}")
 
