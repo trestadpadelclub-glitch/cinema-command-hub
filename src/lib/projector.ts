@@ -369,6 +369,8 @@ const SETTINGS_ACTIONS: Action[] = [
   "motionflow",
   "gamma_correction",
   "color_temp",
+  "input",
+  "blank",
 ];
 
 /**
@@ -746,8 +748,14 @@ export interface SceneCommandPayload {
   marantzPower?: "on" | "off" | null;
   marantzInput?: string | null;
   marantzVolume?: number | null;
+  marantzMute?: boolean | null;
+  marantzSoundMode?: string | null;
+  marantzSmartSelect?: number | null;
+  marantzDirac?: string | null;
+  marantzSpeakerPreset?: number | null;
   lightsOn?: boolean | null;
   sceneLights?: SceneLightCommand[];
+  projectorBlankDelaySeconds?: number;
   /** Fördröjning innan FÖRSTA projektor-kommandot. */
   projectorDelayMs?: number;
   /** Fördröjning innan FÖRSTA marantz-kommandot. */
