@@ -1,10 +1,24 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Formuler_alfa_status_v40.py  (Sony VPL-HW65ES, SDCP / PJ Talk)
+Formuler_alfa_status_v41.py  (Sony VPL-HW65ES, SDCP / PJ Talk)
 ==============================================================
 
-v40 NYTT: MyTVOnline3 startar via rätt paketnamn tv.formuler.mol3.real; MOL3 start/paus följer faktisk USAGE_MEDIA-ljudstatus även när MediaSession fastnar på pb_int=3.
+v41 NYTT — Smart tidsbaserad uppstartssekvens (Blank-cykel) i bridgen:
+  - Konstanter högst upp vid SDCP-helpers: COLD_START_DELAY=40,
+    WARM_START_DELAY=15, WARM_THRESHOLD=300 (sekunder).
+  - Sparar tidsstämpel _LAST_OFF_TS varje gång POWER off skickas.
+  - Vid POWER on: skickar power on, omedelbart BLANK on (mörkar bilden),
+    räknar tid sedan _LAST_OFF_TS och startar en icke-blockerande
+    threading.Timer (daemon=True) som efter delay skickar BLANK off.
+    Kallstart (>WARM_THRESHOLD eller okänt) -> COLD_START_DELAY,
+    annars WARM_START_DELAY.
+  - Timern är daemon=True för att undvika Python 3.13 _ThreadHandle-krock
+    vid process-shutdown. Pågående timer cancel:as om POWER off skickas
+    eller om POWER on skickas igen.
+  - Befintlig HW65ES-logik (status-mappning, SDCP-protokoll) orörd.
+
+v39 NYTT: MOL3 start/paus följer nu faktisk USAGE_MEDIA-ljudstatus även när MediaSession fastnar på pb_int=3.
 
 v36 NYTT (jämfört med v35) — ADCP HELT BORTTAGET:
   - HW65ES (Home Cinema-serien) stödjer INTE Sonys ADCP-protokoll
@@ -788,6 +802,89 @@ LAST_POWER_ON_TS = 0.0
 
 
 # ---------------------------------------------------------------------------
+# Smart Blank-cykel (kall/varmstart) — håller bilden mörklagd tills projektorn
+# faktiskt har låst signal/ljus, så användaren slipper "blå skärm"-flash.
+#
+# Tidsvariabler — kalibrera fritt här:
+COLD_START_DELAY = 40.0   # sekunder vid kallstart (lampan har varit av länge)
+WARM_START_DELAY = 15.0   # sekunder vid varmstart (precis avslagen)
+WARM_THRESHOLD   = 300.0  # sekunder sedan POWER off för att räknas som "varm"
+
+# Tidpunkt då senaste POWER off skickades till projektorn. None = okänt
+# (efter bridge-omstart) -> behandlas som kallstart.
+_LAST_OFF_TS: Optional[float] = None
+
+# Aktiv blank-off-timer (en åt gången). Används på ett trådsäkert sätt så
+# Python 3.13:s strikta _thread._ThreadHandle-krav inte triggar — vi
+# 1) håller alltid daemon=True (process kan exit:a utan att vänta in den),
+# 2) cancel:ar gamla timers innan vi startar en ny,
+# 3) släpper referensen efter att timern fyrat (lokal variabel + GC).
+_BLANK_TIMER: Optional[threading.Timer] = None
+_BLANK_TIMER_LOCK = threading.Lock()
+
+
+def _cancel_blank_timer() -> None:
+    """Avbryt eventuell pågående blank-off timer."""
+    global _BLANK_TIMER
+    with _BLANK_TIMER_LOCK:
+        t = _BLANK_TIMER
+        _BLANK_TIMER = None
+    if t is not None:
+        try:
+            t.cancel()
+        except Exception:
+            pass
+
+
+def _schedule_blank_off(delay: float) -> None:
+    """Starta en daemon-Timer som efter `delay` sekunder skickar BLANK off."""
+    global _BLANK_TIMER
+    _cancel_blank_timer()
+
+    def _fire() -> None:
+        global _BLANK_TIMER
+        try:
+            _log(f"BLANK-CYKEL: tid ute ({delay:.1f}s) -> skickar BLANK off")
+            # Direkt SDCP-send utan att gå via sdcp_set:s POWER-special-branch.
+            # _send_blank_raw är en tunn wrapper runt SDCP SET BLANK_PICTURE.
+            _send_blank_raw(False)
+        except Exception as e:
+            _log(f"BLANK-CYKEL fail vid blank off: {e}")
+        finally:
+            with _BLANK_TIMER_LOCK:
+                if _BLANK_TIMER is not None and not _BLANK_TIMER.is_alive():
+                    _BLANK_TIMER = None
+
+    t = threading.Timer(delay, _fire)
+    t.daemon = True   # KRITISKT: undviker Python 3.13 _ThreadHandle-krock vid shutdown
+    t.name = "BlankCycleTimer"
+    with _BLANK_TIMER_LOCK:
+        _BLANK_TIMER = t
+    t.start()
+    _log(f"BLANK-CYKEL: timer schemalagd, blank off om {delay:.1f}s")
+
+
+def _send_blank_raw(on: bool) -> None:
+    """Skicka SDCP SET BLANK_PICTURE direkt utan att trigga POWER-branch i sdcp_set."""
+    try:
+        item_code = ITEM["BLANK_PICTURE"]
+    except KeyError:
+        _log("BLANK-CYKEL: BLANK_PICTURE saknas i ITEM-tabellen")
+        return
+    val = ONOFF_VAL["on"] if on else ONOFF_VAL["off"]
+    pkt = _build_packet(SDCP_SET, item_code, val, data_len=2)
+    try:
+        resp_type, _item, data = _sdcp_round_trip(pkt)
+        if resp_type == 0x01:
+            _log(f"BLANK-CYKEL RX ACK BLANK={'on' if on else 'off'}")
+        else:
+            _log(f"BLANK-CYKEL RX NAK BLANK={'on' if on else 'off'} data=0x{data:04X}")
+    except (socket.error, AdcpError) as e:
+        _log(f"BLANK-CYKEL SDCP fail: {e}")
+
+
+
+# ---------------------------------------------------------------------------
 # Lågnivå SDCP packet I/O
 # ---------------------------------------------------------------------------
 
@@ -861,7 +958,7 @@ def _sdcp_round_trip(packet: bytes, timeout: Optional[float] = None) -> Tuple[in
 
 def sdcp_set(item_name: str, value_int: int) -> str:
     """Skicka SET-kommando. Returnerar 'ok' vid ACK, 'err_<n>' vid NAK."""
-    global LAST_POWER_ON_TS
+    global LAST_POWER_ON_TS, _LAST_OFF_TS
     item_code = ITEM[item_name]
     pkt = _build_packet(SDCP_SET, item_code, value_int, data_len=2)
     _log(f"SDCP TX SET {item_name}=0x{value_int:04X} (item=0x{item_code:04X})")
@@ -872,11 +969,31 @@ def sdcp_set(item_name: str, value_int: int) -> str:
         return f"err_io"
     if resp_type == 0x01:
         _log(f"SDCP RX ACK {item_name}")
-        if item_name == "POWER" and value_int == POWER_VAL["on"]:
-            LAST_POWER_ON_TS = time.time()
+        if item_name == "POWER":
+            if value_int == POWER_VAL["on"]:
+                LAST_POWER_ON_TS = time.time()
+                # Smart Blank-cykel: mörklägg omedelbart, släpp efter delay.
+                now = time.time()
+                if _LAST_OFF_TS is None or (now - _LAST_OFF_TS) > WARM_THRESHOLD:
+                    delay = COLD_START_DELAY
+                    mode = "kallstart"
+                else:
+                    delay = WARM_START_DELAY
+                    mode = f"varmstart ({now - _LAST_OFF_TS:.0f}s sedan off)"
+                _log(f"BLANK-CYKEL: {mode} -> BLANK on, släpp om {delay:.0f}s")
+                try:
+                    _send_blank_raw(True)
+                except Exception as e:
+                    _log(f"BLANK-CYKEL: kunde inte sätta BLANK on: {e}")
+                _schedule_blank_off(delay)
+            elif value_int == POWER_VAL["off"]:
+                _LAST_OFF_TS = time.time()
+                # Avbryt eventuell pågående blank-cykel — projektorn slås av.
+                _cancel_blank_timer()
         return "ok"
     _log(f"SDCP RX NAK {item_name} data=0x{data:04X}")
     return f"err_nak_0x{data:04X}"
+
 
 
 def sdcp_get(item_name: str) -> Optional[int]:
@@ -1257,7 +1374,6 @@ _RE_FOCUS_COMPONENT = re.compile(r"(?:mCurrentFocus|mFocusedApp).*?\s([A-Za-z0-9
 _FORMULER_PLAYER_PACKAGES = {
     # MyTVOnline3 (Formuler IPTV)
     "tv.formuler.mol3.real",
-    "com.formuler.mol3",
     "com.formuler.mytvonline3",
     # YouTube
     "com.google.android.youtube.tv",
@@ -1478,7 +1594,6 @@ def formuler_launch_app(package: str, timeout: float = 6.0) -> Dict[str, Any]:
         "com.formuler.mytvonline3.activities.SplashActivity",
     ]
     KNOWN_ACTIVITIES = {
-        "tv.formuler.mol3.real": _MOL3_ACTIVITIES,
         "com.formuler.mol3": _MOL3_ACTIVITIES,
         "com.formuler.mytvonline3": _MOL3_ACTIVITIES,
         "com.formuler.mytvonline2": _MOL3_ACTIVITIES,
