@@ -498,6 +498,10 @@ export function MarantzRemote({
         >
           {DIRAC_SLOTS.map((s) => {
             const active = diracSlot === s.value;
+            const display =
+              s.value === "OFF"
+                ? s.label
+                : diracSlotLabel(Number(s.value) as 1 | 2 | 3);
             return (
               <label
                 key={s.value}
@@ -509,11 +513,33 @@ export function MarantzRemote({
                 }`}
               >
                 <RadioGroupItem id={`dirac-${s.value}`} value={s.value} />
-                <span className="text-sm">{s.label}</span>
+                <span className="text-sm truncate">{display}</span>
               </label>
             );
           })}
         </RadioGroup>
+
+        <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <LabelEditor
+            title="Slot 1 namn"
+            value={labels.dirac_1 ?? ""}
+            placeholder="t.ex. Film"
+            onSave={(v) => saveLabel("dirac_1", v)}
+          />
+          <LabelEditor
+            title="Slot 2 namn"
+            value={labels.dirac_2 ?? ""}
+            placeholder="t.ex. Musik"
+            onSave={(v) => saveLabel("dirac_2", v)}
+          />
+          <LabelEditor
+            title="Slot 3 namn"
+            value={labels.dirac_3 ?? ""}
+            placeholder="t.ex. Sport"
+            onSave={(v) => saveLabel("dirac_3", v)}
+          />
+        </div>
+
         <p className="text-xs text-muted-foreground mt-2">
           Skickar <code className="text-primary/80">PSDIRAC 1/2/3</code> eller{" "}
           <code className="text-primary/80">PSDIRAC OFF</code>.
@@ -545,11 +571,29 @@ export function MarantzRemote({
                 <span className="text-xs uppercase tracking-wider text-muted-foreground">
                   Högtalare
                 </span>
-                <span className="text-lg font-semibold">Preset {n}</span>
+                <span className="text-base font-semibold truncate max-w-full px-2">
+                  {speakerPresetLabel(n)}
+                </span>
               </label>
             );
           })}
         </RadioGroup>
+
+        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <LabelEditor
+            title="Preset 1 namn"
+            value={labels.speaker_preset_1 ?? ""}
+            placeholder="t.ex. 7.1.4 Atmos"
+            onSave={(v) => saveLabel("speaker_preset_1", v)}
+          />
+          <LabelEditor
+            title="Preset 2 namn"
+            value={labels.speaker_preset_2 ?? ""}
+            placeholder="t.ex. 5.1 Stereo+Sub"
+            onSave={(v) => saveLabel("speaker_preset_2", v)}
+          />
+        </div>
+
         <p className="text-xs text-muted-foreground mt-2">
           Skickar <code className="text-primary/80">SPPR 1</code> /{" "}
           <code className="text-primary/80">SPPR 2</code>.
