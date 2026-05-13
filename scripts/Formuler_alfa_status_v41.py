@@ -802,6 +802,89 @@ LAST_POWER_ON_TS = 0.0
 
 
 # ---------------------------------------------------------------------------
+# Smart Blank-cykel (kall/varmstart) — håller bilden mörklagd tills projektorn
+# faktiskt har låst signal/ljus, så användaren slipper "blå skärm"-flash.
+#
+# Tidsvariabler — kalibrera fritt här:
+COLD_START_DELAY = 40.0   # sekunder vid kallstart (lampan har varit av länge)
+WARM_START_DELAY = 15.0   # sekunder vid varmstart (precis avslagen)
+WARM_THRESHOLD   = 300.0  # sekunder sedan POWER off för att räknas som "varm"
+
+# Tidpunkt då senaste POWER off skickades till projektorn. None = okänt
+# (efter bridge-omstart) -> behandlas som kallstart.
+_LAST_OFF_TS: Optional[float] = None
+
+# Aktiv blank-off-timer (en åt gången). Används på ett trådsäkert sätt så
+# Python 3.13:s strikta _thread._ThreadHandle-krav inte triggar — vi
+# 1) håller alltid daemon=True (process kan exit:a utan att vänta in den),
+# 2) cancel:ar gamla timers innan vi startar en ny,
+# 3) släpper referensen efter att timern fyrat (lokal variabel + GC).
+_BLANK_TIMER: Optional[threading.Timer] = None
+_BLANK_TIMER_LOCK = threading.Lock()
+
+
+def _cancel_blank_timer() -> None:
+    """Avbryt eventuell pågående blank-off timer."""
+    global _BLANK_TIMER
+    with _BLANK_TIMER_LOCK:
+        t = _BLANK_TIMER
+        _BLANK_TIMER = None
+    if t is not None:
+        try:
+            t.cancel()
+        except Exception:
+            pass
+
+
+def _schedule_blank_off(delay: float) -> None:
+    """Starta en daemon-Timer som efter `delay` sekunder skickar BLANK off."""
+    global _BLANK_TIMER
+    _cancel_blank_timer()
+
+    def _fire() -> None:
+        global _BLANK_TIMER
+        try:
+            _log(f"BLANK-CYKEL: tid ute ({delay:.1f}s) -> skickar BLANK off")
+            # Direkt SDCP-send utan att gå via sdcp_set:s POWER-special-branch.
+            # _send_blank_raw är en tunn wrapper runt SDCP SET BLANK_PICTURE.
+            _send_blank_raw(False)
+        except Exception as e:
+            _log(f"BLANK-CYKEL fail vid blank off: {e}")
+        finally:
+            with _BLANK_TIMER_LOCK:
+                if _BLANK_TIMER is not None and not _BLANK_TIMER.is_alive():
+                    _BLANK_TIMER = None
+
+    t = threading.Timer(delay, _fire)
+    t.daemon = True   # KRITISKT: undviker Python 3.13 _ThreadHandle-krock vid shutdown
+    t.name = "BlankCycleTimer"
+    with _BLANK_TIMER_LOCK:
+        _BLANK_TIMER = t
+    t.start()
+    _log(f"BLANK-CYKEL: timer schemalagd, blank off om {delay:.1f}s")
+
+
+def _send_blank_raw(on: bool) -> None:
+    """Skicka SDCP SET BLANK_PICTURE direkt utan att trigga POWER-branch i sdcp_set."""
+    try:
+        item_code = ITEM["BLANK_PICTURE"]
+    except KeyError:
+        _log("BLANK-CYKEL: BLANK_PICTURE saknas i ITEM-tabellen")
+        return
+    val = ONOFF_VAL["on"] if on else ONOFF_VAL["off"]
+    pkt = _build_packet(SDCP_SET, item_code, val, data_len=2)
+    try:
+        resp_type, _item, data = _sdcp_round_trip(pkt)
+        if resp_type == 0x01:
+            _log(f"BLANK-CYKEL RX ACK BLANK={'on' if on else 'off'}")
+        else:
+            _log(f"BLANK-CYKEL RX NAK BLANK={'on' if on else 'off'} data=0x{data:04X}")
+    except (socket.error, AdcpError) as e:
+        _log(f"BLANK-CYKEL SDCP fail: {e}")
+
+
+
+# ---------------------------------------------------------------------------
 # Lågnivå SDCP packet I/O
 # ---------------------------------------------------------------------------
 
