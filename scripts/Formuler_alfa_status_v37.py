@@ -957,10 +957,16 @@ def adcp_key(key: str) -> str:
     item_code = 0x1700 | (code & 0xFF)
     _log(f"REMOTE {key!r} -> SDCP IR item=0x{item_code:04X}")
     try:
-        return _adcp_set_raw(item_code, 0x0000)
+        reply = _adcp_set_raw(item_code, 0x0000)
     except (socket.error, AdcpError) as e:
         _log(f"REMOTE {key!r} fail: {e}")
         return f"err:{e}"
+    # IR-kommandon ackar inte alltid med 0x01 — projektorn kan svara NAK
+    # även när IR faktiskt utfördes (t.ex. menu/nav). Vi loggar reply men
+    # rapporterar alltid OK till klienten så länge socket inte fallerade.
+    if reply != "ok":
+        _log(f"REMOTE {key!r} reply={reply} (treating as ok for IR)")
+    return "ok"
 
 
 def _wait_until_active(timeout: float = 30.0, poll_interval: float = 1.5) -> bool:
