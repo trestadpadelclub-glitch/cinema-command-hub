@@ -278,6 +278,8 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
   const [lightsBrightness, setLightsBrightness] = useState<number>(50);
   const [lightsBusy, setLightsBusy] = useState<"on" | "off" | null>(null);
   const [movieAutoBusy, setMovieAutoBusy] = useState(false);
+  // Kiosk/lås-läge för telefonen — fixerar layouten på en skärm utan scroll.
+  const [locked, setLocked] = useState(false);
 
   // Movie-auto är PÅ om båda scen 4 och 5 är enabled
   const movieScenes = useMemo(
@@ -706,7 +708,44 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
   const volDb = marantzMvToDb(volDraft);
 
   return (
-    <div className="space-y-4">
+    <div
+      className={
+        locked
+          ? "fixed inset-0 z-40 bg-background overflow-hidden flex flex-col"
+          : ""
+      }
+    >
+      {locked && (
+        <button
+          type="button"
+          onDoubleClick={() => setLocked(false)}
+          onClick={(e) => e.preventDefault()}
+          className="shrink-0 w-full text-center text-[12px] font-semibold py-2 bg-primary/15 text-primary border-b border-primary/40 select-none touch-manipulation"
+          title="Dubbelklicka för att låsa upp"
+        >
+          🔒 LÅST — dubbelklicka här för att låsa upp
+        </button>
+      )}
+      <div
+        className={
+          locked
+            ? "flex-1 min-h-0 overflow-y-auto p-1.5 space-y-1.5 [&_.p-4]:p-2 [&_.h-20]:h-12 [&_.h-44]:h-28 [&_.min-h-\\[180px\\]]:min-h-[110px] [&_.h-16]:h-12 [&_.w-16]:w-12 [&_.h-14]:h-12 [&_.w-14]:w-12"
+            : "space-y-4"
+        }
+      >
+        {!locked && (
+          <div className="flex justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs"
+              onClick={() => setLocked(true)}
+              title="Lås layout på skärmen (dubbelklicka rutan upptill för att låsa upp)"
+            >
+              🔒 Lås på skärmen
+            </Button>
+          </div>
+        )}
       {/* Snabbval — appar */}
       <Card className="p-4">
         <div className="flex items-center justify-between mb-3">
@@ -1347,6 +1386,7 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 }
