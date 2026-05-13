@@ -113,10 +113,16 @@ export function SceneEditorDialog({ open, onOpenChange, householdCode, scene, on
     setMarantzPower(scene.marantz_power);
     setMarantzInput(scene.marantz_input);
     setMarantzVolume(scene.marantz_volume);
+    setMarantzMute(scene.marantz_mute);
+    setMarantzSoundMode(scene.marantz_sound_mode);
+    setMarantzSmartSelect(scene.marantz_smart_select);
+    setMarantzDirac(scene.marantz_dirac);
+    setMarantzSpeakerPreset(scene.marantz_speaker_preset);
     setLightsOn(scene.lights_on);
     setProjectorDelayMs(scene.projector_delay_ms);
     setMarantzDelayMs(scene.marantz_delay_ms);
     setLightsDelayMs(scene.lights_delay_ms);
+    setProjectorBlankDelaySeconds(scene.projector_blank_delay_seconds ?? 0);
     setTab("picture");
 
     setLoading(true);
@@ -164,7 +170,13 @@ export function SceneEditorDialog({ open, onOpenChange, householdCode, scene, on
         marantz_power: marantzPower,
         marantz_input: marantzInput,
         marantz_volume: marantzVolume,
+        marantz_mute: marantzMute,
+        marantz_sound_mode: marantzSoundMode,
+        marantz_smart_select: marantzSmartSelect,
+        marantz_dirac: marantzDirac,
+        marantz_speaker_preset: marantzSpeakerPreset,
         lights_on: lightsOn,
+        projector_blank_delay_seconds: projectorBlankDelaySeconds,
         projector_delay_ms: projectorDelayMs,
         marantz_delay_ms: marantzDelayMs,
         lights_delay_ms: lightsDelayMs,
