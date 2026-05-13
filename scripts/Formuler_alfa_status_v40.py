@@ -1465,11 +1465,23 @@ def formuler_launch_app(package: str, timeout: float = 6.0) -> Dict[str, Any]:
     pkg = launch_target.split("/", 1)[0].strip() if explicit_component else launch_target
 
     # Kända launcher-aktiviteter per paket — utöka vid behov.
+    _MOL3_ACTIVITIES = [
+        "com.formuler.mol3.MainActivity",
+        "com.formuler.mol3.activities.SplashActivity",
+        "com.formuler.mol3.activity.SplashActivity",
+        "com.formuler.mol3.activity.MainActivity",
+        "com.formuler.mol3.SplashActivity",
+        "com.formuler.mol3.ui.SplashActivity",
+        "com.formuler.mol3.ui.MainActivity",
+        "com.formuler.mytvonline3.MainActivity",
+        "com.formuler.mytvonline3.activities.SplashActivity",
+    ]
     KNOWN_ACTIVITIES = {
-        "com.formuler.mytvonline3": [
-            "com.formuler.mytvonline3.MainActivity",
-            "com.formuler.mytvonline3.activities.SplashActivity",
-        ],
+        "com.formuler.mol3": _MOL3_ACTIVITIES,
+        "com.formuler.mytvonline3": _MOL3_ACTIVITIES,
+        "com.formuler.mytvonline2": _MOL3_ACTIVITIES,
+        "com.formuler.mytvonline": _MOL3_ACTIVITIES,
+        "com.mytvonline3": _MOL3_ACTIVITIES,
         "com.google.android.youtube.tv": [
             "com.google.android.apps.youtube.tv.activity.ShellActivity",
         ],
