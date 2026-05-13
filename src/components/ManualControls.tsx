@@ -26,6 +26,13 @@ import {
   type RemoteKey,
 } from "@/lib/projector";
 import { toast } from "sonner";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useRef, type ReactNode } from "react";
 
 interface Props {
@@ -57,7 +64,21 @@ const MOTIONFLOW_OPTS: Motionflow[] = [
   "impulse",
   "combination",
 ];
-const GAMMA_OPTS: Gamma[] = ["off", "1.8", "2.0", "2.1", "2.2", "2.4", "2.6"];
+const GAMMA_OPTS: Gamma[] = ["off", "1.8", "2.0", "2.1", "2.2", "2.4", "2.6", "gamma7", "gamma8", "gamma9", "gamma10"];
+
+const GAMMA_LABELS: Record<Gamma, string> = {
+  off: "Off",
+  "1.8": "Gamma 1.8",
+  "2.0": "Gamma 2.0",
+  "2.1": "Gamma 2.1",
+  "2.2": "Gamma 2.2 (SDR)",
+  "2.4": "Gamma 2.4 (BT.1886)",
+  "2.6": "Gamma 2.6 (DCI)",
+  gamma7: "Gamma 7",
+  gamma8: "Gamma 8",
+  gamma9: "Gamma 9",
+  gamma10: "Gamma 10",
+};
 const COLOR_TEMP_OPTS: ColorTemp[] = [
   "d93",
   "d75",
@@ -157,6 +178,10 @@ const GAMMA_INFO: Record<Gamma, string> = {
   "2.4": "BT.1886 / hemmabio-standard. Mörkare mellantoner, mer kontrast — kräver mörkt rum.",
   "2.6":
     "Cinema/DCI-standard. Mycket mörka mellantoner. Endast för helt mörkt rum och kalibrerad miljö.",
+  gamma7: "Sony-specifik kurva 7. Alternativ profil — testa mot din källa.",
+  gamma8: "Sony-specifik kurva 8. Alternativ profil — testa mot din källa.",
+  gamma9: "Sony-specifik kurva 9. Alternativ profil — testa mot din källa.",
+  gamma10: "Sony-specifik kurva 10. Alternativ profil — testa mot din källa.",
 };
 
 const COLOR_TEMP_INFO: Record<ColorTemp, string> = {
@@ -303,38 +328,9 @@ export function ManualControls({ settings, onChange, showPowerAction }: Props) {
           </Card>
         )}
         <Card className="p-5">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Label className="text-sm font-medium">Picture Mode</Label>
-              <InfoTip text={SECTION_INFO.pic_mode} />
-            </div>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    sendCommand({ action: "remote_key", value: "reset" }).then((res) => {
-                      if (!res.ok) {
-                        toast.error("Bridge-fel", {
-                          description: res.error || `Status ${res.status}`,
-                        });
-                      } else {
-                        toast.success("Reset skickad", {
-                          description: "Återställer aktiv picture mode till fabriksvärden.",
-                        });
-                      }
-                    });
-                  }}
-                >
-                  <RotateCcw className="h-4 w-4 mr-1.5" />
-                  Reset
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="top" className="max-w-xs whitespace-normal text-left leading-snug">
-                Återställer den aktiva picture mode (brightness, contrast, color, gamma m.m.) till Sonys fabriksvärden. Påverkar bara nuvarande preset.
-              </TooltipContent>
-            </Tooltip>
+          <div className="flex items-center gap-2 mb-3">
+            <Label className="text-sm font-medium">Picture Mode</Label>
+            <InfoTip text={SECTION_INFO.pic_mode} />
           </div>
           <div className="grid grid-cols-3 gap-2">
             {PIC_MODES.map((m) => (
@@ -453,20 +449,26 @@ export function ManualControls({ settings, onChange, showPowerAction }: Props) {
           <SectionLabel info={SECTION_INFO.gamma_correction}>
             Gamma Correction
           </SectionLabel>
-          <div className="grid grid-cols-7 gap-2">
-            {GAMMA_OPTS.map((g) => (
-              <OptionButton
-                key={g}
-                active={(settings.gamma_correction ?? "2.2") === g}
-                onClick={() =>
-                  update("gamma_correction", g, { gamma_correction: g })
-                }
-                info={GAMMA_INFO[g]}
-              >
-                {g}
-              </OptionButton>
-            ))}
-          </div>
+          <Select
+            value={settings.gamma_correction ?? "2.2"}
+            onValueChange={(v) =>
+              update("gamma_correction", v as Gamma, { gamma_correction: v as Gamma })
+            }
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Välj gamma" />
+            </SelectTrigger>
+            <SelectContent>
+              {GAMMA_OPTS.map((g) => (
+                <SelectItem key={g} value={g}>
+                  {GAMMA_LABELS[g]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="mt-2 text-xs text-muted-foreground">
+            {GAMMA_INFO[(settings.gamma_correction ?? "2.2") as Gamma]}
+          </p>
         </Card>
 
         <Card className="p-5">
