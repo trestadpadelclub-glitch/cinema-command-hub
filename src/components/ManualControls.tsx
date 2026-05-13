@@ -64,7 +64,21 @@ const MOTIONFLOW_OPTS: Motionflow[] = [
   "impulse",
   "combination",
 ];
-const GAMMA_OPTS: Gamma[] = ["off", "1.8", "2.0", "2.1", "2.2", "2.4", "2.6"];
+const GAMMA_OPTS: Gamma[] = ["off", "1.8", "2.0", "2.1", "2.2", "2.4", "2.6", "gamma7", "gamma8", "gamma9", "gamma10"];
+
+const GAMMA_LABELS: Record<Gamma, string> = {
+  off: "Off",
+  "1.8": "Gamma 1.8",
+  "2.0": "Gamma 2.0",
+  "2.1": "Gamma 2.1",
+  "2.2": "Gamma 2.2 (SDR)",
+  "2.4": "Gamma 2.4 (BT.1886)",
+  "2.6": "Gamma 2.6 (DCI)",
+  gamma7: "Gamma 7",
+  gamma8: "Gamma 8",
+  gamma9: "Gamma 9",
+  gamma10: "Gamma 10",
+};
 const COLOR_TEMP_OPTS: ColorTemp[] = [
   "d93",
   "d75",
