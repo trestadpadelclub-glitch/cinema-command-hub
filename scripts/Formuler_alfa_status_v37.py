@@ -1281,6 +1281,14 @@ _FORMULER_PLAYER_PACKAGES = {
 }
 
 
+def _adcp_set_raw(item_code: int, value_int: int) -> str:
+    """SET med rå item-kod (för IR-simulering 0x17XX)."""
+    pkt = _build_packet(SDCP_SET, item_code, value_int, data_len=2)
+    resp_type, _item, data = _sdcp_round_trip(pkt)
+    if resp_type == 0x01:
+        return "ok"
+    return f"err_nak_0x{data:04X}"
+
 
 # ---------------------------------------------------------------------------
 # FORMULER ad-hoc keyevent (för POST /api/formuler från Lovable-appen)
