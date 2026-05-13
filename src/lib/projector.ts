@@ -783,10 +783,20 @@ export async function sendScene(p: SceneCommandPayload): Promise<CommandResult[]
     lightsDelayPending = 0;
   };
   const applyProjectorSettingsWithBlankDelay = async (settings: ProjectorSettings) => {
-    const { blank, ...rest } = settings;
+    const { power: powerAction, blank, ...rest } = settings;
     const shouldTemporaryBlank = blank === "on" && (p.projectorBlankDelaySeconds ?? 0) > 0;
-    const ordered: ProjectorSettings = shouldTemporaryBlank ? { blank, ...rest } : settings;
-    const more = await applySettings(ordered);
+    if (!shouldTemporaryBlank) {
+      const more = await applySettings(settings);
+      results.push(...more);
+      return;
+    }
+    if (powerAction === "on" || powerAction === "off") {
+      const powerRes = await sendCommand({ action: "power" as Action, value: powerAction });
+      results.push(powerRes);
+      if (!powerRes.ok || powerAction === "off") return;
+    }
+    results.push(await sendCommand({ action: "blank", value: "on" }));
+    const more = await applySettings(rest);
     results.push(...more);
     if (shouldTemporaryBlank) {
       await sleep(Math.min(60, Math.max(0, p.projectorBlankDelaySeconds ?? 0)) * 1000);
