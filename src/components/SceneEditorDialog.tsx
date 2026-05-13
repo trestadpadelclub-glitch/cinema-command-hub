@@ -354,6 +354,63 @@ export function SceneEditorDialog({ open, onOpenChange, householdCode, scene, on
                   }
                 />
               </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <Label>Mute</Label>
+                  <Select
+                    value={marantzMute === null ? "none" : marantzMute ? "on" : "off"}
+                    onValueChange={(v) => setMarantzMute(v === "none" ? null : v === "on")}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">— rör inte —</SelectItem>
+                      <SelectItem value="on">Mute på</SelectItem>
+                      <SelectItem value="off">Mute av</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label>Sound Mode</Label>
+                  <Select value={marantzSoundMode ?? "none"} onValueChange={(v) => setMarantzSoundMode(v === "none" ? null : v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">— rör inte —</SelectItem>
+                      {SOUND_MODES.map((m) => <SelectItem key={m.code} value={m.code}>{m.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label>Smart Select</Label>
+                  <Select value={marantzSmartSelect ? String(marantzSmartSelect) : "none"} onValueChange={(v) => setMarantzSmartSelect(v === "none" ? null : Number(v))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">— rör inte —</SelectItem>
+                      {[1, 2, 3, 4].map((n) => <SelectItem key={n} value={String(n)}>Smart {n}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label>Dirac</Label>
+                  <Select value={marantzDirac ?? "none"} onValueChange={(v) => setMarantzDirac(v === "none" ? null : v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">— rör inte —</SelectItem>
+                      {DIRAC_SLOTS.map((slot) => <SelectItem key={slot} value={slot}>{slot === "OFF" ? "Off" : `Slot ${slot}`}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1 sm:col-span-2">
+                  <Label>Speaker Preset</Label>
+                  <Select value={marantzSpeakerPreset ? String(marantzSpeakerPreset) : "none"} onValueChange={(v) => setMarantzSpeakerPreset(v === "none" ? null : Number(v))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">— rör inte —</SelectItem>
+                      <SelectItem value="1">Preset 1</SelectItem>
+                      <SelectItem value="2">Preset 2</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </TabsContent>
 
             {/* ----------- LJUS ----------- */}
