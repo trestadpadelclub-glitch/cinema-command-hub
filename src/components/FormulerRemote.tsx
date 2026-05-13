@@ -383,7 +383,7 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
       } catch { if (alive) setProjOn(false); }
       // Formuler — pinga bridge-endpoint för boxen
       try {
-        const base = (await import("@/lib/projector")).getBridgeUrl();
+        const base = getBridgeUrl();
         const url = base.replace(/\/api\/projector$/i, "/api/formuler/list_apps");
         const ctrl = new AbortController();
         const t = setTimeout(() => ctrl.abort(), 3500);
