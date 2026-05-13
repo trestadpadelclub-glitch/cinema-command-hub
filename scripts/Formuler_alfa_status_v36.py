@@ -2573,22 +2573,20 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(400, {"error": "unknown_action", "action": action})
             return
 
-        adcp_cmd, mapper, adcp_mode = ACTION_MAP[action]
+        item_name, mapper, _decoder = ACTION_MAP[action]
 
-        # Saknas på HW65ES (t.ex. laser_output, hdr_enhancer, gamma_correction,
-        # reality_creation, dynamic_control) — returnera "skipped" istället
-        # för att skicka och få err_cmd/err_option från projektorn.
-        if adcp_cmd is None:
+        # Saknas på HW65ES via SDCP (laser_output, hdr_enhancer,
+        # reality_creation, dynamic_control) — returnera "skipped".
+        if item_name is None:
             reasons = {
                 "laser_output":     "hw65es_is_lamp_based_use_lamp_control",
-                "dynamic_control":  "light_output_dyn_not_on_hw65es",
-                "hdr_enhancer":     "contrast_enh_not_on_hw65es",
-                "gamma_correction": "gamma_correction_not_an_adcp_item_on_hw65es",
-                "real_cre":         "reality_creation_not_on_hw65es",
-                "reality_creation": "reality_creation_not_on_hw65es",
-                "reality_creation_val": "reality_creation_not_on_hw65es",
+                "dynamic_control":  "not_modeled_in_sdcp_layer",
+                "hdr_enhancer":     "not_modeled_in_sdcp_layer",
+                "real_cre":         "reality_creation_not_modeled_in_sdcp_layer",
+                "reality_creation": "reality_creation_not_modeled_in_sdcp_layer",
+                "reality_creation_val": "reality_creation_not_modeled_in_sdcp_layer",
             }
-            reason = reasons.get(action, "not_supported_on_hw65es")
+            reason = reasons.get(action, "not_supported_on_hw65es_via_sdcp")
             _log(f"ACTION {action} = {value!r} -> SKIPPED ({reason})")
             self._send_json(200, {
                 "status": "skipped",
@@ -2597,14 +2595,17 @@ class Handler(BaseHTTPRequestHandler):
             })
             return
 
-        adcp_value = mapper(value) if mapper else str(value)
-
-        preview = _format_adcp_set(adcp_cmd, adcp_value, adcp_mode)
-        _log(f"ACTION {action} = {value!r} -> ADCP {preview}")
         try:
-            reply = adcp_set(adcp_cmd, adcp_value, mode=adcp_mode)
+            sdcp_value = mapper(value) if mapper else int(value)
+        except Exception as e:
+            self._send_json(400, {"error": "bad_value", "detail": str(e)})
+            return
+
+        _log(f"ACTION {action} = {value!r} -> SDCP {item_name}=0x{sdcp_value:04X}")
+        try:
+            reply = adcp_set(item_name, sdcp_value)
         except (socket.error, AdcpError) as e:
-            _log(f"ADCP fail: {e}")
+            _log(f"SDCP fail: {e}")
             self._send_json(502, {"status": "error", "error": str(e)})
             return
 
@@ -2614,9 +2615,8 @@ class Handler(BaseHTTPRequestHandler):
             {
                 "status": "sent" if ok else "error",
                 "action": action,
-                "adcp_command": adcp_cmd,
-                "adcp_value": adcp_value,
-                "adcp_mode": adcp_mode,
+                "sdcp_item": item_name,
+                "sdcp_value": sdcp_value,
                 "reply": reply,
             },
         )
