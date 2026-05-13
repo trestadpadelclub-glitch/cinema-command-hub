@@ -1153,7 +1153,7 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
           </div>
 
           {/* MITT: D-Pad + transport */}
-          <div className="flex flex-col items-center justify-center gap-3">
+          <div className="flex flex-col items-center justify-center gap-3 min-w-0">
             <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
               Navigation
             </Label>
@@ -1178,7 +1178,7 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
 
             {/* Transport-rad — visas bara när en app är vald */}
             {activeApp && transports.length > 0 && (
-              <div className="flex items-center gap-1 pt-1 border-t border-border/50 w-full justify-center">
+              <div className="flex flex-wrap items-center gap-1 pt-1 border-t border-border/50 w-full justify-center">
                 <span className="text-[10px] text-muted-foreground mr-1">
                   {APPS.find((a) => a.key === activeApp)?.label}:
                 </span>
@@ -1283,11 +1283,11 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
                 <Volume2 className="h-4 w-4" />
               )}
             </Button>
-            <div className="flex items-center gap-1">
+            <div className={`flex flex-col items-center gap-1 w-full ${locked ? "flex-1 min-h-0" : "flex-1 min-h-[180px]"}`}>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7"
+                className="h-7 w-7 shrink-0"
                 onClick={() => {
                   const next = clamp(volDraft + 1, 0, 98);
                   setVolDraft(next);
@@ -1297,9 +1297,7 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
               >
                 <Plus className="h-3.5 w-3.5" />
               </Button>
-            </div>
-            <div className={`flex flex-col items-center gap-1.5 w-full ${locked ? "flex-1 min-h-0" : "flex-1 min-h-[180px]"}`}>
-              <span className="text-xs font-mono tabular-nums">
+              <span className="text-xs font-mono tabular-nums shrink-0">
                 MV{String(volDraft).padStart(2, "0")}
               </span>
               <Slider
@@ -1310,11 +1308,11 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
                 value={[volDraft]}
                 onValueChange={handleVolChange}
                 onValueCommit={handleVolCommit}
-                className={locked ? "flex-1 min-h-0" : "h-44"}
+                className="flex-1 min-h-0"
                 aria-label="Marantz volym"
               />
               <span
-                className={`text-[10px] font-mono tabular-nums ${
+                className={`text-[10px] font-mono tabular-nums shrink-0 ${
                   volDb >= 0 ? "text-amber-400" : "text-muted-foreground"
                 }`}
                 title="dB relativt referens (MV80 = 0 dB)"
@@ -1322,20 +1320,20 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
                 {volDb > 0 ? "+" : ""}
                 {volDb.toFixed(1)} dB
               </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 shrink-0"
+                onClick={() => {
+                  const next = clamp(volDraft - 1, 0, 98);
+                  setVolDraft(next);
+                  pushVolume(next);
+                }}
+                aria-label="Vol -"
+              >
+                <Minus className="h-3.5 w-3.5" />
+              </Button>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7"
-              onClick={() => {
-                const next = clamp(volDraft - 1, 0, 98);
-                setVolDraft(next);
-                pushVolume(next);
-              }}
-              aria-label="Vol -"
-            >
-              <Minus className="h-3.5 w-3.5" />
-            </Button>
             <div className="text-[9px] text-center text-muted-foreground leading-tight">
               {marantzReachable === false ? (
                 <span className="text-destructive">offline</span>
