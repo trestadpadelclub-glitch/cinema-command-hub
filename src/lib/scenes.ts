@@ -215,6 +215,7 @@ export async function fetchAppSettings(householdCode: string): Promise<AppSettin
       household_code: householdCode,
       poll_enabled: true,
       poll_interval_seconds: 5,
+      marantz_labels: {},
     };
   }
   return data as unknown as AppSettings;
@@ -222,7 +223,7 @@ export async function fetchAppSettings(householdCode: string): Promise<AppSettin
 
 export async function updateAppSettings(
   householdCode: string,
-  patch: Partial<Pick<AppSettings, "poll_enabled" | "poll_interval_seconds">>,
+  patch: Partial<Pick<AppSettings, "poll_enabled" | "poll_interval_seconds" | "marantz_labels">>,
 ) {
   const { error } = await supabase
     .from("app_settings")
