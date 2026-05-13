@@ -1558,7 +1558,47 @@ def formuler_launch_app(package: str, timeout: float = 6.0) -> Dict[str, Any]:
             if result:
                 return result
 
-        # 1) monkey
+        # Pre-check: är paketet ens installerat?
+        rc_pm, out_pm, err_pm = _run([
+            "-s", target, "shell", "pm", "path", pkg,
+        ], t=4.0)
+        if rc_pm != 0 or "package:" not in (out_pm or "").lower():
+            attempts.append({"method": "pm_path", "rc": rc_pm, "stdout": out_pm, "stderr": err_pm, "fail": "not_installed"})
+            return {
+                "ok": False, "package": pkg,
+                "error": f"package_not_installed: {pkg}",
+                "attempts": attempts,
+            }
+
+        # 0) Försök hitta launcher-komponent dynamiskt via resolve-activity.
+        for category in ("android.intent.category.LEANBACK_LAUNCHER",
+                         "android.intent.category.LAUNCHER"):
+            rc, out, err = _run([
+                "-s", target, "shell", "cmd", "package", "resolve-activity",
+                "--brief", "-a", "android.intent.action.MAIN",
+                "-c", category, pkg,
+            ], t=4.0)
+            comp_match = re.search(r"([A-Za-z0-9_.$]+)/(\.?[A-Za-z0-9_.$]+)", out or "")
+            if rc == 0 and comp_match and comp_match.group(1) == pkg:
+                component = f"{comp_match.group(1)}/{comp_match.group(2)}"
+                result = _try_component(component, f"resolve_{category.rsplit('.',1)[-1].lower()}")
+                if result:
+                    return result
+
+        # 1) monkey LEANBACK_LAUNCHER (TV-appar)
+        rc, out, err = _run([
+            "-s", target, "shell", "monkey",
+            "-p", pkg,
+            "-c", "android.intent.category.LEANBACK_LAUNCHER",
+            "1",
+        ], t=timeout)
+        fail = _is_failure(rc, out, err)
+        attempts.append({"method": "monkey_leanback", "rc": rc, "stdout": out, "stderr": err, "fail": fail})
+        _log(f"FORMULER monkey_leanback {pkg} rc={rc} out={out!r} err={err!r}")
+        if fail is None:
+            return {"ok": True, "method": "monkey_leanback", "package": pkg, "attempts": attempts}
+
+        # 2) monkey LAUNCHER
         rc, out, err = _run([
             "-s", target, "shell", "monkey",
             "-p", pkg,
@@ -1571,13 +1611,13 @@ def formuler_launch_app(package: str, timeout: float = 6.0) -> Dict[str, Any]:
         if fail is None:
             return {"ok": True, "method": "monkey", "package": pkg, "attempts": attempts}
 
-        # 2) am start -n med kända aktivitetsnamn
+        # 3) am start -n med kända aktivitetsnamn
         for activity in KNOWN_ACTIVITIES.get(pkg, []):
             result = _try_component(f"{pkg}/{activity}", "am_start_known")
             if result:
                 return result
 
-        # 2b) Hämta faktisk launcher-aktivitet dynamiskt och starta komponenten.
+        # 3b) Hämta faktisk launcher-aktivitet dynamiskt och starta komponenten.
         listed = formuler_list_apps(timeout=timeout)
         for app in listed.get("apps", []):
             if app.get("package") != pkg or not app.get("component"):
