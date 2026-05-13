@@ -275,7 +275,13 @@ async function postJson(
     } catch {
       /* keep raw */
     }
-    return { ok: normalizeBridgeOk(res.ok, res.status, data, command), status: res.status, data, command };
+    return {
+      ok: normalizeBridgeOk(res.ok, res.status, data, command),
+      status: res.status,
+      data,
+      error: bridgePayloadError(data),
+      command,
+    };
   } catch (err) {
     return {
       ok: false,
@@ -284,6 +290,14 @@ async function postJson(
       command,
     };
   }
+}
+
+function bridgePayloadError(data: unknown): string | undefined {
+  if (!data || typeof data !== "object") return undefined;
+  const payload = data as Record<string, unknown>;
+  if (typeof payload.error === "string") return payload.error;
+  if (typeof payload.status === "string" && payload.status !== "sent") return payload.status;
+  return undefined;
 }
 
 function normalizeBridgeOk(ok: boolean, status: number, data: unknown, command: SingleCommand): boolean {

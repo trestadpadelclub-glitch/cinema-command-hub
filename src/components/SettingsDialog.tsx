@@ -136,7 +136,7 @@ export function SettingsDialog() {
                   Ladda ner v40
                 </a>
                 {" · "}
-                <span>v40 fixar MOL3-start (resolve-activity + LEANBACK_LAUNCHER + fler kända aktiviteter), MOL3-paus/start via ljudstatus, Lights-status och Chromecast-fjärrkontroll.</span>
+                <span>v40 fixar MyTVOnline3-start med paketet tv.formuler.mol3.real, MOL3-paus/start via ljudstatus, Lights-status och Chromecast-fjärrkontroll.</span>
               </p>
             </div>
           </div>

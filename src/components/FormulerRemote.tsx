@@ -98,7 +98,7 @@ type KeyName = keyof typeof KEYCODES;
 // Standardpaket — kan justeras av användaren via popover om det skiljer sig
 // på just deras Formuler. Används för `adb shell monkey -p <pkg>`.
 const DEFAULT_APPS = {
-  mytvonline3: "com.formuler.mol3",
+  mytvonline3: "tv.formuler.mol3.real",
   youtube: "com.google.android.youtube.tv",
   redbull: "com.nousguide.android.rbtv",
   spotify: "com.spotify.tv.android",
@@ -107,6 +107,7 @@ const DEFAULT_APPS = {
 // Kandidatpaket att prova om standardvalet inte finns på boxen.
 const APP_CANDIDATES: Record<AppKey, string[]> = {
   mytvonline3: [
+    "tv.formuler.mol3.real",
     "com.formuler.mol3",
     "com.formuler.mytvonline3",
     "com.formuler.mytvonline2",
@@ -225,6 +226,7 @@ const ACTIVE_APP_KEY = "formuler_active_app";
 // Återanvänd samma scen-val som LightsRemote använder
 const LS_ON_KEY = (h: string) => `lights_remote_on_scene_${h}`;
 const LS_OFF_KEY = (h: string) => `lights_remote_off_scene_${h}`;
+const LEGACY_MOL3_PACKAGES = new Set(["com.formuler.mol3", "com.formuler.mytvonline3"]);
 
 function loadPackages(): Record<AppKey, string> {
   if (typeof window === "undefined") return { ...DEFAULT_APPS };
@@ -232,6 +234,9 @@ function loadPackages(): Record<AppKey, string> {
     const raw = localStorage.getItem(PKG_STORAGE_KEY);
     if (!raw) return { ...DEFAULT_APPS };
     const parsed = JSON.parse(raw);
+    if (LEGACY_MOL3_PACKAGES.has(parsed?.mytvonline3)) {
+      parsed.mytvonline3 = DEFAULT_APPS.mytvonline3;
+    }
     return { ...DEFAULT_APPS, ...parsed };
   } catch {
     return { ...DEFAULT_APPS };

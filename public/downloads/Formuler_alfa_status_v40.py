@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Formuler_alfa_status_v39.py  (Sony VPL-HW65ES, SDCP / PJ Talk)
+Formuler_alfa_status_v40.py  (Sony VPL-HW65ES, SDCP / PJ Talk)
 ==============================================================
 
-v39 NYTT: MOL3 start/paus följer nu faktisk USAGE_MEDIA-ljudstatus även när MediaSession fastnar på pb_int=3.
+v40 NYTT: MyTVOnline3 startar via rätt paketnamn tv.formuler.mol3.real; MOL3 start/paus följer faktisk USAGE_MEDIA-ljudstatus även när MediaSession fastnar på pb_int=3.
 
 v36 NYTT (jämfört med v35) — ADCP HELT BORTTAGET:
   - HW65ES (Home Cinema-serien) stödjer INTE Sonys ADCP-protokoll
@@ -1257,6 +1257,7 @@ _RE_FOCUS_COMPONENT = re.compile(r"(?:mCurrentFocus|mFocusedApp).*?\s([A-Za-z0-9
 _FORMULER_PLAYER_PACKAGES = {
     # MyTVOnline3 (Formuler IPTV)
     "tv.formuler.mol3.real",
+    "com.formuler.mol3",
     "com.formuler.mytvonline3",
     # YouTube
     "com.google.android.youtube.tv",
@@ -1477,6 +1478,7 @@ def formuler_launch_app(package: str, timeout: float = 6.0) -> Dict[str, Any]:
         "com.formuler.mytvonline3.activities.SplashActivity",
     ]
     KNOWN_ACTIVITIES = {
+        "tv.formuler.mol3.real": _MOL3_ACTIVITIES,
         "com.formuler.mol3": _MOL3_ACTIVITIES,
         "com.formuler.mytvonline3": _MOL3_ACTIVITIES,
         "com.formuler.mytvonline2": _MOL3_ACTIVITIES,
