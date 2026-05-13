@@ -100,6 +100,15 @@ export const Route = createFileRoute("/api/public/trigger")({
           return json({ matched: false, reason: "scene_disabled" }, 200);
         }
 
+        const sceneExtra = scene as typeof scene & {
+          marantz_mute?: boolean | null;
+          marantz_sound_mode?: string | null;
+          marantz_smart_select?: number | null;
+          marantz_dirac?: string | null;
+          marantz_speaker_preset?: number | null;
+          projector_blank_delay_seconds?: number | null;
+        };
+
         // Hämta lampor — alltid (triggern speglar Kör-knappen exakt)
         let sceneLights: Array<Record<string, unknown>> = [];
         {
@@ -226,6 +235,21 @@ export const Route = createFileRoute("/api/public/trigger")({
           const v = String(scene.marantz_volume).padStart(2, "0");
           pushMarantz({ action: "marantz", value: `MV${v}` });
         }
+        if (!marantzOff && typeof sceneExtra.marantz_mute === "boolean") {
+          pushMarantz({ action: "marantz", value: `MU${sceneExtra.marantz_mute ? "ON" : "OFF"}` });
+        }
+        if (!marantzOff && sceneExtra.marantz_sound_mode) {
+          pushMarantz({ action: "marantz", value: `MS${sceneExtra.marantz_sound_mode}` });
+        }
+        if (!marantzOff && typeof sceneExtra.marantz_smart_select === "number") {
+          pushMarantz({ action: "marantz", value: `MSSMART${sceneExtra.marantz_smart_select}` });
+        }
+        if (!marantzOff && sceneExtra.marantz_dirac) {
+          pushMarantz({ action: "marantz", value: sceneExtra.marantz_dirac === "OFF" ? "PSDIRAC OFF" : `PSDIRAC ${sceneExtra.marantz_dirac}` });
+        }
+        if (!marantzOff && typeof sceneExtra.marantz_speaker_preset === "number") {
+          pushMarantz({ action: "marantz", value: `SPPR ${sceneExtra.marantz_speaker_preset}` });
+        }
 
         // 7. Projector tuning settings
         if (projPower !== "off") {
@@ -247,6 +271,13 @@ export const Route = createFileRoute("/api/public/trigger")({
             const v = projSettings[key];
             if (v === undefined || v === null) continue;
             pushProjector({ action: key, value: v as string | number });
+            if (key === "blank" && v === "on" && (sceneExtra.projector_blank_delay_seconds ?? 0) > 0) {
+              commands.push({
+                endpoint: "/api/projector",
+                body: { action: "blank", value: "off" },
+                delay_ms: Math.min(60, Math.max(0, sceneExtra.projector_blank_delay_seconds ?? 0)) * 1000,
+              });
+            }
           }
           const rc = projSettings.reality_creation;
           if (typeof rc === "number") {
@@ -283,7 +314,13 @@ export const Route = createFileRoute("/api/public/trigger")({
               marantz_power: scene.marantz_power,
               marantz_input: scene.marantz_input,
               marantz_volume: scene.marantz_volume,
+              marantz_mute: sceneExtra.marantz_mute,
+              marantz_sound_mode: sceneExtra.marantz_sound_mode,
+              marantz_smart_select: sceneExtra.marantz_smart_select,
+              marantz_dirac: sceneExtra.marantz_dirac,
+              marantz_speaker_preset: sceneExtra.marantz_speaker_preset,
               lights_on: scene.lights_on,
+              projector_blank_delay_seconds: sceneExtra.projector_blank_delay_seconds,
             },
             scene_lights: sceneLights,
             commands,

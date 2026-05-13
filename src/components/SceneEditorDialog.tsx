@@ -55,6 +55,19 @@ interface LightRow {
 }
 
 const LIGHT_DEFAULTS = { brightness: 80, kelvin: 3000, color_hex: "#ffaa55" };
+const SOUND_MODES = [
+  { code: "MOVIE", label: "Movie" },
+  { code: "MUSIC", label: "Music" },
+  { code: "GAME", label: "Game" },
+  { code: "DIRECT", label: "Direct" },
+  { code: "PURE DIRECT", label: "Pure Direct" },
+  { code: "STEREO", label: "Stereo" },
+  { code: "AUTO", label: "Auto" },
+  { code: "MCH STEREO", label: "Multi Ch Stereo" },
+  { code: "DOLBY DIGITAL", label: "Dolby Digital" },
+  { code: "DTS SURROUND", label: "DTS Surround" },
+];
+const DIRAC_SLOTS = ["OFF", "1", "2", "3"];
 
 export function SceneEditorDialog({ open, onOpenChange, householdCode, scene, onSaved }: Props) {
   const [tab, setTab] = useState("picture");
@@ -74,6 +87,11 @@ export function SceneEditorDialog({ open, onOpenChange, householdCode, scene, on
   const [marantzPower, setMarantzPower] = useState<"on" | "off" | null>(scene.marantz_power);
   const [marantzInput, setMarantzInput] = useState<string | null>(scene.marantz_input);
   const [marantzVolume, setMarantzVolume] = useState<number | null>(scene.marantz_volume);
+  const [marantzMute, setMarantzMute] = useState<boolean | null>(scene.marantz_mute);
+  const [marantzSoundMode, setMarantzSoundMode] = useState<string | null>(scene.marantz_sound_mode);
+  const [marantzSmartSelect, setMarantzSmartSelect] = useState<number | null>(scene.marantz_smart_select);
+  const [marantzDirac, setMarantzDirac] = useState<string | null>(scene.marantz_dirac);
+  const [marantzSpeakerPreset, setMarantzSpeakerPreset] = useState<number | null>(scene.marantz_speaker_preset);
   const [inputs, setInputs] = useState<MarantzInput[]>([]);
 
   // Lights
@@ -84,6 +102,7 @@ export function SceneEditorDialog({ open, onOpenChange, householdCode, scene, on
   const [projectorDelayMs, setProjectorDelayMs] = useState(scene.projector_delay_ms);
   const [marantzDelayMs, setMarantzDelayMs] = useState(scene.marantz_delay_ms);
   const [lightsDelayMs, setLightsDelayMs] = useState(scene.lights_delay_ms);
+  const [projectorBlankDelaySeconds, setProjectorBlankDelaySeconds] = useState(scene.projector_blank_delay_seconds ?? 0);
 
   // Reset state whenever dialog opens with a (potentially new) scene
   useEffect(() => {
@@ -94,10 +113,16 @@ export function SceneEditorDialog({ open, onOpenChange, householdCode, scene, on
     setMarantzPower(scene.marantz_power);
     setMarantzInput(scene.marantz_input);
     setMarantzVolume(scene.marantz_volume);
+    setMarantzMute(scene.marantz_mute);
+    setMarantzSoundMode(scene.marantz_sound_mode);
+    setMarantzSmartSelect(scene.marantz_smart_select);
+    setMarantzDirac(scene.marantz_dirac);
+    setMarantzSpeakerPreset(scene.marantz_speaker_preset);
     setLightsOn(scene.lights_on);
     setProjectorDelayMs(scene.projector_delay_ms);
     setMarantzDelayMs(scene.marantz_delay_ms);
     setLightsDelayMs(scene.lights_delay_ms);
+    setProjectorBlankDelaySeconds(scene.projector_blank_delay_seconds ?? 0);
     setTab("picture");
 
     setLoading(true);
@@ -145,7 +170,13 @@ export function SceneEditorDialog({ open, onOpenChange, householdCode, scene, on
         marantz_power: marantzPower,
         marantz_input: marantzInput,
         marantz_volume: marantzVolume,
+        marantz_mute: marantzMute,
+        marantz_sound_mode: marantzSoundMode,
+        marantz_smart_select: marantzSmartSelect,
+        marantz_dirac: marantzDirac,
+        marantz_speaker_preset: marantzSpeakerPreset,
         lights_on: lightsOn,
+        projector_blank_delay_seconds: projectorBlankDelaySeconds,
         projector_delay_ms: projectorDelayMs,
         marantz_delay_ms: marantzDelayMs,
         lights_delay_ms: lightsDelayMs,
@@ -247,6 +278,31 @@ export function SceneEditorDialog({ open, onOpenChange, householdCode, scene, on
                   showPowerAction
                 />
               </div>
+              <div className="rounded-lg border p-3 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <Label>Blank-delay</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Används bara om scenens Blank Screen är satt till Blank. Bilden blir synlig igen efter vald tid.
+                    </p>
+                  </div>
+                  <span className="font-mono text-sm text-primary tabular-nums">
+                    {projectorBlankDelaySeconds}s
+                  </span>
+                </div>
+                <Slider
+                  value={[projectorBlankDelaySeconds]}
+                  min={0}
+                  max={60}
+                  step={1}
+                  disabled={projectorSettings.blank !== "on"}
+                  onValueChange={([v]) => setProjectorBlankDelaySeconds(v)}
+                />
+                <div className="flex justify-between text-[10px] text-muted-foreground">
+                  <span>0s = permanent blank</span>
+                  <span>60s max</span>
+                </div>
+              </div>
             </TabsContent>
 
             {/* ----------- LJUD ----------- */}
@@ -297,6 +353,63 @@ export function SceneEditorDialog({ open, onOpenChange, householdCode, scene, on
                     setMarantzVolume(e.target.value === "" ? null : Number(e.target.value))
                   }
                 />
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <Label>Mute</Label>
+                  <Select
+                    value={marantzMute === null ? "none" : marantzMute ? "on" : "off"}
+                    onValueChange={(v) => setMarantzMute(v === "none" ? null : v === "on")}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">— rör inte —</SelectItem>
+                      <SelectItem value="on">Mute på</SelectItem>
+                      <SelectItem value="off">Mute av</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label>Sound Mode</Label>
+                  <Select value={marantzSoundMode ?? "none"} onValueChange={(v) => setMarantzSoundMode(v === "none" ? null : v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">— rör inte —</SelectItem>
+                      {SOUND_MODES.map((m) => <SelectItem key={m.code} value={m.code}>{m.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label>Smart Select</Label>
+                  <Select value={marantzSmartSelect ? String(marantzSmartSelect) : "none"} onValueChange={(v) => setMarantzSmartSelect(v === "none" ? null : Number(v))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">— rör inte —</SelectItem>
+                      {[1, 2, 3, 4].map((n) => <SelectItem key={n} value={String(n)}>Smart {n}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label>Dirac</Label>
+                  <Select value={marantzDirac ?? "none"} onValueChange={(v) => setMarantzDirac(v === "none" ? null : v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">— rör inte —</SelectItem>
+                      {DIRAC_SLOTS.map((slot) => <SelectItem key={slot} value={slot}>{slot === "OFF" ? "Off" : `Slot ${slot}`}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1 sm:col-span-2">
+                  <Label>Speaker Preset</Label>
+                  <Select value={marantzSpeakerPreset ? String(marantzSpeakerPreset) : "none"} onValueChange={(v) => setMarantzSpeakerPreset(v === "none" ? null : Number(v))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">— rör inte —</SelectItem>
+                      <SelectItem value="1">Preset 1</SelectItem>
+                      <SelectItem value="2">Preset 2</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </TabsContent>
 

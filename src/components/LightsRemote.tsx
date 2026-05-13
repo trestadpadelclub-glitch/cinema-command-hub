@@ -23,7 +23,9 @@ import {
 } from "@/lib/scenes";
 import {
   sendScene,
+  sendSceneLights,
   type SceneLightCommand,
+  type LightStatus,
 } from "@/lib/projector";
 import { toast } from "sonner";
 
@@ -46,15 +48,20 @@ export function LightsRemote({ householdCode }: Props) {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<"on" | "off" | null>(null);
   const [offset, setOffset] = useState(0); // -50..+50
+  const [lightBusy, setLightBusy] = useState<string | null>(null);
+  const [manualLevels, setManualLevels] = useState<Record<string, number>>({});
+  const lightDeviceIds = useMemo(() => lights.map((l) => l.tuya_device_id).filter(Boolean), [lights]);
 
   // Realtidsstatus från bryggan (v33). Pollar var 5s.
-  const { lights: lightStatus, reachable: statusReachable } = useLightsStatus({
+  const { lights: lightStatus, reachable: statusReachable, refetch: refetchLightsStatus } = useLightsStatus({
     enabled: true,
     intervalSeconds: 5,
+    deviceIds: lightDeviceIds,
   });
 
   // Debounce timer för live-skickning under draggning
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lightDebounceRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   // Initial load
   useEffect(() => {
@@ -248,6 +255,65 @@ export function LightsRemote({ householdCode }: Props) {
     pushLiveOffset(next);
   };
 
+  const buildSingleLightCommand = (
+    light: Light,
+    st: LightStatus | undefined,
+    on: boolean,
+    brightness = manualLevels[light.id] ?? st?.brightness ?? 80,
+  ): SceneLightCommand => {
+    const cmd: SceneLightCommand = {
+      device_id: light.tuya_device_id,
+      name: light.name,
+      type: light.light_type,
+      on,
+    };
+    if (on) {
+      cmd.brightness = clamp(Math.round(brightness), 1, 100);
+      if ((light.light_type === "cct" || light.light_type === "rgbcct") && typeof st?.kelvin === "number") {
+        cmd.kelvin = st.kelvin;
+      }
+      if ((light.light_type === "rgb" || light.light_type === "rgbcct") && st?.color_hex) {
+        cmd.color = st.color_hex;
+      }
+    }
+    return cmd;
+  };
+
+  const sendSingleLight = async (
+    light: Light,
+    st: LightStatus | undefined,
+    on: boolean,
+    brightness?: number,
+    showToast = true,
+  ) => {
+    setLightBusy(light.id);
+    const res = await sendSceneLights([buildSingleLightCommand(light, st, on, brightness)]);
+    setLightBusy(null);
+    if (!res.ok) {
+      toast.error(`Kunde inte styra ${light.name}`, {
+        description: res.error || `Status ${res.status}`,
+      });
+      return;
+    }
+    if (showToast) toast.success(`${light.name}: ${on ? "ON" : "OFF"}`);
+    setTimeout(() => refetchLightsStatus().catch(() => {}), 450);
+  };
+
+  const handleLightLevel = (light: Light, st: LightStatus | undefined, value: number) => {
+    const level = clamp(Math.round(value), 1, 100);
+    setManualLevels((prev) => ({ ...prev, [light.id]: level }));
+    if (lightDebounceRef.current[light.id]) clearTimeout(lightDebounceRef.current[light.id]);
+    lightDebounceRef.current[light.id] = setTimeout(() => {
+      void sendSingleLight(light, st, true, level, false);
+    }, 220);
+  };
+
+  useEffect(() => {
+    return () => {
+      Object.values(lightDebounceRef.current).forEach((timer) => clearTimeout(timer));
+    };
+  }, []);
+
   const saveOnScene = (id: string) => {
     setOnSceneId(id);
     localStorage.setItem(LS_ON_KEY(householdCode), id);
@@ -420,19 +486,22 @@ export function LightsRemote({ householdCode }: Props) {
           {lights.map((light) => {
             const st = lightStatus.find((s) => s.device_id === light.tuya_device_id);
             const isOn = st?.on === true;
+            const level = manualLevels[light.id] ?? st?.brightness ?? (isOn ? 100 : 80);
+            const busyThisLight = lightBusy === light.id;
             return (
               <div
                 key={light.id}
-                className="flex items-center gap-3 rounded-md border p-2.5 text-xs"
+                className="grid gap-3 rounded-md border p-3 text-xs sm:grid-cols-[1fr_240px] sm:items-center"
               >
-                <div
-                  className={`h-2 w-2 rounded-full flex-shrink-0 ${
-                    st?.online ? "bg-emerald-400" : "bg-muted-foreground/40"
-                  }`}
-                  title={st?.online ? "online" : "offline"}
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
+                <div className="flex items-start gap-3 min-w-0">
+                  <div
+                    className={`mt-1 h-2 w-2 rounded-full flex-shrink-0 ${
+                      st?.online ? "bg-primary" : "bg-muted-foreground/40"
+                    }`}
+                    title={st?.online ? "online" : "offline"}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
                     <span className="font-medium truncate">{light.name}</span>
                     <Badge variant="outline" className="text-[9px] uppercase">
                       {light.light_type}
@@ -441,29 +510,24 @@ export function LightsRemote({ householdCode }: Props) {
                       <Badge
                         variant="outline"
                         className={`text-[9px] ${
-                          isOn ? "border-amber-500/50 text-amber-400" : "text-muted-foreground"
+                          isOn ? "border-primary/50 text-primary" : "text-muted-foreground"
                         }`}
                       >
                         {isOn ? "ON" : "OFF"}
                       </Badge>
                     )}
-                  </div>
-                  {isOn && (
-                    <div className="mt-1 flex items-center gap-3 text-[10px] text-muted-foreground">
-                      {typeof st?.brightness === "number" && (
-                        <span className="flex items-center gap-1">
-                          <div className="w-12 h-1 rounded bg-muted overflow-hidden">
-                            <div
-                              className="h-full bg-amber-400"
-                              style={{ width: `${Math.max(0, Math.min(100, st.brightness))}%` }}
-                            />
-                          </div>
-                          {st.brightness}%
-                        </span>
-                      )}
-                      {typeof st?.kelvin === "number" && (
-                        <span>{st.kelvin}K</span>
-                      )}
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-3 text-[10px] text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <div className="w-16 h-1 rounded bg-muted overflow-hidden">
+                          <div
+                            className="h-full bg-primary"
+                            style={{ width: `${Math.max(0, Math.min(100, Number(st?.brightness ?? 0)))}%` }}
+                          />
+                        </div>
+                        {typeof st?.brightness === "number" ? `${st.brightness}%` : "—%"}
+                      </span>
+                      {typeof st?.kelvin === "number" && <span>{st.kelvin}K</span>}
                       {st?.color_hex && (
                         <span className="flex items-center gap-1">
                           <span
@@ -474,7 +538,41 @@ export function LightsRemote({ householdCode }: Props) {
                         </span>
                       )}
                     </div>
-                  )}
+                  </div>
+                </div>
+                <div className="grid gap-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      size="sm"
+                      variant={!isOn ? "default" : "secondary"}
+                      disabled={busyThisLight}
+                      onClick={() => void sendSingleLight(light, st, false)}
+                    >
+                      {busyThisLight ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "OFF"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={isOn ? "default" : "secondary"}
+                      disabled={busyThisLight}
+                      onClick={() => void sendSingleLight(light, st, true, level)}
+                    >
+                      {busyThisLight ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "ON"}
+                    </Button>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-[10px] text-muted-foreground">
+                      <span>Intensitet</span>
+                      <span className="font-mono">{level}%</span>
+                    </div>
+                    <Slider
+                      min={1}
+                      max={100}
+                      step={1}
+                      value={[level]}
+                      onValueChange={([v]) => handleLightLevel(light, st, v)}
+                      disabled={busyThisLight}
+                    />
+                  </div>
                 </div>
               </div>
             );

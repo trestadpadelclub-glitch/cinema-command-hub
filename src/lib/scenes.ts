@@ -11,11 +11,17 @@ export interface Scene {
   marantz_power: "on" | "off" | null;
   marantz_input: string | null;
   marantz_volume: number | null;
+  marantz_mute: boolean | null;
+  marantz_sound_mode: string | null;
+  marantz_smart_select: number | null;
+  marantz_dirac: string | null;
+  marantz_speaker_preset: number | null;
   lights_on: boolean | null;
   scene_payload: string | null;
   projector_delay_ms: number;
   marantz_delay_ms: number;
   lights_delay_ms: number;
+  projector_blank_delay_seconds: number;
   updated_at: string;
 }
 

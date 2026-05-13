@@ -275,7 +275,7 @@ async function postJson(
     } catch {
       /* keep raw */
     }
-    return { ok: res.ok, status: res.status, data, command };
+    return { ok: normalizeBridgeOk(res.ok, res.status, data, command), status: res.status, data, command };
   } catch (err) {
     return {
       ok: false,
@@ -284,6 +284,16 @@ async function postJson(
       command,
     };
   }
+}
+
+function normalizeBridgeOk(ok: boolean, status: number, data: unknown, command: SingleCommand): boolean {
+  if (ok) return true;
+  if (command.action !== "remote_key" || status !== 502 || !data || typeof data !== "object") return false;
+  const payload = data as Record<string, unknown>;
+  // Äldre Python-bryggor kan returnera 502/err_cmd för Sony IR-navigation trots
+  // att projektorn faktiskt utför knapptrycket. Räkna bara detta som OK när det
+  // saknas riktigt socket-/transportfel.
+  return typeof payload.reply === "string" && payload.error === undefined;
 }
 
 // --- low level ---
@@ -303,7 +313,7 @@ export async function sendCommand(cmd: SingleCommand): Promise<CommandResult> {
     } catch {
       /* keep raw text */
     }
-    return { ok: res.ok, status: res.status, data, command: cmd };
+    return { ok: normalizeBridgeOk(res.ok, res.status, data, cmd), status: res.status, data, command: cmd };
   } catch (err) {
     return {
       ok: false,
@@ -359,6 +369,8 @@ const SETTINGS_ACTIONS: Action[] = [
   "motionflow",
   "gamma_correction",
   "color_temp",
+  "input",
+  "blank",
 ];
 
 /**
@@ -736,8 +748,14 @@ export interface SceneCommandPayload {
   marantzPower?: "on" | "off" | null;
   marantzInput?: string | null;
   marantzVolume?: number | null;
+  marantzMute?: boolean | null;
+  marantzSoundMode?: string | null;
+  marantzSmartSelect?: number | null;
+  marantzDirac?: string | null;
+  marantzSpeakerPreset?: number | null;
   lightsOn?: boolean | null;
   sceneLights?: SceneLightCommand[];
+  projectorBlankDelaySeconds?: number;
   /** Fördröjning innan FÖRSTA projektor-kommandot. */
   projectorDelayMs?: number;
   /** Fördröjning innan FÖRSTA marantz-kommandot. */
@@ -763,6 +781,27 @@ export async function sendScene(p: SceneCommandPayload): Promise<CommandResult[]
   const waitLights = async () => {
     if (lightsDelayPending > 0) await sleep(lightsDelayPending);
     lightsDelayPending = 0;
+  };
+  const applyProjectorSettingsWithBlankDelay = async (settings: ProjectorSettings) => {
+    const { power: powerAction, blank, ...rest } = settings;
+    const shouldTemporaryBlank = blank === "on" && (p.projectorBlankDelaySeconds ?? 0) > 0;
+    if (!shouldTemporaryBlank) {
+      const more = await applySettings(settings);
+      results.push(...more);
+      return;
+    }
+    if (powerAction === "on" || powerAction === "off") {
+      const powerRes = await sendCommand({ action: "power" as Action, value: powerAction });
+      results.push(powerRes);
+      if (!powerRes.ok || powerAction === "off") return;
+    }
+    results.push(await sendCommand({ action: "blank", value: "on" }));
+    const more = await applySettings(rest);
+    results.push(...more);
+    if (shouldTemporaryBlank) {
+      await sleep(Math.min(60, Math.max(0, p.projectorBlankDelaySeconds ?? 0)) * 1000);
+      results.push(await sendCommand({ action: "blank", value: "off" }));
+    }
   };
 
   await waitProjector();
@@ -793,8 +832,7 @@ export async function sendScene(p: SceneCommandPayload): Promise<CommandResult[]
     results.push(await sendMarantz(p.marantzPower === "on" ? "PWON" : "PWSTANDBY"));
     if (p.marantzPower === "off") {
       if (p.projectorSettings && Object.keys(p.projectorSettings).length > 0) {
-        const more = await applySettings(p.projectorSettings);
-        results.push(...more);
+        await applyProjectorSettingsWithBlankDelay(p.projectorSettings);
       }
       return results;
     }
@@ -808,9 +846,28 @@ export async function sendScene(p: SceneCommandPayload): Promise<CommandResult[]
     const v = String(p.marantzVolume).padStart(2, "0");
     results.push(await sendMarantz(`MV${v}`));
   }
+  if (typeof p.marantzMute === "boolean") {
+    await waitMarantz();
+    results.push(await sendMarantz(`MU${p.marantzMute ? "ON" : "OFF"}`));
+  }
+  if (p.marantzSoundMode) {
+    await waitMarantz();
+    results.push(await sendMarantz(`MS${p.marantzSoundMode}`));
+  }
+  if (typeof p.marantzSmartSelect === "number") {
+    await waitMarantz();
+    results.push(await sendMarantz(`MSSMART${p.marantzSmartSelect}`));
+  }
+  if (p.marantzDirac) {
+    await waitMarantz();
+    results.push(await sendMarantz(p.marantzDirac === "OFF" ? "PSDIRAC OFF" : `PSDIRAC ${p.marantzDirac}`));
+  }
+  if (typeof p.marantzSpeakerPreset === "number") {
+    await waitMarantz();
+    results.push(await sendMarantz(`SPPR ${p.marantzSpeakerPreset}`));
+  }
   if (p.projectorSettings && Object.keys(p.projectorSettings).length > 0) {
-    const more = await applySettings(p.projectorSettings);
-    results.push(...more);
+    await applyProjectorSettingsWithBlankDelay(p.projectorSettings);
   }
   return results;
 }
@@ -980,13 +1037,14 @@ export interface LightStatus {
   error?: string;
 }
 
-export async function getLightsStatus(): Promise<{
+export async function getLightsStatus(deviceIds: string[] = []): Promise<{
   ok: boolean;
   lights: LightStatus[];
   error?: string;
 }> {
   try {
-    const url = lightsUrl() + "/status";
+    const qs = deviceIds.length > 0 ? `?devices=${encodeURIComponent(deviceIds.join(","))}` : "";
+    const url = lightsUrl() + "/status" + qs;
     const res = await fetch(url, {
       headers: { Accept: "application/json", "ngrok-skip-browser-warning": "true" },
     });
