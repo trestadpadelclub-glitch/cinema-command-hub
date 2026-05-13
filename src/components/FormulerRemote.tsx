@@ -1178,7 +1178,7 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
 
             {/* Transport-rad — visas bara när en app är vald */}
             {activeApp && transports.length > 0 && (
-              <div className="flex items-center gap-1 pt-1 border-t border-border/50 w-full justify-center">
+              <div className="flex flex-wrap items-center gap-1 pt-1 border-t border-border/50 w-full justify-center">
                 <span className="text-[10px] text-muted-foreground mr-1">
                   {APPS.find((a) => a.key === activeApp)?.label}:
                 </span>
