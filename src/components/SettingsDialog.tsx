@@ -127,13 +127,13 @@ export function SettingsDialog() {
             <div className="rounded-md border border-border/50 bg-muted/30 p-3 text-xs text-muted-foreground space-y-1">
               <p className="font-medium text-foreground">Lokalt LAN-läge (iPhone/iPad på samma WiFi)</p>
               <p>1. Installera beroenden: <code>pip install tinytuya pychromecast</code></p>
-              <p>2. Starta bryggan (v42): <code>python Formuler_alfa_status_v42.py</code></p>
+              <p>2. Starta bryggan (v43): <code>python Formuler_alfa_status_v43.py</code></p>
               <p>3. Starta appen: <code>bun dev --host</code></p>
               <p>4. Öppna <code>http://&lt;datorns-IP&gt;:5173</code> i Safari på iPad/iPhone.</p>
               <p>5. Sätt Bridge URL ovan till <code>http://&lt;datorns-IP&gt;:5000/api/projector</code>.</p>
               <p className="pt-1 text-[10px]">
-                <a href="/downloads/Formuler_alfa_status_v42.py" download className="text-primary underline">
-                  Ladda ner v42
+                <a href="/downloads/Formuler_alfa_status_v43.py" download className="text-primary underline">
+                  Ladda ner v43
                 </a>
                 {" · "}
                 <span>v42 lägger till <code>GET /api/remote/scene/&lt;n&gt;</code> för fysiska fjärrkontrollsknappar — t.ex. <code>/api/remote/scene/7</code> kör Scen 7 (Tänd) och <code>/8</code> kör Scen 8 (Släck). Returnerar <code>{`{"status":"ok"}`}</code> direkt och kör scenen i bakgrunden. Behåller v41:s smarta Blank-cykel.</span>
