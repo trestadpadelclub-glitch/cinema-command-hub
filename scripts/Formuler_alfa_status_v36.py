@@ -111,8 +111,8 @@ Endpoints:
 
 Konfiguration (env-variabler):
     PROJECTOR_HOST   = projektorns IP   (default 192.168.86.114)
-    PROJECTOR_PORT   = ADCP-port        (default 53595)
-    PROJECTOR_PASS   = ADCP-lösenord    (default "Projector")
+    PROJECTOR_PORT   = SDCP/PJ Talk port (default 53484)
+    PROJECTOR_PASS   = (oanvänd för SDCP — community är alltid "SONY")
     MARANTZ_HOST     = receiverns IP    (default tom = stub-läge)
     MARANTZ_PORT     = Telnet-port      (default 23)
     BRIDGE_PORT      = HTTP-port        (default 5000)
