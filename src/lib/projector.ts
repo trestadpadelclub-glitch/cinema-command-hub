@@ -1047,7 +1047,7 @@ export interface LightStatus {
   brightness?: number;
   kelvin?: number;
   color_hex?: string;
-  last_seen?: string;
+  last_seen?: string | number;
   error?: string;
 }
 
