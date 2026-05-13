@@ -933,12 +933,34 @@ def _parse_value(reply: str) -> Optional[str]:
     return reply.strip()
 
 
-REMOTE_KEY_MAP: Dict[str, str] = {}  # SDCP saknar remote-keys på HW65ES
+# HW65ES SDCP IR-simulering: item = 0x17XX där XX = IR-kod ur Sony Table 2-7..2-11.
+REMOTE_KEY_MAP: Dict[str, int] = {
+    "reset":            0x7B,  # RESET (Picture Mode reset)
+    "menu":             0x29,
+    "enter":            0x5A,  # OK / ENTER
+    "up":               0x35,
+    "down":             0x36,
+    "left":             0x34,
+    "right":            0x33,
+    "exit":             0x2F,
+    "input":            0x05,
+    "power_on":         0x2E,
+    "power_off":        0x2F,
+}
 
 
 def adcp_key(key: str) -> str:
-    _log(f"REMOTE {key!r} -> SKIPPED (SDCP saknar remote-keys på HW65ES — använd CEC/IR)")
-    return "skipped"
+    code = REMOTE_KEY_MAP.get(key.lower())
+    if code is None:
+        _log(f"REMOTE {key!r} -> SKIPPED (okänd IR-kod)")
+        return "skipped"
+    item_code = 0x1700 | (code & 0xFF)
+    _log(f"REMOTE {key!r} -> SDCP IR item=0x{item_code:04X}")
+    try:
+        return _adcp_set_raw(item_code, 0x0000)
+    except (socket.error, AdcpError) as e:
+        _log(f"REMOTE {key!r} fail: {e}")
+        return f"err:{e}"
 
 
 def _wait_until_active(timeout: float = 30.0, poll_interval: float = 1.5) -> bool:
