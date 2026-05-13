@@ -1386,6 +1386,7 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 }
