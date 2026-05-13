@@ -1815,12 +1815,11 @@ class FormulerMonitor(threading.Thread):
             or "ismusicactive: 1" in audio_lower
         )
 
-        # Signal 2: AudioPlaybackConfiguration med state:started/playing.
-        # Formuler/MOL3/VLC rapporterar uppspelning så här. Vi ignorerar
-        # systemljud (SoundPool, USAGE_ASSISTANCE_*, USAGE_NOTIFICATION).
-        # OBS: vi splittar både på radbrytning OCH på ' | ' eftersom
-        # adb-output ibland kommer på en enda rad.
+        # Signal 2: AudioPlaybackConfiguration för riktig ljudstatus.
+        # MOL3 lämnar ofta MediaSession fast på state=3, så paus/start måste
+        # avgöras från USAGE_MEDIA-radernas state:started/state:paused.
         playback_active = False
+        playback_paused = False
         candidate_lines: list[str] = []
         for raw_line in audio_text.splitlines():
             for piece in raw_line.split(" | "):
@@ -1829,45 +1828,33 @@ class FormulerMonitor(threading.Thread):
                     candidate_lines.append(piece)
         for line in candidate_lines:
             low = line.lower()
-            # Måste vara en AudioPlaybackConfiguration-rad
             if "audioplaybackconfiguration" not in low:
                 continue
-            # Måste vara aktivt tillstånd (started/playing)
-            if not any(s in low for s in ("state:started", "state:playing", "state=started", "state=playing")):
-                continue
-            # Filtrera bort inaktiva states som råkar nämnas på samma rad
-            if "state:idle" in low or "state:paused" in low or "state:stopped" in low:
-                # Endast filtrera om started/playing INTE finns separat
-                if not any(s in low for s in ("state:started", "state:playing")):
-                    continue
-            # Filtrera systemljud baserat på typ
             if "soundpool" in low:
                 continue
-            # Filtrera systemljud baserat på usage
             if any(u in low for u in (
                 "usage_assistance", "usage_notification", "usage_alarm",
                 "usage_voice_communication", "usage_unknown",
             )):
                 continue
-            # KRÄV att det är mediauppspelning (film/musik/spel)
             if not any(u in low for u in ("usage_media", "usage_game", "usage_movie")):
                 continue
-            playback_active = True
-            break
+            if any(s in low for s in ("state:started", "state:playing", "state=started", "state=playing")):
+                playback_active = True
+                continue
+            if any(s in low for s in ("state:paused", "state=paused")):
+                playback_paused = True
 
         audio_active = music_active or playback_active
         audio_hint = "active" if audio_active else "inactive"
 
-        # Fallback: vissa Formuler-firmware/appkombinationer rapporterar alltid
-        # MediaSession state=0 även när video faktiskt spelas. Då använder vi
-        # ljudaktivitet + aktiv spelapp som signal för playing/paused.
-        # Ljud-fallback: om MediaSession inte rapporterar PLAYING men det finns
-        # mediauppspelning (USAGE_MEDIA, state:started) och vi är i en filmapp,
-        # behandla det som att film spelas. Vissa firmware/appkombinationer
-        # rapporterar pb_int=0/1/2 även när video faktiskt körs.
-        if play != "playing" and focus in _FORMULER_PLAYER_PACKAGES:
+        # Fallback/override: MOL3 kan lämna MediaSession på pb_int=3 även när
+        # filmen är pausad. I filmappar får därför faktisk ljudstatus styra.
+        if focus in _FORMULER_PLAYER_PACKAGES:
             if audio_active:
                 play = "playing"
+            elif playback_paused:
+                play = "paused"
             elif self._play_state == "playing":
                 play = "paused"
 
@@ -1878,6 +1865,7 @@ class FormulerMonitor(threading.Thread):
             "focus_component": focus_component,
             "pb_int": pb_int,
             "audio": audio_hint,
+            "audio_media": "started" if playback_active else ("paused" if playback_paused else "none"),
             "audio_raw": " | ".join(line.strip() for line in audio_text.splitlines() if line.strip())[:1500],
             "audio_full": audio_text,
             "play": play,
@@ -1941,6 +1929,7 @@ class FormulerMonitor(threading.Thread):
         focus = st["focus"]
         pb_int = st.get("pb_int", 0)
         audio = st.get("audio", "-")
+        audio_media = st.get("audio_media", "-")
         audio_raw = st.get("audio_raw", "")
         audio_active = audio == "active"
 
@@ -1972,7 +1961,7 @@ class FormulerMonitor(threading.Thread):
         if (now - self._last_heartbeat) >= 30.0:
             _log(
                 f"FORMULER heartbeat box={'on' if box_on else 'off'} "
-                f"play={play} pb_int={pb_int} audio={audio} state={self._play_state} "
+                f"play={play} pb_int={pb_int} audio={audio}/{audio_media} state={self._play_state} "
                 f"focus={focus or '-'} audio_raw={audio_raw or '-'}"
             )
             self._last_heartbeat = now
@@ -1984,6 +1973,9 @@ class FormulerMonitor(threading.Thread):
             self._play_state = play if box_on else "stopped"
             self._last_focus = focus
             _log(f"FORMULER baseline: box={'on' if box_on else 'off'} play={play} focus={focus}")
+            if box_on and focus in _FORMULER_PLAYER_PACKAGES and play == "playing":
+                _log("FORMULER baseline sync: skickar movie_playing")
+                self._post_trigger("movie_playing")
             return
 
         if box_on != self._box_on:
