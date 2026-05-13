@@ -50,6 +50,10 @@ import {
   sendMarantz,
   sendScene,
   marantzMvToDb,
+  getStatus,
+  parseStatus,
+  getLightsStatus,
+  getBridgeUrl,
   type MarantzStatus,
   type SceneLightCommand,
 } from "@/lib/projector";
@@ -357,6 +361,59 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
     if (activeApp) localStorage.setItem(ACTIVE_APP_KEY, activeApp);
   }, [activeApp]);
 
+  // Status-LEDs i låst läge: projektor / marantz / formuler / lights
+  const [projOn, setProjOn] = useState<boolean | null>(null);
+  const [formulerOn, setFormulerOn] = useState<boolean | null>(null);
+  const [lightsOn, setLightsOn] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (!locked) return;
+    let alive = true;
+    const tick = async () => {
+      // Projektor
+      try {
+        const r = await getStatus();
+        if (!alive) return;
+        if (r.ok) {
+          const p = parseStatus(r.data);
+          setProjOn(p.power === "on");
+        } else {
+          setProjOn(false);
+        }
+      } catch { if (alive) setProjOn(false); }
+      // Formuler — pinga bridge-endpoint för boxen
+      try {
+        const base = getBridgeUrl();
+        const url = base.replace(/\/api\/projector$/i, "/api/formuler/list_apps");
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), 3500);
+        const res = await fetch(url, {
+          headers: { accept: "application/json", "ngrok-skip-browser-warning": "true" },
+          signal: ctrl.signal,
+        });
+        clearTimeout(t);
+        const d = await res.json().catch(() => ({}));
+        if (!alive) return;
+        setFormulerOn(res.ok && !!d?.ok);
+      } catch { if (alive) setFormulerOn(false); }
+      // Lights — minst en lampa online och tänd
+      try {
+        const r = await getLightsStatus();
+        if (!alive) return;
+        if (r.ok) {
+          setLightsOn(r.lights.some((l) => l.online && l.on));
+        } else {
+          setLightsOn(false);
+        }
+      } catch { if (alive) setLightsOn(false); }
+    };
+    tick();
+    const id = setInterval(tick, 8000);
+    return () => { alive = false; clearInterval(id); };
+  }, [locked]);
+
+  const marantzOn = marantzReachable !== false && marantzStatus?.power === "on";
+
   // Synka volym-slider med pollad status, men bara när användaren inte drar.
   useEffect(() => {
     if (draggingVol.current) return;
@@ -660,7 +717,7 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
   ) => (
     <Button
       variant="secondary"
-      className={`h-14 w-14 rounded-full p-0 ${extra}`}
+      className={`${locked ? "h-16 w-16" : "h-14 w-14"} rounded-full p-0 ${extra}`}
       onClick={() => press(key, label)}
       disabled={busy === key}
       aria-label={label}
@@ -716,23 +773,47 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
       }
     >
       {locked && (
-        <button
-          type="button"
-          onDoubleClick={() => setLocked(false)}
-          onClick={(e) => e.preventDefault()}
-          className="shrink-0 w-full text-center text-[12px] font-semibold py-2 bg-primary/15 text-primary border-b border-primary/40 select-none touch-manipulation"
-          title="Dubbelklicka för att låsa upp"
-        >
-          🔒 LÅST — dubbelklicka här för att låsa upp
-        </button>
+        <div className="shrink-0 w-full bg-primary/15 border-b border-primary/40">
+          <div className="flex items-center justify-center gap-2 pt-1.5">
+            {[
+              { on: projOn, title: "Projektor" },
+              { on: marantzOn, title: "Marantz" },
+              { on: formulerOn, title: "Formuler" },
+              { on: lightsOn, title: "Lights" },
+            ].map((s, i) => (
+              <span
+                key={i}
+                title={`${s.title}: ${s.on === null ? "okänt" : s.on ? "ON" : "OFF"}`}
+                className={
+                  "h-3 w-3 rounded-full border " +
+                  (s.on === null
+                    ? "bg-muted-foreground/30 border-muted-foreground/40"
+                    : s.on
+                      ? "bg-emerald-500 border-emerald-300 shadow-[0_0_6px_rgb(16_185_129/0.8)]"
+                      : "bg-red-500 border-red-300 shadow-[0_0_6px_rgb(239_68_68/0.8)]")
+                }
+              />
+            ))}
+          </div>
+          <button
+            type="button"
+            onDoubleClick={() => setLocked(false)}
+            onClick={(e) => e.preventDefault()}
+            className="w-full text-center text-[11px] font-semibold py-1 text-primary select-none touch-manipulation"
+            title="Dubbelklicka för att låsa upp"
+          >
+            🔒 LÅST — dubbelklicka här för att låsa upp
+          </button>
+        </div>
       )}
       <div
         className={
           locked
-            ? "flex-1 min-h-0 overflow-y-auto p-1.5 space-y-1.5 [&_.p-4]:p-2 [&_.h-20]:h-12 [&_.h-44]:h-28 [&_.min-h-\\[180px\\]]:min-h-[110px] [&_.h-16]:h-12 [&_.w-16]:w-12 [&_.h-14]:h-12 [&_.w-14]:w-12"
+            ? "flex-1 min-h-0 overflow-hidden p-1.5 flex flex-col gap-1.5 [&_.p-4]:p-2"
             : "space-y-4"
         }
       >
+
         {!locked && (
           <div className="flex justify-end">
             <Button
@@ -978,10 +1059,10 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
       </Card>
 
       {/* Huvudpanel: lights · navigation/transport · marantz volume */}
-      <Card className="p-4">
-        <div className="grid grid-cols-[auto_1fr_auto] gap-4 items-stretch">
+      <Card className={locked ? "p-2 flex-1 min-h-0 flex flex-col" : "p-4"}>
+        <div className={`grid grid-cols-[auto_1fr_auto] gap-4 items-stretch ${locked ? "h-full min-h-0" : ""}`}>
           {/* VÄNSTER: ljus */}
-          <div className="flex flex-col items-center gap-2 min-w-[64px]">
+          <div className={`flex flex-col items-center gap-2 ${locked ? "min-w-[72px]" : "min-w-[64px]"}`}>
             <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
               Ljus
             </Label>
@@ -989,35 +1070,35 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
               <Button
                 variant="secondary"
                 size="icon"
-                className="h-9 w-9"
+                className={locked ? "h-12 w-12" : "h-9 w-9"}
                 onClick={() => handleLights("on")}
                 disabled={lightsBusy !== null}
                 title="Ljus på"
                 aria-label="Ljus på"
               >
                 {lightsBusy === "on" ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className={locked ? "h-6 w-6 animate-spin" : "h-4 w-4 animate-spin"} />
                 ) : (
-                  <Lightbulb className="h-4 w-4 text-amber-400" />
+                  <Lightbulb className={locked ? "h-6 w-6 text-amber-400" : "h-4 w-4 text-amber-400"} />
                 )}
               </Button>
               <Button
                 variant="secondary"
                 size="icon"
-                className="h-9 w-9"
+                className={locked ? "h-12 w-12" : "h-9 w-9"}
                 onClick={() => handleLights("off")}
                 disabled={lightsBusy !== null}
                 title="Ljus av"
                 aria-label="Ljus av"
               >
                 {lightsBusy === "off" ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className={locked ? "h-6 w-6 animate-spin" : "h-4 w-4 animate-spin"} />
                 ) : (
-                  <Power className="h-4 w-4" />
+                  <Power className={locked ? "h-6 w-6" : "h-4 w-4"} />
                 )}
               </Button>
             </div>
-            <div className="flex-1 flex flex-col items-center gap-1.5 pt-1 min-h-[180px]">
+            <div className={`flex flex-col items-center gap-1.5 pt-1 w-full ${locked ? "flex-1 min-h-0" : "flex-1 min-h-[180px]"}`}>
               <span className="text-[10px] font-mono tabular-nums text-muted-foreground">
                 {lightsBrightness}%
               </span>
@@ -1032,7 +1113,7 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
                   setLightsBrightness(next);
                   pushLightsBrightness(next);
                 }}
-                className="h-44"
+                className={locked ? "flex-1 min-h-0" : "h-44"}
                 aria-label="Ljusintensitet"
               />
               <span className="text-[9px] text-muted-foreground">10–90%</span>
@@ -1064,7 +1145,7 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
               <div />
               {dpadBtn("left", "Vänster", <ChevronLeft className="h-6 w-6" />)}
               <Button
-                className="h-16 w-16 rounded-full text-base font-semibold shadow-[var(--cinema-glow)]"
+                className={`${locked ? "h-20 w-20 text-lg" : "h-16 w-16 text-base"} rounded-full font-semibold shadow-[var(--cinema-glow)]`}
                 onClick={() => press("ok", "OK")}
                 disabled={busy === "ok"}
                 aria-label="OK"
@@ -1199,7 +1280,7 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
                 <Plus className="h-3.5 w-3.5" />
               </Button>
             </div>
-            <div className="flex-1 flex flex-col items-center gap-1.5 min-h-[180px]">
+            <div className={`flex flex-col items-center gap-1.5 w-full ${locked ? "flex-1 min-h-0" : "flex-1 min-h-[180px]"}`}>
               <span className="text-xs font-mono tabular-nums">
                 MV{String(volDraft).padStart(2, "0")}
               </span>
@@ -1211,7 +1292,7 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
                 value={[volDraft]}
                 onValueChange={handleVolChange}
                 onValueCommit={handleVolCommit}
-                className="h-44"
+                className={locked ? "flex-1 min-h-0" : "h-44"}
                 aria-label="Marantz volym"
               />
               <span
