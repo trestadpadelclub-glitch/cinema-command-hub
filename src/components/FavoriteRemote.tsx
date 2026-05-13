@@ -84,13 +84,18 @@ const ACTIVE_APP_KEY = "formuler_active_app";
 const FAV_LIGHTS_PCT_KEY = "favorite_remote_lights_pct";
 const LS_ON_KEY = (h: string) => `lights_remote_on_scene_${h}`;
 const LS_OFF_KEY = (h: string) => `lights_remote_off_scene_${h}`;
+const LEGACY_MOL3_PACKAGES = new Set(["com.formuler.mol3", "com.formuler.mytvonline3"]);
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
 
 function loadPackages(): Record<AppKey, string> {
   if (typeof window === "undefined") return {} as Record<AppKey, string>;
   try {
     const raw = localStorage.getItem(PKG_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : ({} as Record<AppKey, string>);
+    const parsed = raw ? JSON.parse(raw) : ({} as Record<AppKey, string>);
+    if (LEGACY_MOL3_PACKAGES.has(parsed?.mytvonline3)) {
+      parsed.mytvonline3 = "tv.formuler.mol3.real";
+    }
+    return parsed;
   } catch {
     return {} as Record<AppKey, string>;
   }
