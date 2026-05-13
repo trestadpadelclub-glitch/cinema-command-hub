@@ -772,23 +772,47 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
       }
     >
       {locked && (
-        <button
-          type="button"
-          onDoubleClick={() => setLocked(false)}
-          onClick={(e) => e.preventDefault()}
-          className="shrink-0 w-full text-center text-[12px] font-semibold py-2 bg-primary/15 text-primary border-b border-primary/40 select-none touch-manipulation"
-          title="Dubbelklicka för att låsa upp"
-        >
-          🔒 LÅST — dubbelklicka här för att låsa upp
-        </button>
+        <div className="shrink-0 w-full bg-primary/15 border-b border-primary/40">
+          <div className="flex items-center justify-center gap-2 pt-1.5">
+            {[
+              { on: projOn, title: "Projektor" },
+              { on: marantzOn, title: "Marantz" },
+              { on: formulerOn, title: "Formuler" },
+              { on: lightsOn, title: "Lights" },
+            ].map((s, i) => (
+              <span
+                key={i}
+                title={`${s.title}: ${s.on === null ? "okänt" : s.on ? "ON" : "OFF"}`}
+                className={
+                  "h-3 w-3 rounded-full border " +
+                  (s.on === null
+                    ? "bg-muted-foreground/30 border-muted-foreground/40"
+                    : s.on
+                      ? "bg-emerald-500 border-emerald-300 shadow-[0_0_6px_rgb(16_185_129/0.8)]"
+                      : "bg-red-500 border-red-300 shadow-[0_0_6px_rgb(239_68_68/0.8)]")
+                }
+              />
+            ))}
+          </div>
+          <button
+            type="button"
+            onDoubleClick={() => setLocked(false)}
+            onClick={(e) => e.preventDefault()}
+            className="w-full text-center text-[11px] font-semibold py-1 text-primary select-none touch-manipulation"
+            title="Dubbelklicka för att låsa upp"
+          >
+            🔒 LÅST — dubbelklicka här för att låsa upp
+          </button>
+        </div>
       )}
       <div
         className={
           locked
-            ? "flex-1 min-h-0 overflow-y-auto p-1.5 space-y-1.5 [&_.p-4]:p-2 [&_.h-20]:h-12 [&_.h-44]:h-28 [&_.min-h-\\[180px\\]]:min-h-[110px] [&_.h-16]:h-12 [&_.w-16]:w-12 [&_.h-14]:h-12 [&_.w-14]:w-12"
+            ? "flex-1 min-h-0 overflow-hidden p-1.5 flex flex-col gap-1.5 [&_.p-4]:p-2"
             : "space-y-4"
         }
       >
+
         {!locked && (
           <div className="flex justify-end">
             <Button
