@@ -23,7 +23,9 @@ import {
 } from "@/lib/scenes";
 import {
   sendScene,
+  sendSceneLights,
   type SceneLightCommand,
+  type LightStatus,
 } from "@/lib/projector";
 import { toast } from "sonner";
 
@@ -46,15 +48,20 @@ export function LightsRemote({ householdCode }: Props) {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<"on" | "off" | null>(null);
   const [offset, setOffset] = useState(0); // -50..+50
+  const [lightBusy, setLightBusy] = useState<string | null>(null);
+  const [manualLevels, setManualLevels] = useState<Record<string, number>>({});
+  const lightDeviceIds = useMemo(() => lights.map((l) => l.tuya_device_id).filter(Boolean), [lights]);
 
   // Realtidsstatus från bryggan (v33). Pollar var 5s.
-  const { lights: lightStatus, reachable: statusReachable } = useLightsStatus({
+  const { lights: lightStatus, reachable: statusReachable, refetch: refetchLightsStatus } = useLightsStatus({
     enabled: true,
     intervalSeconds: 5,
+    deviceIds: lightDeviceIds,
   });
 
   // Debounce timer för live-skickning under draggning
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lightDebounceRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   // Initial load
   useEffect(() => {
@@ -246,6 +253,59 @@ export function LightsRemote({ householdCode }: Props) {
     const next = v[0] ?? 0;
     setOffset(next);
     pushLiveOffset(next);
+  };
+
+  const buildSingleLightCommand = (
+    light: Light,
+    st: LightStatus | undefined,
+    on: boolean,
+    brightness = manualLevels[light.id] ?? st?.brightness ?? 80,
+  ): SceneLightCommand => {
+    const cmd: SceneLightCommand = {
+      device_id: light.tuya_device_id,
+      name: light.name,
+      type: light.light_type,
+      on,
+    };
+    if (on) {
+      cmd.brightness = clamp(Math.round(brightness), 1, 100);
+      if ((light.light_type === "cct" || light.light_type === "rgbcct") && typeof st?.kelvin === "number") {
+        cmd.kelvin = st.kelvin;
+      }
+      if ((light.light_type === "rgb" || light.light_type === "rgbcct") && st?.color_hex) {
+        cmd.color = st.color_hex;
+      }
+    }
+    return cmd;
+  };
+
+  const sendSingleLight = async (
+    light: Light,
+    st: LightStatus | undefined,
+    on: boolean,
+    brightness?: number,
+    showToast = true,
+  ) => {
+    setLightBusy(light.id);
+    const res = await sendSceneLights([buildSingleLightCommand(light, st, on, brightness)]);
+    setLightBusy(null);
+    if (!res.ok) {
+      toast.error(`Kunde inte styra ${light.name}`, {
+        description: res.error || `Status ${res.status}`,
+      });
+      return;
+    }
+    if (showToast) toast.success(`${light.name}: ${on ? "ON" : "OFF"}`);
+    setTimeout(() => refetchLightsStatus().catch(() => {}), 450);
+  };
+
+  const handleLightLevel = (light: Light, st: LightStatus | undefined, value: number) => {
+    const level = clamp(Math.round(value), 1, 100);
+    setManualLevels((prev) => ({ ...prev, [light.id]: level }));
+    if (lightDebounceRef.current[light.id]) clearTimeout(lightDebounceRef.current[light.id]);
+    lightDebounceRef.current[light.id] = setTimeout(() => {
+      void sendSingleLight(light, st, true, level, false);
+    }, 220);
   };
 
   const saveOnScene = (id: string) => {
