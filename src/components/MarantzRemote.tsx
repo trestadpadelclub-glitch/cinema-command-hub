@@ -194,6 +194,19 @@ export function MarantzRemote({
     send(`SPPR ${n}`, `Speaker Preset ${n}`, `spk`);
   };
 
+  // Volym-slider: optimistisk drag, debounced send som absolut MV-värde.
+  const handleVolumeDrag = (v: number) => {
+    setVolDrag(v);
+    if (volTimerRef.current) clearTimeout(volTimerRef.current);
+    volTimerRef.current = setTimeout(() => {
+      const padded = v.toString().padStart(2, "0");
+      send(`MV${padded}`, `Volym ${v}`, "vol-set").finally(() => {
+        // Släpp drag-värdet så status-pollen tar över UI:t igen.
+        setTimeout(() => setVolDrag(null), 800);
+      });
+    }, 250);
+  };
+
   const inputLabel = (() => {
     if (!marantzStatus?.input) return null;
     const match = inputs.find((i) => i.marantz_code === marantzStatus.input);
@@ -203,8 +216,17 @@ export function MarantzRemote({
     if (!marantzStatus?.sound_mode) return "—";
     return SOUND_MODES.find((m) => m.code === marantzStatus.sound_mode)?.label ?? marantzStatus.sound_mode;
   })();
-  const diracLabel = marantzStatus?.dirac ? (marantzStatus.dirac === "OFF" ? "Av" : `Slot ${marantzStatus.dirac}`) : "—";
-  const speakerLabel = marantzStatus?.speaker_preset != null ? `Preset ${marantzStatus.speaker_preset}` : "—";
+  const diracLabel = (() => {
+    if (!marantzStatus?.dirac) return "—";
+    if (marantzStatus.dirac === "OFF") return "Av";
+    const n = Number(marantzStatus.dirac);
+    return n === 1 || n === 2 || n === 3 ? diracSlotLabel(n) : `Slot ${marantzStatus.dirac}`;
+  })();
+  const speakerLabel = (() => {
+    const n = marantzStatus?.speaker_preset;
+    if (n === 1 || n === 2) return speakerPresetLabel(n);
+    return "—";
+  })();
   const smartLabel = marantzStatus?.smart_select != null ? `Smart ${marantzStatus.smart_select}` : "—";
 
   return (
