@@ -263,7 +263,11 @@ export const Route = createFileRoute("/api/public/trigger")({
             if (v === undefined || v === null) continue;
             pushProjector({ action: key, value: v as string | number });
             if (key === "blank" && v === "on" && (scene.projector_blank_delay_seconds ?? 0) > 0) {
-              pushProjector({ action: "blank", value: "off", delay_ms: Math.min(60, Math.max(0, scene.projector_blank_delay_seconds)) * 1000 });
+              commands.push({
+                endpoint: "/api/projector",
+                body: { action: "blank", value: "off" },
+                delay_ms: Math.min(60, Math.max(0, scene.projector_blank_delay_seconds)) * 1000,
+              });
             }
           }
           const rc = projSettings.reality_creation;
