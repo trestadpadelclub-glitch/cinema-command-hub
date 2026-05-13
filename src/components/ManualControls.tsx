@@ -8,7 +8,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Info, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Menu, RotateCcw, EyeOff, Eye } from "lucide-react";
+import { Info, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Menu, EyeOff, Eye } from "lucide-react";
 import {
   sendCommand,
   PIC_MODE_LABELS,
