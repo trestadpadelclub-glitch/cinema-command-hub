@@ -79,6 +79,13 @@ export function MarantzRemote({
   const [diracSlot, setDiracSlot] = useState<string>("");
   const [speakerPreset, setSpeakerPreset] = useState<string>("");
 
+  // Volym-slider (lokalt drag-värde, optimistisk uppdatering)
+  const [volDrag, setVolDrag] = useState<number | null>(null);
+  const volTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Anpassningsbara namn för Speaker presets & Dirac slots
+  const [labels, setLabels] = useState<MarantzLabels>({});
+
   // Status kommer från bryggan (pollas) och används både för visning och aktiva val.
   const muted = marantzStatus?.mute ?? false;
   const currentPower = marantzStatus?.power === "on" ? "ON" : marantzStatus?.power === "off" ? "Standby" : "—";
@@ -88,10 +95,27 @@ export function MarantzRemote({
     const volDb = marantzMvToDb(volNum);
     return `${volNum} (${volDb >= 0 ? "+" : ""}${volDb} dB)`;
   })();
+  const liveVolume = volDrag ?? marantzStatus?.volume ?? 0;
 
   useEffect(() => {
     fetchInputs(householdCode).then(setInputs);
+    fetchAppSettings(householdCode).then((s) => setLabels(s.marantz_labels ?? {}));
   }, [householdCode]);
+
+  const speakerPresetLabel = (n: 1 | 2): string =>
+    (n === 1 ? labels.speaker_preset_1 : labels.speaker_preset_2) || `Preset ${n}`;
+  const diracSlotLabel = (n: 1 | 2 | 3): string =>
+    (n === 1 ? labels.dirac_1 : n === 2 ? labels.dirac_2 : labels.dirac_3) || `Slot ${n}`;
+
+  const saveLabel = async (key: keyof MarantzLabels, value: string) => {
+    const next = { ...labels, [key]: value.trim() || undefined };
+    setLabels(next);
+    try {
+      await updateAppSettings(householdCode, { marantz_labels: next });
+    } catch (e) {
+      toast.error("Kunde inte spara namn", { description: String(e) });
+    }
+  };
 
   // Synka radio-knappar / dropdown med faktisk receiver-status när den uppdateras.
   useEffect(() => {
