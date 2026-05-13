@@ -1279,7 +1279,7 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
                 <Plus className="h-3.5 w-3.5" />
               </Button>
             </div>
-            <div className="flex-1 flex flex-col items-center gap-1.5 min-h-[180px]">
+            <div className={`flex flex-col items-center gap-1.5 w-full ${locked ? "flex-1 min-h-0" : "flex-1 min-h-[180px]"}`}>
               <span className="text-xs font-mono tabular-nums">
                 MV{String(volDraft).padStart(2, "0")}
               </span>
@@ -1291,7 +1291,7 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
                 value={[volDraft]}
                 onValueChange={handleVolChange}
                 onValueCommit={handleVolCommit}
-                className="h-44"
+                className={locked ? "flex-1 min-h-0" : "h-44"}
                 aria-label="Marantz volym"
               />
               <span
