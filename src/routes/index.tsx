@@ -285,7 +285,7 @@ function Index() {
           </div>
         </header>
 
-        <Tabs defaultValue="scenes" className="w-full">
+        <Tabs defaultValue="remotes" className="w-full">
           <TabsList className="mb-6 flex flex-wrap h-auto">
             <TabsTrigger value="scenes">Scenes</TabsTrigger>
             <TabsTrigger value="remotes">Remotes</TabsTrigger>
