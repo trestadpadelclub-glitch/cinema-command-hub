@@ -550,7 +550,9 @@ ITEM = {
     "GAMMA_CORRECTION": 0x0022,
     "LAMP_CONTROL":     0x001A,
     "IRIS_DYN_CONT":    0x0019,  # iris dynamic control (HW65ES, lampbaserad)
-    "MOTIONFLOW":       0x0021,
+    "MOTIONFLOW":       0x0059,
+    "REALITY_CREATION": 0x0067,  # On/Off
+    "REALITY_CRE_RESO": 0x0068,  # 1..100
     "BLANK_PICTURE":    0x0030,
 }
 
@@ -2603,6 +2605,40 @@ class Handler(BaseHTTPRequestHandler):
                 return
             ok = reply.lower() == "ok"
             self._send_json(200 if ok else 502, {"status": "sent" if ok else "error", "action": action, "reply": reply})
+            return
+
+        # reality_creation: 0 = off, 1..100 = on + resolution
+        if action in ("reality_creation", "real_cre", "reality_creation_val"):
+            try:
+                n = int(round(float(value)))
+            except Exception:
+                n = 0
+            n = max(0, min(100, n))
+            try:
+                if n <= 0:
+                    reply = adcp_set("REALITY_CREATION", 0x0000)
+                    sdcp_value = 0
+                    sdcp_item = "REALITY_CREATION"
+                else:
+                    r1 = adcp_set("REALITY_CREATION", 0x0001)
+                    if r1.lower() != "ok":
+                        self._send_json(502, {"status": "error", "action": action,
+                                              "sdcp_item": "REALITY_CREATION", "reply": r1})
+                        return
+                    reply = adcp_set("REALITY_CRE_RESO", n)
+                    sdcp_value = n
+                    sdcp_item = "REALITY_CRE_RESO"
+            except (socket.error, AdcpError) as e:
+                _log(f"SDCP fail: {e}")
+                self._send_json(502, {"status": "error", "error": str(e)})
+                return
+            ok = reply.lower() == "ok"
+            _log(f"ACTION {action} = {value!r} -> SDCP {sdcp_item}={sdcp_value} ({reply})")
+            self._send_json(200 if ok else 502, {
+                "status": "sent" if ok else "error",
+                "action": action, "sdcp_item": sdcp_item,
+                "sdcp_value": sdcp_value, "reply": reply,
+            })
             return
 
         if action not in ACTION_MAP:
