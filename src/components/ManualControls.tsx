@@ -303,7 +303,39 @@ export function ManualControls({ settings, onChange, showPowerAction }: Props) {
           </Card>
         )}
         <Card className="p-5">
-          <SectionLabel info={SECTION_INFO.pic_mode}>Picture Mode</SectionLabel>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Label className="text-sm font-medium">Picture Mode</Label>
+              <InfoTip text={SECTION_INFO.pic_mode} />
+            </div>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    sendCommand({ action: "remote_key", value: "reset" }).then((res) => {
+                      if (!res.ok) {
+                        toast.error("Bridge-fel", {
+                          description: res.error || `Status ${res.status}`,
+                        });
+                      } else {
+                        toast.success("Reset skickad", {
+                          description: "Återställer aktiv picture mode till fabriksvärden.",
+                        });
+                      }
+                    });
+                  }}
+                >
+                  <RotateCcw className="h-4 w-4 mr-1.5" />
+                  Reset
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-xs whitespace-normal text-left leading-snug">
+                Återställer den aktiva picture mode (brightness, contrast, color, gamma m.m.) till Sonys fabriksvärden. Påverkar bara nuvarande preset.
+              </TooltipContent>
+            </Tooltip>
+          </div>
           <div className="grid grid-cols-3 gap-2">
             {PIC_MODES.map((m) => (
               <OptionButton
