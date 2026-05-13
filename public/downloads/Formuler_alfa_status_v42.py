@@ -193,6 +193,13 @@ SETTINGS = {
         "TRIGGER_URL",
         "https://projector-pal-97.lovable.app/api/public/trigger",
     ),
+    # v42: Endpoint för att hämta scen-payload via scene_number. Används av
+    # GET /api/remote/scene/<n> så fysiska fjärrkontrollsknappar kan starta
+    # scener (t.ex. Tänd=7, Släck=8) utan att gå via UI:t.
+    "scene_url": os.environ.get(
+        "SCENE_URL",
+        "https://projector-pal-97.lovable.app/api/public/scene",
+    ),
     "household_code": os.environ.get("HOUSEHOLD_CODE", ""),
     "adb_bin": os.environ.get("ADB_BIN", "adb"),
     # --- Chromecast (Google Cast via pychromecast) ---
@@ -1767,6 +1774,36 @@ def formuler_launch_app(package: str, timeout: float = 6.0) -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 # GLOBAL LOKAL EXEKVERING (headless-stöd, från bridge64.py)
 # ---------------------------------------------------------------------------
+def _fetch_scene_payload(scene_number: int, timeout: float = 8.0) -> Optional[Dict[str, Any]]:
+    """v42: Hämta exekveringspayload för en scen via scene_number.
+
+    Anropar backend (/api/public/scene) som returnerar samma struktur som
+    /api/public/trigger, så _execute_scene_payload kan köra resultatet rakt av.
+    """
+    url = SETTINGS["scene_url"]
+    hh = SETTINGS["household_code"]
+    if not hh:
+        _log(f"REMOTE scene {scene_number} (skipped — sätt HOUSEHOLD_CODE)")
+        return {"matched": False, "reason": "no_household_code"}
+    body = json.dumps({"household_code": hh, "scene_number": int(scene_number)}).encode("utf-8")
+    req = urllib.request.Request(
+        url, data=body, headers={"Content-Type": "application/json"}, method="POST"
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            raw = r.read().decode("utf-8", "replace")
+            try:
+                payload = json.loads(raw)
+            except json.JSONDecodeError:
+                _log(f"REMOTE scene {scene_number} bad json: {raw[:140]}")
+                return None
+            _log(f"REMOTE scene {scene_number} -> matched={payload.get('matched')} name={(payload.get('scene') or {}).get('name')}")
+            return payload
+    except (urllib.error.URLError, socket.timeout, OSError) as e:
+        _log(f"REMOTE scene {scene_number} fetch FAIL: {e}")
+        raise
+
+
 def _execute_scene_payload(payload: Optional[Dict[str, Any]]) -> None:
     """Kör scendatan lokalt direkt när molnet svarar på en trigger.
 
@@ -2633,6 +2670,34 @@ class Handler(BaseHTTPRequestHandler):
             except Exception as e:
                 _log(f"chromecast status error: {e}")
                 self._send_json(200, {"connected": False, "error": str(e)})
+            return
+        # v42: Enkel endpoint för fysiska fjärrkontrollsknappar.
+        # GET /api/remote/scene/<scene_number> -> kör scenen lokalt.
+        if path.startswith("/api/remote/scene/"):
+            try:
+                num_str = path[len("/api/remote/scene/"):].strip()
+                scene_num = int(num_str)
+            except ValueError:
+                self._send_json(400, {"status": "error", "error": "invalid_scene_number"})
+                return
+            try:
+                payload = _fetch_scene_payload(scene_num)
+                if not payload or not payload.get("matched"):
+                    reason = (payload or {}).get("reason", "unknown")
+                    self._send_json(404, {"status": "error", "error": reason})
+                    return
+                # Kör scenen i bakgrundstråd så HTTP-svaret returnerar direkt.
+                threading.Thread(
+                    target=_execute_scene_payload,
+                    args=(payload,),
+                    daemon=True,
+                    name=f"RemoteScene-{scene_num}",
+                ).start()
+                self._send_json(200, {"status": "ok", "scene_number": scene_num,
+                                      "scene_name": payload.get("scene", {}).get("name")})
+            except Exception as e:
+                _log(f"remote scene {num_str} error: {e}")
+                self._send_json(500, {"status": "error", "error": str(e)})
             return
         self._send_json(404, {"error": "not_found", "path": self.path})
 
