@@ -609,6 +609,65 @@ export function LightsRemote({ householdCode }: Props) {
                       disabled={busyThisLight}
                     />
                   </div>
+                  {(light.light_type === "rgb" || light.light_type === "rgbcct") && (() => {
+                    const currentHex =
+                      manualColors[light.id] ?? st?.color_hex ?? "#ffffff";
+                    const safeHex = normalizeHex(currentHex) ?? "#ffffff";
+                    const { r, g, b } = hexToRgb(safeHex);
+                    const setChannel = (ch: "r" | "g" | "b", v: number) => {
+                      const next = rgbToHex(
+                        ch === "r" ? v : r,
+                        ch === "g" ? v : g,
+                        ch === "b" ? v : b,
+                      );
+                      handleLightColor(light, st, next);
+                    };
+                    return (
+                      <div className="space-y-2 pt-1 border-t border-border/40">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-muted-foreground">Färg</span>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="inline-block h-4 w-4 rounded border border-border"
+                              style={{ backgroundColor: safeHex }}
+                            />
+                            <Input
+                              value={manualColors[light.id] ?? safeHex}
+                              onChange={(e) => {
+                                const raw = e.target.value;
+                                setManualColors((prev) => ({ ...prev, [light.id]: raw }));
+                                const norm = normalizeHex(raw);
+                                if (norm) handleLightColor(light, st, norm);
+                              }}
+                              className="h-7 w-24 font-mono text-[11px]"
+                              placeholder="#rrggbb"
+                            />
+                          </div>
+                        </div>
+                        {[
+                          { key: "r" as const, label: "R", value: r, color: "bg-red-500" },
+                          { key: "g" as const, label: "G", value: g, color: "bg-green-500" },
+                          { key: "b" as const, label: "B", value: b, color: "bg-blue-500" },
+                        ].map((ch) => (
+                          <div key={ch.key} className="flex items-center gap-2">
+                            <span className={`text-[10px] w-3 font-semibold`}>{ch.label}</span>
+                            <Slider
+                              min={0}
+                              max={255}
+                              step={1}
+                              value={[ch.value]}
+                              onValueChange={([v]) => setChannel(ch.key, v)}
+                              disabled={busyThisLight}
+                              className="flex-1"
+                            />
+                            <span className="text-[10px] font-mono w-7 text-right text-muted-foreground">
+                              {ch.value}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             );
