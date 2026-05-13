@@ -550,7 +550,9 @@ ITEM = {
     "GAMMA_CORRECTION": 0x0022,
     "LAMP_CONTROL":     0x001A,
     "IRIS_DYN_CONT":    0x0019,  # iris dynamic control (HW65ES, lampbaserad)
-    "MOTIONFLOW":       0x0021,
+    "MOTIONFLOW":       0x0059,
+    "REALITY_CREATION": 0x0067,  # On/Off
+    "REALITY_CRE_RESO": 0x0068,  # 1..100
     "BLANK_PICTURE":    0x0030,
 }
 
