@@ -262,6 +262,7 @@ export function LightsRemote({ householdCode }: Props) {
     st: LightStatus | undefined,
     on: boolean,
     brightness = manualLevels[light.id] ?? st?.brightness ?? 80,
+    colorOverride?: string,
   ): SceneLightCommand => {
     const cmd: SceneLightCommand = {
       device_id: light.tuya_device_id,
@@ -274,8 +275,9 @@ export function LightsRemote({ householdCode }: Props) {
       if ((light.light_type === "cct" || light.light_type === "rgbcct") && typeof st?.kelvin === "number") {
         cmd.kelvin = st.kelvin;
       }
-      if ((light.light_type === "rgb" || light.light_type === "rgbcct") && st?.color_hex) {
-        cmd.color = st.color_hex;
+      if (light.light_type === "rgb" || light.light_type === "rgbcct") {
+        const color = colorOverride ?? manualColors[light.id] ?? st?.color_hex;
+        if (color) cmd.color = color;
       }
     }
     return cmd;
@@ -287,9 +289,10 @@ export function LightsRemote({ householdCode }: Props) {
     on: boolean,
     brightness?: number,
     showToast = true,
+    colorOverride?: string,
   ) => {
     setLightBusy(light.id);
-    const res = await sendSceneLights([buildSingleLightCommand(light, st, on, brightness)]);
+    const res = await sendSceneLights([buildSingleLightCommand(light, st, on, brightness, colorOverride)]);
     setLightBusy(null);
     if (!res.ok) {
       toast.error(`Kunde inte styra ${light.name}`, {
@@ -307,6 +310,16 @@ export function LightsRemote({ householdCode }: Props) {
     if (lightDebounceRef.current[light.id]) clearTimeout(lightDebounceRef.current[light.id]);
     lightDebounceRef.current[light.id] = setTimeout(() => {
       void sendSingleLight(light, st, true, level, false);
+    }, 220);
+  };
+
+  const handleLightColor = (light: Light, st: LightStatus | undefined, hex: string) => {
+    setManualColors((prev) => ({ ...prev, [light.id]: hex }));
+    const key = `${light.id}__color`;
+    if (lightDebounceRef.current[key]) clearTimeout(lightDebounceRef.current[key]);
+    lightDebounceRef.current[key] = setTimeout(() => {
+      const level = manualLevels[light.id] ?? st?.brightness ?? 80;
+      void sendSingleLight(light, st, true, level, false, hex);
     }, 220);
   };
 
