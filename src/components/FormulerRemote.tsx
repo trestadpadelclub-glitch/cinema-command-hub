@@ -284,6 +284,10 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
   const [movieAutoBusy, setMovieAutoBusy] = useState(false);
   // Kiosk/lås-läge för telefonen — fixerar layouten på en skärm utan scroll.
   const [locked, setLocked] = useState(false);
+  const lightDeviceIds = useMemo(
+    () => lights.filter((l) => l.enabled).map((l) => l.tuya_device_id).filter(Boolean),
+    [lights],
+  );
 
   // Movie-auto är PÅ om båda scen 4 och 5 är enabled
   const movieScenes = useMemo(
@@ -381,42 +385,48 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
           setProjOn(false);
         }
       } catch { if (alive) setProjOn(false); }
-      // Formuler — bryggan svarar alltid {ok:true} även när boxen är av.
-      // Räkna bara boxen som ON om adb verkligen fick lista appar (count > 0).
+      // Formuler — list_apps kan ge ok:true/count:0 även vid tappad ADB.
+      // Använd därför debug-dumpsys som faktisk shell-probe och fallbacka till applistan.
       try {
-        const base = getBridgeUrl();
-        const url = base.replace(/\/api\/projector$/i, "/api/formuler/list_apps");
         const ctrl = new AbortController();
-        const t = setTimeout(() => ctrl.abort(), 3500);
-        const res = await fetch(url, {
+        const t = setTimeout(() => ctrl.abort(), 3000);
+        const base = getBridgeUrl().replace(/\/api\/projector$/i, "").replace(/\/+$/, "");
+        const res = await fetch(`${base}/debug/formuler-audio`, {
           headers: { accept: "application/json", "ngrok-skip-browser-warning": "true" },
           signal: ctrl.signal,
         });
         clearTimeout(t);
-        const d = (await res.json().catch(() => ({}))) as {
-          ok?: boolean;
-          apps?: unknown[];
-          count?: number;
-        };
+        const text = await res.text().catch(() => "");
         if (!alive) return;
-        const apps = Array.isArray(d?.apps) ? d.apps.length : 0;
-        const count = typeof d?.count === "number" ? d.count : apps;
-        setFormulerOn(res.ok && !!d?.ok && count > 0);
+        const hasDumpsys = res.ok && text.trim().length > 20 && !text.trim().startsWith("{");
+        if (hasDumpsys) {
+          setFormulerOn(true);
+        } else {
+          const fallback = await listFormulerApps();
+          if (!alive) return;
+          setFormulerOn(fallback.ok && fallback.apps.length > 0);
+        }
       } catch { if (alive) setFormulerOn(false); }
-      // Lights — minst en lampa online, tänd OCH med faktisk ljusstyrka.
-      // Bryggans Tuya-cache kan annars hänga kvar med on=true efter att lampan
-      // släckts utanför appen.
+      // Lights — fråga bara de aktiva lamporna för detta hushåll och lita på
+      // switch_led/on-flaggan; brightness kan ligga kvar från senaste ON-läge.
       try {
-        const r = await getLightsStatus();
+        if (lightDeviceIds.length === 0) {
+          setLightsOn(false);
+          return;
+        }
+        const r = await getLightsStatus(lightDeviceIds);
         if (!alive) return;
         if (r.ok) {
-          const now = Date.now() / 1000;
+          const now = Date.now();
           setLightsOn(
             r.lights.some((l) => {
-              if (!l.online || !l.on) return false;
-              if (typeof l.brightness === "number" && l.brightness <= 0) return false;
-              // Ignorera helt stale cache (>2 min)
-              if (typeof l.last_seen === "number" && now - l.last_seen > 120) return false;
+              if (!lightDeviceIds.includes(l.device_id)) return false;
+              if (l.online === false || l.on !== true) return false;
+              if (typeof l.last_seen === "number") return now - l.last_seen * 1000 <= 120000;
+              if (typeof l.last_seen === "string") {
+                const ts = Number(l.last_seen) || Date.parse(l.last_seen);
+                return Number.isFinite(ts) ? now - (ts < 10_000_000_000 ? ts * 1000 : ts) <= 120000 : true;
+              }
               return true;
             }),
           );
@@ -428,7 +438,7 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
     tick();
     const id = setInterval(tick, 8000);
     return () => { alive = false; clearInterval(id); };
-  }, [locked]);
+  }, [locked, lightDeviceIds]);
 
   const marantzOn = marantzReachable !== false && marantzStatus?.power === "on";
 
