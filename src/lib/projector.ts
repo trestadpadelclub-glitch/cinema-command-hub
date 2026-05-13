@@ -782,6 +782,17 @@ export async function sendScene(p: SceneCommandPayload): Promise<CommandResult[]
     if (lightsDelayPending > 0) await sleep(lightsDelayPending);
     lightsDelayPending = 0;
   };
+  const applyProjectorSettingsWithBlankDelay = async (settings: ProjectorSettings) => {
+    const { blank, ...rest } = settings;
+    const shouldTemporaryBlank = blank === "on" && (p.projectorBlankDelaySeconds ?? 0) > 0;
+    const ordered: ProjectorSettings = shouldTemporaryBlank ? { blank, ...rest } : settings;
+    const more = await applySettings(ordered);
+    results.push(...more);
+    if (shouldTemporaryBlank) {
+      await sleep(Math.min(60, Math.max(0, p.projectorBlankDelaySeconds ?? 0)) * 1000);
+      results.push(await sendCommand({ action: "blank", value: "off" }));
+    }
+  };
 
   await waitProjector();
   results.push(await sendCommand({ action: "scene" as Action, value: p.scenePayload }));
@@ -811,8 +822,7 @@ export async function sendScene(p: SceneCommandPayload): Promise<CommandResult[]
     results.push(await sendMarantz(p.marantzPower === "on" ? "PWON" : "PWSTANDBY"));
     if (p.marantzPower === "off") {
       if (p.projectorSettings && Object.keys(p.projectorSettings).length > 0) {
-        const more = await applySettings(p.projectorSettings);
-        results.push(...more);
+        await applyProjectorSettingsWithBlankDelay(p.projectorSettings);
       }
       return results;
     }
@@ -826,9 +836,28 @@ export async function sendScene(p: SceneCommandPayload): Promise<CommandResult[]
     const v = String(p.marantzVolume).padStart(2, "0");
     results.push(await sendMarantz(`MV${v}`));
   }
+  if (typeof p.marantzMute === "boolean") {
+    await waitMarantz();
+    results.push(await sendMarantz(`MU${p.marantzMute ? "ON" : "OFF"}`));
+  }
+  if (p.marantzSoundMode) {
+    await waitMarantz();
+    results.push(await sendMarantz(`MS${p.marantzSoundMode}`));
+  }
+  if (typeof p.marantzSmartSelect === "number") {
+    await waitMarantz();
+    results.push(await sendMarantz(`MSSMART${p.marantzSmartSelect}`));
+  }
+  if (p.marantzDirac) {
+    await waitMarantz();
+    results.push(await sendMarantz(p.marantzDirac === "OFF" ? "PSDIRAC OFF" : `PSDIRAC ${p.marantzDirac}`));
+  }
+  if (typeof p.marantzSpeakerPreset === "number") {
+    await waitMarantz();
+    results.push(await sendMarantz(`SPPR ${p.marantzSpeakerPreset}`));
+  }
   if (p.projectorSettings && Object.keys(p.projectorSettings).length > 0) {
-    const more = await applySettings(p.projectorSettings);
-    results.push(...more);
+    await applyProjectorSettingsWithBlankDelay(p.projectorSettings);
   }
   return results;
 }
