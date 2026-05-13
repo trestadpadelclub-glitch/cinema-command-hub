@@ -1,8 +1,22 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Formuler_alfa_status_v39.py  (Sony VPL-HW65ES, SDCP / PJ Talk)
+Formuler_alfa_status_v41.py  (Sony VPL-HW65ES, SDCP / PJ Talk)
 ==============================================================
+
+v41 NYTT — Smart tidsbaserad uppstartssekvens (Blank-cykel) i bridgen:
+  - Konstanter högst upp vid SDCP-helpers: COLD_START_DELAY=40,
+    WARM_START_DELAY=15, WARM_THRESHOLD=300 (sekunder).
+  - Sparar tidsstämpel _LAST_OFF_TS varje gång POWER off skickas.
+  - Vid POWER on: skickar power on, omedelbart BLANK on (mörkar bilden),
+    räknar tid sedan _LAST_OFF_TS och startar en icke-blockerande
+    threading.Timer (daemon=True) som efter delay skickar BLANK off.
+    Kallstart (>WARM_THRESHOLD eller okänt) -> COLD_START_DELAY,
+    annars WARM_START_DELAY.
+  - Timern är daemon=True för att undvika Python 3.13 _ThreadHandle-krock
+    vid process-shutdown. Pågående timer cancel:as om POWER off skickas
+    eller om POWER on skickas igen.
+  - Befintlig HW65ES-logik (status-mappning, SDCP-protokoll) orörd.
 
 v39 NYTT: MOL3 start/paus följer nu faktisk USAGE_MEDIA-ljudstatus även när MediaSession fastnar på pb_int=3.
 
