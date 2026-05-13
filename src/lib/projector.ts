@@ -275,7 +275,7 @@ async function postJson(
     } catch {
       /* keep raw */
     }
-    return { ok: res.ok, status: res.status, data, command };
+    return { ok: normalizeBridgeOk(res.ok, res.status, data, command), status: res.status, data, command };
   } catch (err) {
     return {
       ok: false,
@@ -284,6 +284,16 @@ async function postJson(
       command,
     };
   }
+}
+
+function normalizeBridgeOk(ok: boolean, status: number, data: unknown, command: SingleCommand): boolean {
+  if (ok) return true;
+  if (command.action !== "remote_key" || status !== 502 || !data || typeof data !== "object") return false;
+  const payload = data as Record<string, unknown>;
+  // Äldre Python-bryggor kan returnera 502/err_cmd för Sony IR-navigation trots
+  // att projektorn faktiskt utför knapptrycket. Räkna bara detta som OK när det
+  // saknas riktigt socket-/transportfel.
+  return typeof payload.reply === "string" && payload.error === undefined;
 }
 
 // --- low level ---
@@ -303,7 +313,7 @@ export async function sendCommand(cmd: SingleCommand): Promise<CommandResult> {
     } catch {
       /* keep raw text */
     }
-    return { ok: res.ok, status: res.status, data, command: cmd };
+    return { ok: normalizeBridgeOk(res.ok, res.status, data, cmd), status: res.status, data, command: cmd };
   } catch (err) {
     return {
       ok: false,
