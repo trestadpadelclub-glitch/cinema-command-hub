@@ -278,6 +278,8 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
   const [lightsBrightness, setLightsBrightness] = useState<number>(50);
   const [lightsBusy, setLightsBusy] = useState<"on" | "off" | null>(null);
   const [movieAutoBusy, setMovieAutoBusy] = useState(false);
+  // Kiosk/lås-läge för telefonen — fixerar layouten på en skärm utan scroll.
+  const [locked, setLocked] = useState(false);
 
   // Movie-auto är PÅ om båda scen 4 och 5 är enabled
   const movieScenes = useMemo(
