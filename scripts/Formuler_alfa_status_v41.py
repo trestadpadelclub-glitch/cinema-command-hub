@@ -958,7 +958,7 @@ def _sdcp_round_trip(packet: bytes, timeout: Optional[float] = None) -> Tuple[in
 
 def sdcp_set(item_name: str, value_int: int) -> str:
     """Skicka SET-kommando. Returnerar 'ok' vid ACK, 'err_<n>' vid NAK."""
-    global LAST_POWER_ON_TS
+    global LAST_POWER_ON_TS, _LAST_OFF_TS
     item_code = ITEM[item_name]
     pkt = _build_packet(SDCP_SET, item_code, value_int, data_len=2)
     _log(f"SDCP TX SET {item_name}=0x{value_int:04X} (item=0x{item_code:04X})")
@@ -969,11 +969,31 @@ def sdcp_set(item_name: str, value_int: int) -> str:
         return f"err_io"
     if resp_type == 0x01:
         _log(f"SDCP RX ACK {item_name}")
-        if item_name == "POWER" and value_int == POWER_VAL["on"]:
-            LAST_POWER_ON_TS = time.time()
+        if item_name == "POWER":
+            if value_int == POWER_VAL["on"]:
+                LAST_POWER_ON_TS = time.time()
+                # Smart Blank-cykel: mörklägg omedelbart, släpp efter delay.
+                now = time.time()
+                if _LAST_OFF_TS is None or (now - _LAST_OFF_TS) > WARM_THRESHOLD:
+                    delay = COLD_START_DELAY
+                    mode = "kallstart"
+                else:
+                    delay = WARM_START_DELAY
+                    mode = f"varmstart ({now - _LAST_OFF_TS:.0f}s sedan off)"
+                _log(f"BLANK-CYKEL: {mode} -> BLANK on, släpp om {delay:.0f}s")
+                try:
+                    _send_blank_raw(True)
+                except Exception as e:
+                    _log(f"BLANK-CYKEL: kunde inte sätta BLANK on: {e}")
+                _schedule_blank_off(delay)
+            elif value_int == POWER_VAL["off"]:
+                _LAST_OFF_TS = time.time()
+                # Avbryt eventuell pågående blank-cykel — projektorn slås av.
+                _cancel_blank_timer()
         return "ok"
     _log(f"SDCP RX NAK {item_name} data=0x{data:04X}")
     return f"err_nak_0x{data:04X}"
+
 
 
 def sdcp_get(item_name: str) -> Optional[int]:
