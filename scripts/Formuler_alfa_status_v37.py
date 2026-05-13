@@ -589,11 +589,11 @@ POWER_VAL = {"off": 0x0000, "on": 0x0001}
 POWER_STATUS_VAL = {
     0x0000: "standby",
     0x0001: "startup",
-    0x0002: "on",
-    0x0003: "cooling1",
-    0x0004: "cooling2",
-    0x0005: "saving_cool1",
-    0x0006: "saving_cool2",
+    0x0002: "startup_lamp",
+    0x0003: "on",
+    0x0004: "cooling1",
+    0x0005: "cooling2",
+    0x0006: "saving_cool",
     0x0007: "saving_standby",
 }
 INPUT_VAL = {"hdmi1": 0x0002, "hdmi2": 0x0003}
@@ -971,9 +971,13 @@ def build_status() -> Dict[str, Any]:
     p = raw.get("power")
     if p is not None:
         label = POWER_STATUS_VAL.get(p, str(p))
-        if label in ("on", "startup"):
+        if label == "on":
             out["power"] = "on"
-        elif label in ("standby", "cooling1", "cooling2", "saving_cool1", "saving_cool2", "saving_standby"):
+        elif label in ("startup", "startup_lamp"):
+            out["power"] = "on"
+            out["warming_up"] = True
+            out["power_status"] = label
+        elif label in ("standby", "cooling1", "cooling2", "saving_cool", "saving_standby"):
             out["power"] = "off"
         else:
             out["power"] = label
