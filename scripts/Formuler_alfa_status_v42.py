@@ -2658,7 +2658,7 @@ class Handler(BaseHTTPRequestHandler):
                     return
                 # Kör scenen i bakgrundstråd så HTTP-svaret returnerar direkt.
                 threading.Thread(
-                    target=_run_scene_locally,
+                    target=_execute_scene_payload,
                     args=(payload,),
                     daemon=True,
                     name=f"RemoteScene-{scene_num}",
