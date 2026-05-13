@@ -590,12 +590,6 @@ function RemotePad({ onKey }: { onKey: (k: RemoteKey) => void }) {
         >
           <Menu className="h-4 w-4" /> Menu
         </button>
-        <button
-          className={`${btn} w-auto px-3 gap-1.5`}
-          onClick={() => onKey("reset")}
-        >
-          <RotateCcw className="h-4 w-4" /> Reset
-        </button>
       </div>
     </div>
   );
