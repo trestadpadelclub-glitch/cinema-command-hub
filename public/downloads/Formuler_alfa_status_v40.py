@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Formuler_alfa_status_v39.py  (Sony VPL-HW65ES, SDCP / PJ Talk)
+Formuler_alfa_status_v40.py  (Sony VPL-HW65ES, SDCP / PJ Talk)
 ==============================================================
 
-v39 NYTT: MOL3 start/paus följer nu faktisk USAGE_MEDIA-ljudstatus även när MediaSession fastnar på pb_int=3.
+v40 NYTT: MyTVOnline3 startar via rätt paketnamn tv.formuler.mol3.real; MOL3 start/paus följer faktisk USAGE_MEDIA-ljudstatus även när MediaSession fastnar på pb_int=3.
 
 v36 NYTT (jämfört med v35) — ADCP HELT BORTTAGET:
   - HW65ES (Home Cinema-serien) stödjer INTE Sonys ADCP-protokoll
