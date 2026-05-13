@@ -301,10 +301,6 @@ function Index() {
             <Section title="Smart Scenes">
               <SceneGrid householdCode={household} />
             </Section>
-
-            <Section title="Power">
-              <PowerControl />
-            </Section>
           </TabsContent>
 
           {/* REMOTES — swipeable hub */}
