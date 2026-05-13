@@ -55,6 +55,19 @@ interface LightRow {
 }
 
 const LIGHT_DEFAULTS = { brightness: 80, kelvin: 3000, color_hex: "#ffaa55" };
+const SOUND_MODES = [
+  { code: "MOVIE", label: "Movie" },
+  { code: "MUSIC", label: "Music" },
+  { code: "GAME", label: "Game" },
+  { code: "DIRECT", label: "Direct" },
+  { code: "PURE DIRECT", label: "Pure Direct" },
+  { code: "STEREO", label: "Stereo" },
+  { code: "AUTO", label: "Auto" },
+  { code: "MCH STEREO", label: "Multi Ch Stereo" },
+  { code: "DOLBY DIGITAL", label: "Dolby Digital" },
+  { code: "DTS SURROUND", label: "DTS Surround" },
+];
+const DIRAC_SLOTS = ["OFF", "1", "2", "3"];
 
 export function SceneEditorDialog({ open, onOpenChange, householdCode, scene, onSaved }: Props) {
   const [tab, setTab] = useState("picture");
@@ -74,6 +87,11 @@ export function SceneEditorDialog({ open, onOpenChange, householdCode, scene, on
   const [marantzPower, setMarantzPower] = useState<"on" | "off" | null>(scene.marantz_power);
   const [marantzInput, setMarantzInput] = useState<string | null>(scene.marantz_input);
   const [marantzVolume, setMarantzVolume] = useState<number | null>(scene.marantz_volume);
+  const [marantzMute, setMarantzMute] = useState<boolean | null>(scene.marantz_mute);
+  const [marantzSoundMode, setMarantzSoundMode] = useState<string | null>(scene.marantz_sound_mode);
+  const [marantzSmartSelect, setMarantzSmartSelect] = useState<number | null>(scene.marantz_smart_select);
+  const [marantzDirac, setMarantzDirac] = useState<string | null>(scene.marantz_dirac);
+  const [marantzSpeakerPreset, setMarantzSpeakerPreset] = useState<number | null>(scene.marantz_speaker_preset);
   const [inputs, setInputs] = useState<MarantzInput[]>([]);
 
   // Lights
@@ -84,6 +102,7 @@ export function SceneEditorDialog({ open, onOpenChange, householdCode, scene, on
   const [projectorDelayMs, setProjectorDelayMs] = useState(scene.projector_delay_ms);
   const [marantzDelayMs, setMarantzDelayMs] = useState(scene.marantz_delay_ms);
   const [lightsDelayMs, setLightsDelayMs] = useState(scene.lights_delay_ms);
+  const [projectorBlankDelaySeconds, setProjectorBlankDelaySeconds] = useState(scene.projector_blank_delay_seconds ?? 0);
 
   // Reset state whenever dialog opens with a (potentially new) scene
   useEffect(() => {
