@@ -50,6 +50,7 @@ export function LightsRemote({ householdCode }: Props) {
   const [offset, setOffset] = useState(0); // -50..+50
   const [lightBusy, setLightBusy] = useState<string | null>(null);
   const [manualLevels, setManualLevels] = useState<Record<string, number>>({});
+  const [manualColors, setManualColors] = useState<Record<string, string>>({});
   const lightDeviceIds = useMemo(() => lights.map((l) => l.tuya_device_id).filter(Boolean), [lights]);
 
   // Realtidsstatus från bryggan (v33). Pollar var 5s.
