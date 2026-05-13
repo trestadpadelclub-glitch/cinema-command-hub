@@ -136,7 +136,7 @@ export function SettingsDialog() {
                   Ladda ner v43
                 </a>
                 {" · "}
-                <span>v42 lägger till <code>GET /api/remote/scene/&lt;n&gt;</code> för fysiska fjärrkontrollsknappar — t.ex. <code>/api/remote/scene/7</code> kör Scen 7 (Tänd) och <code>/8</code> kör Scen 8 (Släck). Returnerar <code>{`{"status":"ok"}`}</code> direkt och kör scenen i bakgrunden. Behåller v41:s smarta Blank-cykel.</span>
+                <span>v43: <strong>endast MyTVOnline3</strong> triggar movie_*-scener (ljusautomatik). YouTube, Spotify, Red Bull TV, Netflix m.fl. ignoreras helt — play/paus i dem släcker/tänder INTE längre lampor. Behåller v42:s <code>GET /api/remote/scene/&lt;n&gt;</code> och v41:s smarta Blank-cykel.</span>
               </p>
 
             </div>
