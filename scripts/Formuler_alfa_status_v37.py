@@ -1861,7 +1861,11 @@ class FormulerMonitor(threading.Thread):
         # Fallback: vissa Formuler-firmware/appkombinationer rapporterar alltid
         # MediaSession state=0 även när video faktiskt spelas. Då använder vi
         # ljudaktivitet + aktiv spelapp som signal för playing/paused.
-        if pb_int == 0 and focus in _FORMULER_PLAYER_PACKAGES:
+        # Ljud-fallback: om MediaSession inte rapporterar PLAYING men det finns
+        # mediauppspelning (USAGE_MEDIA, state:started) och vi är i en filmapp,
+        # behandla det som att film spelas. Vissa firmware/appkombinationer
+        # rapporterar pb_int=0/1/2 även när video faktiskt körs.
+        if play != "playing" and focus in _FORMULER_PLAYER_PACKAGES:
             if audio_active:
                 play = "playing"
             elif self._play_state == "playing":
