@@ -716,7 +716,7 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
   ) => (
     <Button
       variant="secondary"
-      className={`h-14 w-14 rounded-full p-0 ${extra}`}
+      className={`${locked ? "h-16 w-16" : "h-14 w-14"} rounded-full p-0 ${extra}`}
       onClick={() => press(key, label)}
       disabled={busy === key}
       aria-label={label}
