@@ -1786,8 +1786,17 @@ def _fetch_scene_payload(scene_number: int, timeout: float = 8.0) -> Optional[Di
         _log(f"REMOTE scene {scene_number} (skipped — sätt HOUSEHOLD_CODE)")
         return {"matched": False, "reason": "no_household_code"}
     body = json.dumps({"household_code": hh, "scene_number": int(scene_number)}).encode("utf-8")
+    # Cloudflare blockerar default "Python-urllib/x.y" med 403 — sätt en
+    # vanlig User-Agent så att /api/public/scene släpper igenom anropet.
     req = urllib.request.Request(
-        url, data=body, headers={"Content-Type": "application/json"}, method="POST"
+        url,
+        data=body,
+        headers={
+            "Content-Type": "application/json",
+            "User-Agent": "FormulerBridge/42 (+lovable)",
+            "Accept": "application/json",
+        },
+        method="POST",
     )
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:
