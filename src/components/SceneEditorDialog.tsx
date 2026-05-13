@@ -278,6 +278,31 @@ export function SceneEditorDialog({ open, onOpenChange, householdCode, scene, on
                   showPowerAction
                 />
               </div>
+              <div className="rounded-lg border p-3 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <Label>Blank-delay</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Används bara om scenens Blank Screen är satt till Blank. Bilden blir synlig igen efter vald tid.
+                    </p>
+                  </div>
+                  <span className="font-mono text-sm text-primary tabular-nums">
+                    {projectorBlankDelaySeconds}s
+                  </span>
+                </div>
+                <Slider
+                  value={[projectorBlankDelaySeconds]}
+                  min={0}
+                  max={60}
+                  step={1}
+                  disabled={projectorSettings.blank !== "on"}
+                  onValueChange={([v]) => setProjectorBlankDelaySeconds(v)}
+                />
+                <div className="flex justify-between text-[10px] text-muted-foreground">
+                  <span>0s = permanent blank</span>
+                  <span>60s max</span>
+                </div>
+              </div>
             </TabsContent>
 
             {/* ----------- LJUD ----------- */}
