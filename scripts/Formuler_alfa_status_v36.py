@@ -143,7 +143,7 @@ from typing import Any, Dict, Optional, Tuple
 
 SETTINGS = {
     "host":   os.environ.get("PROJECTOR_HOST", "192.168.86.114"),
-    "port":   int(os.environ.get("PROJECTOR_PORT", "53595")),
+    "port":   int(os.environ.get("PROJECTOR_PORT", "53484")),
     "passwd": os.environ.get("PROJECTOR_PASS", "kirderF1"),
     "bridge_port": int(os.environ.get("BRIDGE_PORT", "5000")),
     "timeout": 3.0,
