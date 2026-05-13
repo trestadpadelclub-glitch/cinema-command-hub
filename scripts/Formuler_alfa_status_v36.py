@@ -1,48 +1,34 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Formuler_alfa_status_v35.py  (Sony VPL-HW65ES, ADCP)
-=====================================================
+Formuler_alfa_status_v36.py  (Sony VPL-HW65ES, SDCP / PJ Talk)
+==============================================================
 
-v35 NYTT (jämfört med v34):
-  - Återinför LOKAL EXEKVERING: _execute_scene_payload() körs direkt
-    när molnet svarar på en trigger (Formuler / Chromecast / Marantz),
-    så projektor/Marantz/lampor styrs lokalt utan extra rundtur via
-    /api/* från appen. Lägre latens + funkar headless.
-  - Inga ADCP-ändringar: hårdvarurisker hos HW65ES kvarstår
-      * Power On via ADCP är opålitlig — port 53595 stängs i standby.
-        Vid återkommande fel: lägg PJ Talk (pysdcp/SDCP 53484) som
-        hybrid för power+status och låt ADCP enbart avfyra inställningar
-        när projektorn är på och varm.
-      * Tung batch-GET (status) på 53595 kan ge socket.timeout —
-        håll polling glesa eller flytta till PJ Talk.
+v36 NYTT (jämfört med v35) — ADCP HELT BORTTAGET:
+  - HW65ES (Home Cinema-serien) stödjer INTE Sonys ADCP-protokoll
+    (port 53595). ADCP finns endast på "Data Projector"-serien
+    (VPL-FH/FHZ/PHZ + installations-/VW-modeller).
+  - Det förklarar tidigare "socket.timeout"/"ADCP batch GET fail" och
+    den opålitliga "Power On via ADCP" — porten existerar inte på HW65ES,
+    TCP-anslutningen blir refused eller hänger till timeout.
+  - HW65ES styrs istället via SDCP / PJ Talk på TCP 53484 med
+    community "SONY" (samma protokoll pysdcp / pysdcp-extended använder).
+  - All projektor-IO går nu genom en inbyggd, dependensfri SDCP-klient
+    (raw paket enligt Sony SDCP-spec). Inga externa libs krävs.
+  - _execute_scene_payload() applicerar nu HELA scenens
+    projector_settings lokalt (power, picture_mode, brightness,
+    contrast, color, sharpness, color_temp, lamp_control, motionflow,
+    input, blank) via SDCP — inte bara power.
+  - /api/projector och /api/projector/status fortsätter funka exakt som
+    förut för appen — endast bakomliggande transport är bytt.
+  - REMOTE-knappar (menu/up/down/...) finns INTE i SDCP. Returnerar
+    "skipped" — om du behöver fjärrkontroll på HW65ES krävs CEC eller
+    en IR-blaster.
 
-v35: STÖD FÖR SONY VPL-HW65ES (ersätter XW5000ES-mappningarna).
-v35: Samma ADCP text-protokoll på TCP 53595 och samma /api/projector + /status
-v35: endpoints — endast Sony-lagret är ombytt enligt Sonys "Protocol Manual
-v35: (SUPPORTED COMMAND LIST)" 1st Edition Rev.1, kolumn HW65ES (col 9).
-v34:
-v34: HW65ES stödjer (○):
-v34:   - power, input (hdmi1/hdmi2), blank (on/off)
-v34:   - picture_mode: cinema_film1, cinema_film2, reference, tv, photo,
-v34:     brt_cinema, brt_tv, user, game  (INTE user1/2/3, INTE cinema_digital)
-v34:   - contrast, brightness, color, sharpness  (numeric 0..100)
-v34:   - color_temp: custom1..5, d93, d75, d65, d55  (INTE dci)
-v34:   - coltemp_gain_r/g/b, coltemp_bias_r/g/b
-v34:   - lamp_control: low / high  (ersätter laser_output från XW5000ES)
-v34:   - motionflow: off, true_cinema, smooth_low, smooth_high
-v34:     (HW65ES saknar impulse + combination)
-v34:
-v34: HW65ES stödjer INTE (svarar err_cmd/err_option) — dessa returnerar nu
-v34: "skipped" utan att gå mot projektorn:
-v34:   - light_output_val (laser_output)  → ersatt av lamp_control
-v34:   - light_output_dyn (dynamic_control)
-v34:   - contrast_enh     (hdr_enhancer)
-v34:   - gamma_correction (saknas som direkt ADCP-item på HW65ES)
-v34:   - real_cre / real_cre_reso (Reality Creation)
-v34:
-v34: Allt annat (Marantz, Formuler, Lights, Chromecast, triggers) är OFÖRÄNDRAT
-v34: från v33.
+Konfigurationsändring:
+  - PROJECTOR_PORT default ändrad: 53595 (ADCP) -> 53484 (SDCP/PJ Talk).
+  - PROJECTOR_PASS används inte (SDCP autentiserar via community-fält
+    som alltid är "SONY" på HW65ES).
 
 v33: NYHETER mot v32 (additivt — alla v32-endpoints fungerar oförändrat):
 v33:   * GET  /api/lights/status         -> aktuell status för varje konfigurerad
