@@ -549,9 +549,40 @@ ITEM = {
     "COLOR_TEMP":       0x0017,
     "GAMMA_CORRECTION": 0x001C,
     "LAMP_CONTROL":     0x001A,
+    "IRIS_DYN_CONT":    0x0019,  # iris dynamic control (HW65ES, lampbaserad)
     "MOTIONFLOW":       0x0021,
     "BLANK_PICTURE":    0x0030,
 }
+
+# Iris dynamic control – select-värden (off / limited / full)
+IRIS_DYN_VAL = {"off": 0x0000, "limited": 0x0001, "full": 0x0002}
+IRIS_DYN_VAL_R = {v: k for k, v in IRIS_DYN_VAL.items()}
+
+def _iris_dyn_to_sdcp(v: Any) -> int:
+    s = str(v).strip().lower()
+    if s in IRIS_DYN_VAL:
+        return IRIS_DYN_VAL[s]
+    # Numeriskt: 0=off, 1-50=limited, >50=full
+    try:
+        n = int(float(s))
+    except Exception:
+        return IRIS_DYN_VAL["off"]
+    if n <= 0:
+        return IRIS_DYN_VAL["off"]
+    if n > 50:
+        return IRIS_DYN_VAL["full"]
+    return IRIS_DYN_VAL["limited"]
+
+def _laser_to_lamp_sdcp(v: Any) -> int:
+    """laser_output (0-100 i UI) -> LAMP_CONTROL high/low på HW65ES."""
+    s = str(v).strip().lower()
+    if s in ("high", "low"):
+        return LAMP_VAL[s]
+    try:
+        n = int(float(s))
+    except Exception:
+        return LAMP_VAL["low"]
+    return LAMP_VAL["high"] if n > 50 else LAMP_VAL["low"]
 
 # --- Enum-värden ---
 POWER_VAL = {"off": 0x0000, "on": 0x0001}
@@ -705,9 +736,11 @@ ACTION_MAP: Dict[str, Tuple[Optional[str], Any, Any]] = {
     "contrast":     ("CONTRAST",         _ui_0_100,           _decode_0_100),
     "color":        ("COLOR",            _ui_0_100,           _decode_0_100),
     "sharpness":    ("SHARPNESS",        _ui_0_100,           _decode_0_100),
-    # Ej tillgängliga via SDCP på HW65ES — returnera "skipped" istället för fel.
-    "laser_output":         (None, None, None),
-    "dynamic_control":      (None, None, None),
+    # HW65ES (lampbaserad): laser_output mappas till LAMP_CONTROL (high/low),
+    # dynamic_control mappas till IRIS_DYN_CONT (off/limited/full).
+    "laser_output":         ("LAMP_CONTROL",  _laser_to_lamp_sdcp, lambda n: LAMP_VAL_R.get(n, str(n))),
+    "dynamic_control":      ("IRIS_DYN_CONT", _iris_dyn_to_sdcp,   lambda n: IRIS_DYN_VAL_R.get(n, str(n))),
+    # Övriga saknas via SDCP — returnera "skipped" istället för fel.
     "hdr_enhancer":         (None, None, None),
     "real_cre":             (None, None, None),
     "reality_creation":     (None, None, None),
@@ -1844,13 +1877,13 @@ class FormulerMonitor(threading.Thread):
                 if state is None:
                     time.sleep(self.poll_sec)
                     continue
-                self._handle(state)
+                self._process_state(state)
             except Exception as e:
                 _log(f"FORMULER loop error: {e}")
             self._stop.wait(self.poll_sec)
         _log("FORMULER monitor stopped")
 
-    def _handle(self, st: Dict[str, Any]) -> None:
+    def _process_state(self, st: Dict[str, Any]) -> None:
         now = time.time()
         box_on = st["box_on"]
         play = st["play"]
@@ -2579,8 +2612,6 @@ class Handler(BaseHTTPRequestHandler):
         # reality_creation, dynamic_control) — returnera "skipped".
         if item_name is None:
             reasons = {
-                "laser_output":     "hw65es_is_lamp_based_use_lamp_control",
-                "dynamic_control":  "not_modeled_in_sdcp_layer",
                 "hdr_enhancer":     "not_modeled_in_sdcp_layer",
                 "real_cre":         "reality_creation_not_modeled_in_sdcp_layer",
                 "reality_creation": "reality_creation_not_modeled_in_sdcp_layer",
