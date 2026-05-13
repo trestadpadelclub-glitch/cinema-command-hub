@@ -589,11 +589,11 @@ POWER_VAL = {"off": 0x0000, "on": 0x0001}
 POWER_STATUS_VAL = {
     0x0000: "standby",
     0x0001: "startup",
-    0x0002: "on",
-    0x0003: "cooling1",
-    0x0004: "cooling2",
-    0x0005: "saving_cool1",
-    0x0006: "saving_cool2",
+    0x0002: "startup_lamp",
+    0x0003: "on",
+    0x0004: "cooling1",
+    0x0005: "cooling2",
+    0x0006: "saving_cool",
     0x0007: "saving_standby",
 }
 INPUT_VAL = {"hdmi1": 0x0002, "hdmi2": 0x0003}
