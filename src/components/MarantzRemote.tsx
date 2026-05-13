@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   Power,
   Volume2,
@@ -9,10 +9,15 @@ import {
   RefreshCw,
   CircleDot,
   CircleOff,
+  Pencil,
+  Check,
+  X,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -23,7 +28,7 @@ import {
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { sendMarantz, marantzMvToDb, type MarantzStatus } from "@/lib/projector";
-import { fetchInputs, type MarantzInput } from "@/lib/scenes";
+import { fetchInputs, fetchAppSettings, updateAppSettings, type MarantzInput, type MarantzLabels } from "@/lib/scenes";
 import { toast } from "sonner";
 
 interface Props {
@@ -74,6 +79,13 @@ export function MarantzRemote({
   const [diracSlot, setDiracSlot] = useState<string>("");
   const [speakerPreset, setSpeakerPreset] = useState<string>("");
 
+  // Volym-slider (lokalt drag-värde, optimistisk uppdatering)
+  const [volDrag, setVolDrag] = useState<number | null>(null);
+  const volTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Anpassningsbara namn för Speaker presets & Dirac slots
+  const [labels, setLabels] = useState<MarantzLabels>({});
+
   // Status kommer från bryggan (pollas) och används både för visning och aktiva val.
   const muted = marantzStatus?.mute ?? false;
   const currentPower = marantzStatus?.power === "on" ? "ON" : marantzStatus?.power === "off" ? "Standby" : "—";
@@ -83,10 +95,27 @@ export function MarantzRemote({
     const volDb = marantzMvToDb(volNum);
     return `${volNum} (${volDb >= 0 ? "+" : ""}${volDb} dB)`;
   })();
+  const liveVolume = volDrag ?? marantzStatus?.volume ?? 0;
 
   useEffect(() => {
     fetchInputs(householdCode).then(setInputs);
+    fetchAppSettings(householdCode).then((s) => setLabels(s.marantz_labels ?? {}));
   }, [householdCode]);
+
+  const speakerPresetLabel = (n: 1 | 2): string =>
+    (n === 1 ? labels.speaker_preset_1 : labels.speaker_preset_2) || `Preset ${n}`;
+  const diracSlotLabel = (n: 1 | 2 | 3): string =>
+    (n === 1 ? labels.dirac_1 : n === 2 ? labels.dirac_2 : labels.dirac_3) || `Slot ${n}`;
+
+  const saveLabel = async (key: keyof MarantzLabels, value: string) => {
+    const next = { ...labels, [key]: value.trim() || undefined };
+    setLabels(next);
+    try {
+      await updateAppSettings(householdCode, { marantz_labels: next });
+    } catch (e) {
+      toast.error("Kunde inte spara namn", { description: String(e) });
+    }
+  };
 
   // Synka radio-knappar / dropdown med faktisk receiver-status när den uppdateras.
   useEffect(() => {
@@ -165,6 +194,19 @@ export function MarantzRemote({
     send(`SPPR ${n}`, `Speaker Preset ${n}`, `spk`);
   };
 
+  // Volym-slider: optimistisk drag, debounced send som absolut MV-värde.
+  const handleVolumeDrag = (v: number) => {
+    setVolDrag(v);
+    if (volTimerRef.current) clearTimeout(volTimerRef.current);
+    volTimerRef.current = setTimeout(() => {
+      const padded = v.toString().padStart(2, "0");
+      send(`MV${padded}`, `Volym ${v}`, "vol-set").finally(() => {
+        // Släpp drag-värdet så status-pollen tar över UI:t igen.
+        setTimeout(() => setVolDrag(null), 800);
+      });
+    }, 250);
+  };
+
   const inputLabel = (() => {
     if (!marantzStatus?.input) return null;
     const match = inputs.find((i) => i.marantz_code === marantzStatus.input);
@@ -174,8 +216,17 @@ export function MarantzRemote({
     if (!marantzStatus?.sound_mode) return "—";
     return SOUND_MODES.find((m) => m.code === marantzStatus.sound_mode)?.label ?? marantzStatus.sound_mode;
   })();
-  const diracLabel = marantzStatus?.dirac ? (marantzStatus.dirac === "OFF" ? "Av" : `Slot ${marantzStatus.dirac}`) : "—";
-  const speakerLabel = marantzStatus?.speaker_preset != null ? `Preset ${marantzStatus.speaker_preset}` : "—";
+  const diracLabel = (() => {
+    if (!marantzStatus?.dirac) return "—";
+    if (marantzStatus.dirac === "OFF") return "Av";
+    const n = Number(marantzStatus.dirac);
+    return n === 1 || n === 2 || n === 3 ? diracSlotLabel(n) : `Slot ${marantzStatus.dirac}`;
+  })();
+  const speakerLabel = (() => {
+    const n = marantzStatus?.speaker_preset;
+    if (n === 1 || n === 2) return speakerPresetLabel(n);
+    return "—";
+  })();
   const smartLabel = marantzStatus?.smart_select != null ? `Smart ${marantzStatus.smart_select}` : "—";
 
   return (
@@ -291,6 +342,29 @@ export function MarantzRemote({
       {/* Volume */}
       <Card className="p-4">
         <SettingHeader label="Volume" value={`${currentVolume}${muted ? " · Muted" : ""}`} />
+
+        {/* Slider — drag för exakt volym (MV-skala 0..98) */}
+        <div className="mb-4 px-1">
+          <div className="flex items-baseline justify-between mb-1.5">
+            <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
+              Drag för exakt volym
+            </span>
+            <span className="font-mono text-sm tabular-nums text-primary">
+              MV{liveVolume.toString().padStart(2, "0")} ·{" "}
+              {marantzMvToDb(liveVolume) >= 0 ? "+" : ""}
+              {marantzMvToDb(liveVolume)} dB
+            </span>
+          </div>
+          <Slider
+            value={[liveVolume]}
+            min={0}
+            max={98}
+            step={1}
+            onValueChange={(v) => handleVolumeDrag(v[0])}
+            disabled={marantzReachable === false}
+          />
+        </div>
+
         <div className="grid grid-cols-3 gap-2">
           <Button
             size="lg"
@@ -424,6 +498,10 @@ export function MarantzRemote({
         >
           {DIRAC_SLOTS.map((s) => {
             const active = diracSlot === s.value;
+            const display =
+              s.value === "OFF"
+                ? s.label
+                : diracSlotLabel(Number(s.value) as 1 | 2 | 3);
             return (
               <label
                 key={s.value}
@@ -435,11 +513,33 @@ export function MarantzRemote({
                 }`}
               >
                 <RadioGroupItem id={`dirac-${s.value}`} value={s.value} />
-                <span className="text-sm">{s.label}</span>
+                <span className="text-sm truncate">{display}</span>
               </label>
             );
           })}
         </RadioGroup>
+
+        <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <LabelEditor
+            title="Slot 1 namn"
+            value={labels.dirac_1 ?? ""}
+            placeholder="t.ex. Film"
+            onSave={(v) => saveLabel("dirac_1", v)}
+          />
+          <LabelEditor
+            title="Slot 2 namn"
+            value={labels.dirac_2 ?? ""}
+            placeholder="t.ex. Musik"
+            onSave={(v) => saveLabel("dirac_2", v)}
+          />
+          <LabelEditor
+            title="Slot 3 namn"
+            value={labels.dirac_3 ?? ""}
+            placeholder="t.ex. Sport"
+            onSave={(v) => saveLabel("dirac_3", v)}
+          />
+        </div>
+
         <p className="text-xs text-muted-foreground mt-2">
           Skickar <code className="text-primary/80">PSDIRAC 1/2/3</code> eller{" "}
           <code className="text-primary/80">PSDIRAC OFF</code>.
@@ -471,11 +571,29 @@ export function MarantzRemote({
                 <span className="text-xs uppercase tracking-wider text-muted-foreground">
                   Högtalare
                 </span>
-                <span className="text-lg font-semibold">Preset {n}</span>
+                <span className="text-base font-semibold truncate max-w-full px-2">
+                  {speakerPresetLabel(n)}
+                </span>
               </label>
             );
           })}
         </RadioGroup>
+
+        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <LabelEditor
+            title="Preset 1 namn"
+            value={labels.speaker_preset_1 ?? ""}
+            placeholder="t.ex. 7.1.4 Atmos"
+            onSave={(v) => saveLabel("speaker_preset_1", v)}
+          />
+          <LabelEditor
+            title="Preset 2 namn"
+            value={labels.speaker_preset_2 ?? ""}
+            placeholder="t.ex. 5.1 Stereo+Sub"
+            onSave={(v) => saveLabel("speaker_preset_2", v)}
+          />
+        </div>
+
         <p className="text-xs text-muted-foreground mt-2">
           Skickar <code className="text-primary/80">SPPR 1</code> /{" "}
           <code className="text-primary/80">SPPR 2</code>.
@@ -505,6 +623,90 @@ function SettingHeader({ label, value }: { label: string; value: ReactNode }) {
       <span className="max-w-[65%] truncate rounded-md border border-primary/30 bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
         {value}
       </span>
+    </div>
+  );
+}
+
+function LabelEditor({
+  title,
+  value,
+  placeholder,
+  onSave,
+}: {
+  title: string;
+  value: string;
+  placeholder?: string;
+  onSave: (v: string) => void | Promise<void>;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+
+  useEffect(() => {
+    if (!editing) setDraft(value);
+  }, [value, editing]);
+
+  if (!editing) {
+    return (
+      <button
+        type="button"
+        onClick={() => setEditing(true)}
+        className="flex items-center justify-between gap-2 h-9 px-3 rounded-md border border-border bg-secondary/30 hover:bg-secondary text-left transition-colors"
+      >
+        <span className="flex flex-col min-w-0">
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            {title}
+          </span>
+          <span className="text-xs truncate">
+            {value || <span className="text-muted-foreground italic">{placeholder ?? "— ange namn —"}</span>}
+          </span>
+        </span>
+        <Pencil className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      <Input
+        autoFocus
+        value={draft}
+        placeholder={placeholder}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            void onSave(draft);
+            setEditing(false);
+          } else if (e.key === "Escape") {
+            setDraft(value);
+            setEditing(false);
+          }
+        }}
+        className="h-9 text-xs"
+      />
+      <Button
+        size="icon"
+        variant="ghost"
+        className="h-8 w-8 flex-shrink-0"
+        onClick={() => {
+          void onSave(draft);
+          setEditing(false);
+        }}
+        aria-label="Spara"
+      >
+        <Check className="h-4 w-4" />
+      </Button>
+      <Button
+        size="icon"
+        variant="ghost"
+        className="h-8 w-8 flex-shrink-0"
+        onClick={() => {
+          setDraft(value);
+          setEditing(false);
+        }}
+        aria-label="Avbryt"
+      >
+        <X className="h-4 w-4" />
+      </Button>
     </div>
   );
 }

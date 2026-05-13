@@ -1,0 +1,1 @@
+ALTER TABLE public.app_settings ADD COLUMN IF NOT EXISTS marantz_labels jsonb NOT NULL DEFAULT '{}'::jsonb;

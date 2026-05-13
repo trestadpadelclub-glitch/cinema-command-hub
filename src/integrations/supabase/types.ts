@@ -17,18 +17,21 @@ export type Database = {
       app_settings: {
         Row: {
           household_code: string
+          marantz_labels: Json
           poll_enabled: boolean
           poll_interval_seconds: number
           updated_at: string
         }
         Insert: {
           household_code: string
+          marantz_labels?: Json
           poll_enabled?: boolean
           poll_interval_seconds?: number
           updated_at?: string
         }
         Update: {
           household_code?: string
+          marantz_labels?: Json
           poll_enabled?: boolean
           poll_interval_seconds?: number
           updated_at?: string

@@ -4,7 +4,7 @@ import { Projector, RotateCw, Loader2 } from "lucide-react";
 import { Toaster } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
 import { SettingsDialog } from "@/components/SettingsDialog";
-import { PowerControl } from "@/components/PowerControl";
+
 import { ManualControls } from "@/components/ManualControls";
 import { AiAssistant } from "@/components/AiAssistant";
 import { RemoteHub } from "@/components/RemoteHub";
@@ -300,10 +300,6 @@ function Index() {
           <TabsContent value="scenes" className="mt-0 space-y-6">
             <Section title="Smart Scenes">
               <SceneGrid householdCode={household} />
-            </Section>
-
-            <Section title="Power">
-              <PowerControl />
             </Section>
           </TabsContent>
 

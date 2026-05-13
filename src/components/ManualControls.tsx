@@ -8,7 +8,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Info, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Menu, RotateCcw, EyeOff, Eye } from "lucide-react";
+import { Info, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Menu, EyeOff, Eye } from "lucide-react";
 import {
   sendCommand,
   PIC_MODE_LABELS,
@@ -589,12 +589,6 @@ function RemotePad({ onKey }: { onKey: (k: RemoteKey) => void }) {
           onClick={() => onKey("menu")}
         >
           <Menu className="h-4 w-4" /> Menu
-        </button>
-        <button
-          className={`${btn} w-auto px-3 gap-1.5`}
-          onClick={() => onKey("reset")}
-        >
-          <RotateCcw className="h-4 w-4" /> Reset
         </button>
       </div>
     </div>
