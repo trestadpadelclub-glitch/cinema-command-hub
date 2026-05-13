@@ -21,7 +21,7 @@ export function useLightsStatus({ enabled, intervalSeconds, deviceIds = [] }: Op
     }
     setReachable(true);
     setLights(res.lights);
-  }, []);
+  }, [deviceKey]);
 
   useEffect(() => {
     if (!enabled) {
