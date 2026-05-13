@@ -40,6 +40,27 @@ const LS_OFF_KEY = (h: string) => `lights_remote_off_scene_${h}`;
 const clamp = (n: number, lo: number, hi: number) =>
   Math.max(lo, Math.min(hi, n));
 
+const normalizeHex = (raw: string): string | null => {
+  let s = raw.trim().replace(/^#/, "");
+  if (s.length === 3) s = s.split("").map((c) => c + c).join("");
+  if (!/^[0-9a-fA-F]{6}$/.test(s)) return null;
+  return `#${s.toLowerCase()}`;
+};
+
+const hexToRgb = (hex: string): { r: number; g: number; b: number } => {
+  const h = (normalizeHex(hex) ?? "#ffffff").slice(1);
+  return {
+    r: parseInt(h.slice(0, 2), 16),
+    g: parseInt(h.slice(2, 4), 16),
+    b: parseInt(h.slice(4, 6), 16),
+  };
+};
+
+const rgbToHex = (r: number, g: number, b: number): string => {
+  const h = (n: number) => clamp(Math.round(n), 0, 255).toString(16).padStart(2, "0");
+  return `#${h(r)}${h(g)}${h(b)}`;
+};
+
 export function LightsRemote({ householdCode }: Props) {
   const [scenes, setScenes] = useState<Scene[]>([]);
   const [lights, setLights] = useState<Light[]>([]);
