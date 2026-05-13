@@ -55,7 +55,8 @@ export function RemoteHub({
         </TabsTrigger>
       </TabsList>
 
-      <TabsContent value="sony" className="mt-4">
+      <TabsContent value="sony" className="mt-4 space-y-4">
+        <PowerControl />
         <ManualControls settings={settings} onChange={onSettingsChange} />
       </TabsContent>
       <TabsContent value="marantz" className="mt-4">
