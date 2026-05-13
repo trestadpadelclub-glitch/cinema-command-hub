@@ -28,10 +28,19 @@ export interface MarantzInput {
 }
 
 
+export interface MarantzLabels {
+  speaker_preset_1?: string;
+  speaker_preset_2?: string;
+  dirac_1?: string;
+  dirac_2?: string;
+  dirac_3?: string;
+}
+
 export interface AppSettings {
   household_code: string;
   poll_enabled: boolean;
   poll_interval_seconds: number;
+  marantz_labels?: MarantzLabels;
 }
 
 export type LightType = "dimmer" | "cct" | "rgb" | "rgbcct";
