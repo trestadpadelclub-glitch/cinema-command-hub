@@ -549,7 +549,7 @@ ITEM = {
     "COLOR_TEMP":       0x0017,
     "GAMMA_CORRECTION": 0x0022,
     "LAMP_CONTROL":     0x001A,
-    "IRIS_DYN_CONT":    0x0019,  # iris dynamic control (HW65ES, lampbaserad)
+    "IRIS_DYN_CONT":    0x001D,  # Advanced Iris (HW65ES, lampbaserad)
     "MOTIONFLOW":       0x0059,
     "REALITY_CREATION": 0x0067,  # On/Off
     "REALITY_CRE_RESO": 0x0068,  # 1..100
@@ -557,7 +557,9 @@ ITEM = {
 }
 
 # Iris dynamic control – select-värden (off / limited / full)
-IRIS_DYN_VAL = {"off": 0x0000, "limited": 0x0001, "full": 0x0002}
+# Advanced Iris – select-värden enligt Sony HW-protokoll:
+# 0=Off, 1=Manual, 2=Auto Full, 3=Auto Limited
+IRIS_DYN_VAL = {"off": 0x0000, "manual": 0x0001, "full": 0x0002, "limited": 0x0003}
 IRIS_DYN_VAL_R = {v: k for k, v in IRIS_DYN_VAL.items()}
 
 def _iris_dyn_to_sdcp(v: Any) -> int:
