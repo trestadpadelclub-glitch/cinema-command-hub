@@ -3,44 +3,25 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type",
   "Access-Control-Max-Age": "86400",
 } as const;
 
-const VALID_TRIGGERS = new Set([
-  "chromecast_on",
-  "chromecast_off",
-  "marantz_on",
-  "marantz_off",
-  "formuler_on",
-  "formuler_off",
-  "movie_playing",
-  "movie_paused",
-  "movie_stopped",
-]);
-
-interface TriggerRequest {
+interface SceneRequest {
   household_code: string;
-  trigger_key: string;
+  scene_number: number | string;
 }
 
 /**
- * Public endpoint för Python-bryggan att rapportera händelser till.
+ * Public endpoint för att hämta exekveringspayloaden för en scen via dess
+ * scene_number (1..N). Spegelbild av /api/public/trigger men slår upp scenen
+ * direkt istället för via en trigger-mappning. Används av bridgens enkla
+ * GET /api/remote/scene/<n> så att fysiska fjärrkontrollsknappar kan trigga
+ * scener direkt.
  *
- * POST /api/public/trigger
- * Body: { household_code: "abc", trigger_key: "chromecast_on" }
- *
- * Svar (200): {
- *   matched: true,
- *   scene: { id, name, scene_number, scene_payload, projector_settings, marantz_input, marantz_volume, lights_on },
- *   filters: { run_projector, run_marantz, run_lights },
- *   scene_lights: [ { device_id, name, type, on, brightness?, kelvin?, color? } ]
- * }
- *
- * Svar (200): { matched: false } när ingen trigger är mappad.
- *
- * Bryggan är ansvarig för att exekvera kommandona lokalt mot hårdvaran.
+ * POST /api/public/scene
+ * Body: { household_code: "abc", scene_number: 7 }
  */
 export const Route = createFileRoute("/api/public/scene")({
   server: {
@@ -49,46 +30,31 @@ export const Route = createFileRoute("/api/public/scene")({
         new Response(null, { status: 204, headers: CORS_HEADERS }),
 
       POST: async ({ request }) => {
-        let body: TriggerRequest;
+        let body: SceneRequest;
         try {
-          body = (await request.json()) as TriggerRequest;
+          body = (await request.json()) as SceneRequest;
         } catch {
           return json({ error: "Invalid JSON" }, 400);
         }
 
         const householdCode = String(body.household_code || "").trim();
-        const triggerKey = String(body.trigger_key || "").trim();
+        const sceneNumber = Number(body.scene_number);
 
         if (!householdCode || householdCode.length > 64) {
           return json({ error: "Invalid household_code" }, 400);
         }
-        if (!VALID_TRIGGERS.has(triggerKey)) {
-          return json({ error: "Invalid trigger_key" }, 400);
+        if (!Number.isInteger(sceneNumber) || sceneNumber < 1 || sceneNumber > 999) {
+          return json({ error: "Invalid scene_number" }, 400);
         }
 
-        // Slå upp trigger-mappning
-        const { data: trigger, error: trigErr } = await supabaseAdmin
-          .from("scene_triggers")
-          .select("*")
-          .eq("household_code", householdCode)
-          .eq("trigger_key", triggerKey)
-          .eq("enabled", true)
-          .maybeSingle();
+        const triggerKey = `remote_scene_${sceneNumber}`;
 
-        if (trigErr) {
-          console.error("Trigger lookup failed", trigErr);
-          return json({ error: "Database error" }, 500);
-        }
-
-        if (!trigger) {
-          return json({ matched: false, reason: "no_mapping" }, 200);
-        }
-
-        // Hämta scenen
+        // Hämta scenen direkt via scene_number
         const { data: scene, error: sceneErr } = await supabaseAdmin
           .from("scenes")
           .select("*")
-          .eq("id", trigger.scene_id)
+          .eq("household_code", householdCode)
+          .eq("scene_number", sceneNumber)
           .maybeSingle();
 
         if (sceneErr || !scene) {
