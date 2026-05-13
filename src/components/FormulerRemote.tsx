@@ -1153,7 +1153,7 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
           </div>
 
           {/* MITT: D-Pad + transport */}
-          <div className="flex flex-col items-center justify-center gap-3">
+          <div className="flex flex-col items-center justify-center gap-3 min-w-0">
             <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
               Navigation
             </Label>
