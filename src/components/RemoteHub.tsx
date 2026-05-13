@@ -27,7 +27,7 @@ export function RemoteHub({
   onMarantzRefresh,
 }: Props) {
   return (
-    <Tabs defaultValue="sony" className="w-full">
+    <Tabs defaultValue="formuler" className="w-full">
       <TabsList className="grid w-full grid-cols-6 h-auto">
         <TabsTrigger value="sony" className="flex-col gap-1 py-2">
           <Tv2 className="h-4 w-4" />
