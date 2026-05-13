@@ -360,6 +360,59 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
     if (activeApp) localStorage.setItem(ACTIVE_APP_KEY, activeApp);
   }, [activeApp]);
 
+  // Status-LEDs i låst läge: projektor / marantz / formuler / lights
+  const [projOn, setProjOn] = useState<boolean | null>(null);
+  const [formulerOn, setFormulerOn] = useState<boolean | null>(null);
+  const [lightsOn, setLightsOn] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (!locked) return;
+    let alive = true;
+    const tick = async () => {
+      // Projektor
+      try {
+        const r = await getStatus();
+        if (!alive) return;
+        if (r.ok) {
+          const p = parseStatus(r.data);
+          setProjOn(p.power === "on");
+        } else {
+          setProjOn(false);
+        }
+      } catch { if (alive) setProjOn(false); }
+      // Formuler — pinga bridge-endpoint för boxen
+      try {
+        const base = (await import("@/lib/projector")).getBridgeUrl();
+        const url = base.replace(/\/api\/projector$/i, "/api/formuler/list_apps");
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), 3500);
+        const res = await fetch(url, {
+          headers: { accept: "application/json", "ngrok-skip-browser-warning": "true" },
+          signal: ctrl.signal,
+        });
+        clearTimeout(t);
+        const d = await res.json().catch(() => ({}));
+        if (!alive) return;
+        setFormulerOn(res.ok && !!d?.ok);
+      } catch { if (alive) setFormulerOn(false); }
+      // Lights — minst en lampa online och tänd
+      try {
+        const r = await getLightsStatus();
+        if (!alive) return;
+        if (r.ok) {
+          setLightsOn(r.lights.some((l) => l.online && l.on));
+        } else {
+          setLightsOn(false);
+        }
+      } catch { if (alive) setLightsOn(false); }
+    };
+    tick();
+    const id = setInterval(tick, 8000);
+    return () => { alive = false; clearInterval(id); };
+  }, [locked]);
+
+  const marantzOn = marantzReachable !== false && marantzStatus?.power === "on";
+
   // Synka volym-slider med pollad status, men bara när användaren inte drar.
   useEffect(() => {
     if (draggingVol.current) return;
