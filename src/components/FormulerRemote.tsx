@@ -1061,7 +1061,7 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
       <Card className={locked ? "p-2 flex-1 min-h-0 flex flex-col" : "p-4"}>
         <div className={`grid grid-cols-[auto_1fr_auto] gap-4 items-stretch ${locked ? "h-full min-h-0" : ""}`}>
           {/* VÄNSTER: ljus */}
-          <div className="flex flex-col items-center gap-2 min-w-[64px]">
+          <div className={`flex flex-col items-center gap-2 ${locked ? "min-w-[72px]" : "min-w-[64px]"}`}>
             <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
               Ljus
             </Label>
@@ -1069,35 +1069,35 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
               <Button
                 variant="secondary"
                 size="icon"
-                className="h-9 w-9"
+                className={locked ? "h-12 w-12" : "h-9 w-9"}
                 onClick={() => handleLights("on")}
                 disabled={lightsBusy !== null}
                 title="Ljus på"
                 aria-label="Ljus på"
               >
                 {lightsBusy === "on" ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className={locked ? "h-6 w-6 animate-spin" : "h-4 w-4 animate-spin"} />
                 ) : (
-                  <Lightbulb className="h-4 w-4 text-amber-400" />
+                  <Lightbulb className={locked ? "h-6 w-6 text-amber-400" : "h-4 w-4 text-amber-400"} />
                 )}
               </Button>
               <Button
                 variant="secondary"
                 size="icon"
-                className="h-9 w-9"
+                className={locked ? "h-12 w-12" : "h-9 w-9"}
                 onClick={() => handleLights("off")}
                 disabled={lightsBusy !== null}
                 title="Ljus av"
                 aria-label="Ljus av"
               >
                 {lightsBusy === "off" ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className={locked ? "h-6 w-6 animate-spin" : "h-4 w-4 animate-spin"} />
                 ) : (
-                  <Power className="h-4 w-4" />
+                  <Power className={locked ? "h-6 w-6" : "h-4 w-4"} />
                 )}
               </Button>
             </div>
-            <div className="flex-1 flex flex-col items-center gap-1.5 pt-1 min-h-[180px]">
+            <div className={`flex flex-col items-center gap-1.5 pt-1 w-full ${locked ? "flex-1 min-h-0" : "flex-1 min-h-[180px]"}`}>
               <span className="text-[10px] font-mono tabular-nums text-muted-foreground">
                 {lightsBrightness}%
               </span>
@@ -1112,7 +1112,7 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
                   setLightsBrightness(next);
                   pushLightsBrightness(next);
                 }}
-                className="h-44"
+                className={locked ? "flex-1 min-h-0" : "h-44"}
                 aria-label="Ljusintensitet"
               />
               <span className="text-[9px] text-muted-foreground">10–90%</span>
