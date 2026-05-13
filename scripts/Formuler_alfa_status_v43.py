@@ -1378,38 +1378,17 @@ _RE_FOCUS_COMPONENT = re.compile(r"(?:mCurrentFocus|mFocusedApp).*?\s([A-Za-z0-9
 
 # Appar som räknas som "film" — audio-aktivitet i dessa triggar movie_*-scener
 # så lampor släcks/tänds automatiskt. Lägg till fler paket vid behov.
+# Endast MyTVOnline3 (MOL3) räknas som "film" och triggar movie_*-scener.
+# Andra appar (YouTube, Spotify, Red Bull TV, Netflix, VLC m.fl.) ska INTE
+# påverka ljusautomatiken — användaren styr dem manuellt.
 _FORMULER_PLAYER_PACKAGES = {
-    # MyTVOnline3 (Formuler IPTV)
+    # MyTVOnline3 (Formuler IPTV) — alla kända paketnamn
     "tv.formuler.mol3.real",
+    "com.formuler.mol3",
     "com.formuler.mytvonline3",
-    # YouTube
-    "com.google.android.youtube.tv",
-    "com.google.android.youtube",
-    "com.liskovsoft.smarttubetv.beta",
-    "com.liskovsoft.smarttubetv",
-    # Red Bull TV
-    "com.nousguide.android.rbtv",
-    # VLC
-    "org.videolan.vlc",
-    # Netflix / Prime / Disney+
-    "com.netflix.ninja",
-    "com.netflix.mediaclient",
-    "com.amazon.amazonvideo.livingroom",
-    "com.amazon.firetv.youtube",
-    "com.disney.disneyplus",
-    # Kodi
-    "org.xbmc.kodi",
-    # Plex / Jellyfin / Emby
-    "com.plexapp.android",
-    "org.jellyfin.androidtv",
-    "tv.emby.embyatv",
-    # HBO Max / SkyShowtime / Viaplay / SVT / TV4
-    "com.hbo.hbonow",
-    "com.wbd.stream",
-    "com.skyshowtime.skyshowtime",
-    "com.viaplay.android",
-    "se.svtplay.mobil",
-    "se.tv4.tv4playtab",
+    "com.formuler.mytvonline2",
+    "com.formuler.mytvonline",
+    "com.mytvonline3",
 }
 
 
