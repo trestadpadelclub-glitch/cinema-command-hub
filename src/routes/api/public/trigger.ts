@@ -271,11 +271,11 @@ export const Route = createFileRoute("/api/public/trigger")({
             const v = projSettings[key];
             if (v === undefined || v === null) continue;
             pushProjector({ action: key, value: v as string | number });
-            if (key === "blank" && v === "on" && (scene.projector_blank_delay_seconds ?? 0) > 0) {
+            if (key === "blank" && v === "on" && (sceneExtra.projector_blank_delay_seconds ?? 0) > 0) {
               commands.push({
                 endpoint: "/api/projector",
                 body: { action: "blank", value: "off" },
-                delay_ms: Math.min(60, Math.max(0, scene.projector_blank_delay_seconds)) * 1000,
+                delay_ms: Math.min(60, Math.max(0, sceneExtra.projector_blank_delay_seconds ?? 0)) * 1000,
               });
             }
           }
@@ -314,13 +314,13 @@ export const Route = createFileRoute("/api/public/trigger")({
               marantz_power: scene.marantz_power,
               marantz_input: scene.marantz_input,
               marantz_volume: scene.marantz_volume,
-              marantz_mute: scene.marantz_mute,
-              marantz_sound_mode: scene.marantz_sound_mode,
-              marantz_smart_select: scene.marantz_smart_select,
-              marantz_dirac: scene.marantz_dirac,
-              marantz_speaker_preset: scene.marantz_speaker_preset,
+              marantz_mute: sceneExtra.marantz_mute,
+              marantz_sound_mode: sceneExtra.marantz_sound_mode,
+              marantz_smart_select: sceneExtra.marantz_smart_select,
+              marantz_dirac: sceneExtra.marantz_dirac,
+              marantz_speaker_preset: sceneExtra.marantz_speaker_preset,
               lights_on: scene.lights_on,
-              projector_blank_delay_seconds: scene.projector_blank_delay_seconds,
+              projector_blank_delay_seconds: sceneExtra.projector_blank_delay_seconds,
             },
             scene_lights: sceneLights,
             commands,
