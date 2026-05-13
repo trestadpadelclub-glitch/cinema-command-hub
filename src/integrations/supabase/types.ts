@@ -227,10 +227,16 @@ export type Database = {
           lights_delay_ms: number
           lights_on: boolean | null
           marantz_delay_ms: number
+          marantz_dirac: string | null
           marantz_input: string | null
+          marantz_mute: boolean | null
           marantz_power: string | null
+          marantz_smart_select: number | null
+          marantz_sound_mode: string | null
+          marantz_speaker_preset: number | null
           marantz_volume: number | null
           name: string
+          projector_blank_delay_seconds: number
           projector_delay_ms: number
           projector_settings: Json
           scene_number: number
@@ -245,10 +251,16 @@ export type Database = {
           lights_delay_ms?: number
           lights_on?: boolean | null
           marantz_delay_ms?: number
+          marantz_dirac?: string | null
           marantz_input?: string | null
+          marantz_mute?: boolean | null
           marantz_power?: string | null
+          marantz_smart_select?: number | null
+          marantz_sound_mode?: string | null
+          marantz_speaker_preset?: number | null
           marantz_volume?: number | null
           name: string
+          projector_blank_delay_seconds?: number
           projector_delay_ms?: number
           projector_settings?: Json
           scene_number: number
@@ -263,10 +275,16 @@ export type Database = {
           lights_delay_ms?: number
           lights_on?: boolean | null
           marantz_delay_ms?: number
+          marantz_dirac?: string | null
           marantz_input?: string | null
+          marantz_mute?: boolean | null
           marantz_power?: string | null
+          marantz_smart_select?: number | null
+          marantz_sound_mode?: string | null
+          marantz_speaker_preset?: number | null
           marantz_volume?: number | null
           name?: string
+          projector_blank_delay_seconds?: number
           projector_delay_ms?: number
           projector_settings?: Json
           scene_number?: number
