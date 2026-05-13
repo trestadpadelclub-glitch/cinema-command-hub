@@ -1059,7 +1059,7 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
 
       {/* Huvudpanel: lights · navigation/transport · marantz volume */}
       <Card className={locked ? "p-2 flex-1 min-h-0 flex flex-col" : "p-4"}>
-        <div className={\}>
+        <div className={`grid grid-cols-[auto_1fr_auto] gap-4 items-stretch ${locked ? "h-full min-h-0" : ""}`}>
           {/* VÄNSTER: ljus */}
           <div className="flex flex-col items-center gap-2 min-w-[64px]">
             <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
