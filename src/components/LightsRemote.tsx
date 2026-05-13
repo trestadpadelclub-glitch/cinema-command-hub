@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { useLightsStatus } from "@/hooks/useLightsStatus";
 import {
   Select,
@@ -39,6 +40,27 @@ const LS_OFF_KEY = (h: string) => `lights_remote_off_scene_${h}`;
 const clamp = (n: number, lo: number, hi: number) =>
   Math.max(lo, Math.min(hi, n));
 
+const normalizeHex = (raw: string): string | null => {
+  let s = raw.trim().replace(/^#/, "");
+  if (s.length === 3) s = s.split("").map((c) => c + c).join("");
+  if (!/^[0-9a-fA-F]{6}$/.test(s)) return null;
+  return `#${s.toLowerCase()}`;
+};
+
+const hexToRgb = (hex: string): { r: number; g: number; b: number } => {
+  const h = (normalizeHex(hex) ?? "#ffffff").slice(1);
+  return {
+    r: parseInt(h.slice(0, 2), 16),
+    g: parseInt(h.slice(2, 4), 16),
+    b: parseInt(h.slice(4, 6), 16),
+  };
+};
+
+const rgbToHex = (r: number, g: number, b: number): string => {
+  const h = (n: number) => clamp(Math.round(n), 0, 255).toString(16).padStart(2, "0");
+  return `#${h(r)}${h(g)}${h(b)}`;
+};
+
 export function LightsRemote({ householdCode }: Props) {
   const [scenes, setScenes] = useState<Scene[]>([]);
   const [lights, setLights] = useState<Light[]>([]);
@@ -50,6 +72,7 @@ export function LightsRemote({ householdCode }: Props) {
   const [offset, setOffset] = useState(0); // -50..+50
   const [lightBusy, setLightBusy] = useState<string | null>(null);
   const [manualLevels, setManualLevels] = useState<Record<string, number>>({});
+  const [manualColors, setManualColors] = useState<Record<string, string>>({});
   const lightDeviceIds = useMemo(() => lights.map((l) => l.tuya_device_id).filter(Boolean), [lights]);
 
   // Realtidsstatus från bryggan (v33). Pollar var 5s.
@@ -260,6 +283,7 @@ export function LightsRemote({ householdCode }: Props) {
     st: LightStatus | undefined,
     on: boolean,
     brightness = manualLevels[light.id] ?? st?.brightness ?? 80,
+    colorOverride?: string,
   ): SceneLightCommand => {
     const cmd: SceneLightCommand = {
       device_id: light.tuya_device_id,
@@ -272,8 +296,9 @@ export function LightsRemote({ householdCode }: Props) {
       if ((light.light_type === "cct" || light.light_type === "rgbcct") && typeof st?.kelvin === "number") {
         cmd.kelvin = st.kelvin;
       }
-      if ((light.light_type === "rgb" || light.light_type === "rgbcct") && st?.color_hex) {
-        cmd.color = st.color_hex;
+      if (light.light_type === "rgb" || light.light_type === "rgbcct") {
+        const color = colorOverride ?? manualColors[light.id] ?? st?.color_hex;
+        if (color) cmd.color = color;
       }
     }
     return cmd;
@@ -285,9 +310,10 @@ export function LightsRemote({ householdCode }: Props) {
     on: boolean,
     brightness?: number,
     showToast = true,
+    colorOverride?: string,
   ) => {
     setLightBusy(light.id);
-    const res = await sendSceneLights([buildSingleLightCommand(light, st, on, brightness)]);
+    const res = await sendSceneLights([buildSingleLightCommand(light, st, on, brightness, colorOverride)]);
     setLightBusy(null);
     if (!res.ok) {
       toast.error(`Kunde inte styra ${light.name}`, {
@@ -305,6 +331,16 @@ export function LightsRemote({ householdCode }: Props) {
     if (lightDebounceRef.current[light.id]) clearTimeout(lightDebounceRef.current[light.id]);
     lightDebounceRef.current[light.id] = setTimeout(() => {
       void sendSingleLight(light, st, true, level, false);
+    }, 220);
+  };
+
+  const handleLightColor = (light: Light, st: LightStatus | undefined, hex: string) => {
+    setManualColors((prev) => ({ ...prev, [light.id]: hex }));
+    const key = `${light.id}__color`;
+    if (lightDebounceRef.current[key]) clearTimeout(lightDebounceRef.current[key]);
+    lightDebounceRef.current[key] = setTimeout(() => {
+      const level = manualLevels[light.id] ?? st?.brightness ?? 80;
+      void sendSingleLight(light, st, true, level, false, hex);
     }, 220);
   };
 
@@ -573,6 +609,65 @@ export function LightsRemote({ householdCode }: Props) {
                       disabled={busyThisLight}
                     />
                   </div>
+                  {(light.light_type === "rgb" || light.light_type === "rgbcct") && (() => {
+                    const currentHex =
+                      manualColors[light.id] ?? st?.color_hex ?? "#ffffff";
+                    const safeHex = normalizeHex(currentHex) ?? "#ffffff";
+                    const { r, g, b } = hexToRgb(safeHex);
+                    const setChannel = (ch: "r" | "g" | "b", v: number) => {
+                      const next = rgbToHex(
+                        ch === "r" ? v : r,
+                        ch === "g" ? v : g,
+                        ch === "b" ? v : b,
+                      );
+                      handleLightColor(light, st, next);
+                    };
+                    return (
+                      <div className="space-y-2 pt-1 border-t border-border/40">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-muted-foreground">Färg</span>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="inline-block h-4 w-4 rounded border border-border"
+                              style={{ backgroundColor: safeHex }}
+                            />
+                            <Input
+                              value={manualColors[light.id] ?? safeHex}
+                              onChange={(e) => {
+                                const raw = e.target.value;
+                                setManualColors((prev) => ({ ...prev, [light.id]: raw }));
+                                const norm = normalizeHex(raw);
+                                if (norm) handleLightColor(light, st, norm);
+                              }}
+                              className="h-7 w-24 font-mono text-[11px]"
+                              placeholder="#rrggbb"
+                            />
+                          </div>
+                        </div>
+                        {[
+                          { key: "r" as const, label: "R", value: r, color: "bg-red-500" },
+                          { key: "g" as const, label: "G", value: g, color: "bg-green-500" },
+                          { key: "b" as const, label: "B", value: b, color: "bg-blue-500" },
+                        ].map((ch) => (
+                          <div key={ch.key} className="flex items-center gap-2">
+                            <span className={`text-[10px] w-3 font-semibold`}>{ch.label}</span>
+                            <Slider
+                              min={0}
+                              max={255}
+                              step={1}
+                              value={[ch.value]}
+                              onValueChange={([v]) => setChannel(ch.key, v)}
+                              disabled={busyThisLight}
+                              className="flex-1"
+                            />
+                            <span className="text-[10px] font-mono w-7 text-right text-muted-foreground">
+                              {ch.value}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             );
