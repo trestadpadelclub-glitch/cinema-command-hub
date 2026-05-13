@@ -2641,6 +2641,34 @@ class Handler(BaseHTTPRequestHandler):
                 _log(f"chromecast status error: {e}")
                 self._send_json(200, {"connected": False, "error": str(e)})
             return
+        # v42: Enkel endpoint för fysiska fjärrkontrollsknappar.
+        # GET /api/remote/scene/<scene_number> -> kör scenen lokalt.
+        if path.startswith("/api/remote/scene/"):
+            try:
+                num_str = path[len("/api/remote/scene/"):].strip()
+                scene_num = int(num_str)
+            except ValueError:
+                self._send_json(400, {"status": "error", "error": "invalid_scene_number"})
+                return
+            try:
+                payload = _fetch_scene_payload(scene_num)
+                if not payload or not payload.get("matched"):
+                    reason = (payload or {}).get("reason", "unknown")
+                    self._send_json(404, {"status": "error", "error": reason})
+                    return
+                # Kör scenen i bakgrundstråd så HTTP-svaret returnerar direkt.
+                threading.Thread(
+                    target=_run_scene_locally,
+                    args=(payload,),
+                    daemon=True,
+                    name=f"RemoteScene-{scene_num}",
+                ).start()
+                self._send_json(200, {"status": "ok", "scene_number": scene_num,
+                                      "scene_name": payload.get("scene", {}).get("name")})
+            except Exception as e:
+                _log(f"remote scene {num_str} error: {e}")
+                self._send_json(500, {"status": "error", "error": str(e)})
+            return
         self._send_json(404, {"error": "not_found", "path": self.path})
 
     def do_POST(self) -> None:
