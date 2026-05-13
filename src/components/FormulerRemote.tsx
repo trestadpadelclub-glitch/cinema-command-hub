@@ -1144,7 +1144,7 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
               <div />
               {dpadBtn("left", "Vänster", <ChevronLeft className="h-6 w-6" />)}
               <Button
-                className="h-16 w-16 rounded-full text-base font-semibold shadow-[var(--cinema-glow)]"
+                className={`${locked ? "h-20 w-20 text-lg" : "h-16 w-16 text-base"} rounded-full font-semibold shadow-[var(--cinema-glow)]`}
                 onClick={() => press("ok", "OK")}
                 disabled={busy === "ok"}
                 aria-label="OK"
