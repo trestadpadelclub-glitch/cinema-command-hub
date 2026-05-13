@@ -59,7 +59,18 @@ export const MOTIONFLOW_LABELS: Record<Motionflow, string> = {
 };
 
 // Gamma values supported by bridge (sent as gamma_correct "<value>")
-export type Gamma = "off" | "1.8" | "2.0" | "2.1" | "2.2" | "2.4" | "2.6";
+export type Gamma =
+  | "off"
+  | "1.8"
+  | "2.0"
+  | "2.1"
+  | "2.2"
+  | "2.4"
+  | "2.6"
+  | "gamma7"
+  | "gamma8"
+  | "gamma9"
+  | "gamma10";
 
 // Color temperature presets supported by XW5000ES bridge
 export type ColorTemp =
