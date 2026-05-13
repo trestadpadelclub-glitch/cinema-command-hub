@@ -626,3 +626,87 @@ function SettingHeader({ label, value }: { label: string; value: ReactNode }) {
     </div>
   );
 }
+
+function LabelEditor({
+  title,
+  value,
+  placeholder,
+  onSave,
+}: {
+  title: string;
+  value: string;
+  placeholder?: string;
+  onSave: (v: string) => void | Promise<void>;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+
+  useEffect(() => {
+    if (!editing) setDraft(value);
+  }, [value, editing]);
+
+  if (!editing) {
+    return (
+      <button
+        type="button"
+        onClick={() => setEditing(true)}
+        className="flex items-center justify-between gap-2 h-9 px-3 rounded-md border border-border bg-secondary/30 hover:bg-secondary text-left transition-colors"
+      >
+        <span className="flex flex-col min-w-0">
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            {title}
+          </span>
+          <span className="text-xs truncate">
+            {value || <span className="text-muted-foreground italic">{placeholder ?? "— ange namn —"}</span>}
+          </span>
+        </span>
+        <Pencil className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      <Input
+        autoFocus
+        value={draft}
+        placeholder={placeholder}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            void onSave(draft);
+            setEditing(false);
+          } else if (e.key === "Escape") {
+            setDraft(value);
+            setEditing(false);
+          }
+        }}
+        className="h-9 text-xs"
+      />
+      <Button
+        size="icon"
+        variant="ghost"
+        className="h-8 w-8 flex-shrink-0"
+        onClick={() => {
+          void onSave(draft);
+          setEditing(false);
+        }}
+        aria-label="Spara"
+      >
+        <Check className="h-4 w-4" />
+      </Button>
+      <Button
+        size="icon"
+        variant="ghost"
+        className="h-8 w-8 flex-shrink-0"
+        onClick={() => {
+          setDraft(value);
+          setEditing(false);
+        }}
+        aria-label="Avbryt"
+      >
+        <X className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+}
