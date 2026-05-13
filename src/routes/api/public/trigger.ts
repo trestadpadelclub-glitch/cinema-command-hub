@@ -100,6 +100,15 @@ export const Route = createFileRoute("/api/public/trigger")({
           return json({ matched: false, reason: "scene_disabled" }, 200);
         }
 
+        const sceneExtra = scene as typeof scene & {
+          marantz_mute?: boolean | null;
+          marantz_sound_mode?: string | null;
+          marantz_smart_select?: number | null;
+          marantz_dirac?: string | null;
+          marantz_speaker_preset?: number | null;
+          projector_blank_delay_seconds?: number | null;
+        };
+
         // Hämta lampor — alltid (triggern speglar Kör-knappen exakt)
         let sceneLights: Array<Record<string, unknown>> = [];
         {
@@ -226,20 +235,20 @@ export const Route = createFileRoute("/api/public/trigger")({
           const v = String(scene.marantz_volume).padStart(2, "0");
           pushMarantz({ action: "marantz", value: `MV${v}` });
         }
-        if (!marantzOff && typeof scene.marantz_mute === "boolean") {
-          pushMarantz({ action: "marantz", value: `MU${scene.marantz_mute ? "ON" : "OFF"}` });
+        if (!marantzOff && typeof sceneExtra.marantz_mute === "boolean") {
+          pushMarantz({ action: "marantz", value: `MU${sceneExtra.marantz_mute ? "ON" : "OFF"}` });
         }
-        if (!marantzOff && scene.marantz_sound_mode) {
-          pushMarantz({ action: "marantz", value: `MS${scene.marantz_sound_mode}` });
+        if (!marantzOff && sceneExtra.marantz_sound_mode) {
+          pushMarantz({ action: "marantz", value: `MS${sceneExtra.marantz_sound_mode}` });
         }
-        if (!marantzOff && typeof scene.marantz_smart_select === "number") {
-          pushMarantz({ action: "marantz", value: `MSSMART${scene.marantz_smart_select}` });
+        if (!marantzOff && typeof sceneExtra.marantz_smart_select === "number") {
+          pushMarantz({ action: "marantz", value: `MSSMART${sceneExtra.marantz_smart_select}` });
         }
-        if (!marantzOff && scene.marantz_dirac) {
-          pushMarantz({ action: "marantz", value: scene.marantz_dirac === "OFF" ? "PSDIRAC OFF" : `PSDIRAC ${scene.marantz_dirac}` });
+        if (!marantzOff && sceneExtra.marantz_dirac) {
+          pushMarantz({ action: "marantz", value: sceneExtra.marantz_dirac === "OFF" ? "PSDIRAC OFF" : `PSDIRAC ${sceneExtra.marantz_dirac}` });
         }
-        if (!marantzOff && typeof scene.marantz_speaker_preset === "number") {
-          pushMarantz({ action: "marantz", value: `SPPR ${scene.marantz_speaker_preset}` });
+        if (!marantzOff && typeof sceneExtra.marantz_speaker_preset === "number") {
+          pushMarantz({ action: "marantz", value: `SPPR ${sceneExtra.marantz_speaker_preset}` });
         }
 
         // 7. Projector tuning settings
