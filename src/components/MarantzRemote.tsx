@@ -342,6 +342,29 @@ export function MarantzRemote({
       {/* Volume */}
       <Card className="p-4">
         <SettingHeader label="Volume" value={`${currentVolume}${muted ? " · Muted" : ""}`} />
+
+        {/* Slider — drag för exakt volym (MV-skala 0..98) */}
+        <div className="mb-4 px-1">
+          <div className="flex items-baseline justify-between mb-1.5">
+            <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
+              Drag för exakt volym
+            </span>
+            <span className="font-mono text-sm tabular-nums text-primary">
+              MV{liveVolume.toString().padStart(2, "0")} ·{" "}
+              {marantzMvToDb(liveVolume) >= 0 ? "+" : ""}
+              {marantzMvToDb(liveVolume)} dB
+            </span>
+          </div>
+          <Slider
+            value={[liveVolume]}
+            min={0}
+            max={98}
+            step={1}
+            onValueChange={(v) => handleVolumeDrag(v[0])}
+            disabled={marantzReachable === false}
+          />
+        </div>
+
         <div className="grid grid-cols-3 gap-2">
           <Button
             size="lg"
