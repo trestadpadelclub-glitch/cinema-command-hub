@@ -3,7 +3,7 @@
 // One action per request — multi-setting payloads are split client-side.
 
 const BRIDGE_URL_KEY = "sony_hw65es_bridge_url";
-export const DEFAULT_BRIDGE_URL = "http://localhost:5000/api/projector";
+export const DEFAULT_BRIDGE_URL = "http://192.168.86.136:5000/api/projector";
 
 // Bridge-supported pic modes (HW65ES). Values match what the bridge expects.
 // HW65ES saknar "IMAX Enhanced" (user3) men har "Photo".
