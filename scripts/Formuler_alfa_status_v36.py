@@ -510,146 +510,228 @@ class TuyaStatusPoller(threading.Thread):
 
 
 # ---------------------------------------------------------------------------
-# ACTION → ADCP-kommando
+# SDCP / PJ Talk klient (TCP 53484, community "SONY")
 # ---------------------------------------------------------------------------
 #
-# Lovable-appen skickar `action` enligt SETTINGS_ACTIONS i src/lib/projector.ts.
-# Här mappar vi varje action till rätt ADCP-kommandonamn + värdetransformation.
+# HW65ES (Home Cinema-serien) styrs via Sonys SDCP/PJ Talk-protokoll.
+# Detta är ett binärt 10+N byte-paket:
 #
-# Format för varje post:
-#   "action_från_appen": (adcp_command, value_mapper_eller_None)
+#   byte 0      : 0x02         (version)
+#   byte 1      : 0x0A         (kategori)
+#   bytes 2-5   : "SONY"        (community, ASCII)
+#   byte 6      : 0x00 SET / 0x01 GET   (request)
+#                 0x01 ACK / 0x00 NAK   (response)
+#   bytes 7-8   : item code    (16-bit big-endian)
+#   byte 9      : data length  (typiskt 2)
+#   bytes 10..  : data         (16-bit big-endian för numeriska/enum-värden)
 #
-# value_mapper är en funktion som tar appens råvärde (str|int) och returnerar
-# strängen som skickas till projektorn. None = skicka råvärdet som-är.
+# Item-koder och värden enligt pysdcp + pysdcp-extended (Galala7), verifierade
+# mot Sonys "BPJ Protocol Manual" där HW65ES finns med under Home Cinema-block.
 
-def _lamp_to_adcp(v: Any) -> str:
-    """HW65ES lamp_control: only 'low' eller 'high'."""
-    s = str(v).lower().strip()
-    return "high" if s in ("high", "1", "on", "true") else "low"
+import struct
 
-def _ui_0_100(v: Any) -> str:
-    """UI/projektor-menu 0..100 -> ADCP numeric value, utan citationstecken."""
-    try:
-        n = int(round(float(v)))
-    except (TypeError, ValueError):
-        n = 50
-    return str(max(0, min(100, n)))
+SDCP_HEADER = b"\x02\x0a"
+SDCP_COMMUNITY = b"SONY"
+SDCP_SET = 0x00
+SDCP_GET = 0x01
 
-
-def _slider_signed(v: Any) -> str:
-    """Fallback: appens 0..100 -> signerad -50..+50 om modellen kräver det."""
-    try:
-        n = int(round(float(v)))
-    except (TypeError, ValueError):
-        n = 50
-    n = max(0, min(100, n)) - 50
-    return str(n)
-
-def _power_to_adcp(v: Any) -> str:
-    s = str(v).lower().strip()
-    return "on" if s in ("on", "1", "true") else "off"
-
-# Picture-modes som finns på VPL-HW65ES enligt Sony Protocol Manual
-# (SUPPORTED COMMAND LIST) Rev.1, col 9. Inga user1/2/3, inga cinema_digital.
-_HW65ES_PIC_MODES = {
-    "cinema_film1", "cinema_film2", "reference", "tv",
-    "photo", "game", "brt_cinema", "brt_tv", "user",
+# --- Item-koder (16-bit) ---
+ITEM = {
+    "POWER":            0x0130,  # SET (off=0, on=1)
+    "POWER_STATUS":     0x0102,  # GET only
+    "INPUT":            0x0001,
+    "PICTURE_MODE":     0x0002,  # calibration preset
+    "CONTRAST":         0x0010,
+    "BRIGHTNESS":       0x0011,
+    "COLOR":            0x0012,
+    "HUE":              0x0013,
+    "SHARPNESS":        0x0014,
+    "COLOR_TEMP":       0x0017,
+    "GAMMA_CORRECTION": 0x001C,
+    "LAMP_CONTROL":     0x001A,
+    "MOTIONFLOW":       0x0021,
+    "BLANK_PICTURE":    0x0030,
 }
 
-def _picmode_to_adcp(v: Any) -> str:
-    """Normalisera och fall-back till närmaste mode som faktiskt finns på HW65ES."""
+# --- Enum-värden ---
+POWER_VAL = {"off": 0x0000, "on": 0x0001}
+POWER_STATUS_VAL = {
+    0x0000: "standby",
+    0x0001: "startup",
+    0x0002: "on",
+    0x0003: "cooling1",
+    0x0004: "cooling2",
+    0x0005: "saving_cool1",
+    0x0006: "saving_cool2",
+    0x0007: "saving_standby",
+}
+INPUT_VAL = {"hdmi1": 0x0002, "hdmi2": 0x0003}
+INPUT_VAL_R = {v: k for k, v in INPUT_VAL.items()}
+
+# Picture modes (calibration preset) — HW65ES (col 9 i Sony manualen).
+PICMODE_VAL = {
+    "cinema_film1": 0x0000,
+    "cinema_film2": 0x0001,
+    "reference":    0x0002,
+    "tv":           0x0003,
+    "photo":        0x0004,
+    "game":         0x0005,
+    "brt_cinema":   0x0006,
+    "brt_tv":       0x0007,
+    "user":         0x0008,
+}
+PICMODE_VAL_R = {v: k for k, v in PICMODE_VAL.items()}
+
+COLOR_TEMP_VAL = {
+    "d93":     0x0000,
+    "d75":     0x0001,
+    "d65":     0x0002,
+    "custom1": 0x0003,
+    "custom2": 0x0004,
+    "custom3": 0x0005,
+    "custom4": 0x0006,
+    "custom5": 0x0007,
+    "d55":     0x0008,
+}
+COLOR_TEMP_VAL_R = {v: k for k, v in COLOR_TEMP_VAL.items()}
+
+LAMP_VAL = {"low": 0x0000, "high": 0x0001}
+LAMP_VAL_R = {v: k for k, v in LAMP_VAL.items()}
+
+MOTIONFLOW_VAL = {
+    "off":          0x0000,
+    "smooth_high":  0x0001,
+    "smooth_low":   0x0002,
+    "impulse":      0x0003,   # ej HW65ES
+    "combination":  0x0004,   # ej HW65ES
+    "true_cinema":  0x0005,
+}
+MOTIONFLOW_VAL_R = {v: k for k, v in MOTIONFLOW_VAL.items()}
+
+ONOFF_VAL = {"off": 0x0000, "on": 0x0001}
+ONOFF_VAL_R = {v: k for k, v in ONOFF_VAL.items()}
+
+# Gamma correction enum (HW65ES delmängd)
+GAMMA_VAL = {
+    "off":     0x0000,
+    "1.8":     0x0001,
+    "2.0":     0x0002,
+    "2.1":     0x0003,
+    "2.2":     0x0004,
+    "2.4":     0x0005,
+    "2.6":     0x0006,
+    "gamma7":  0x0007,
+    "gamma8":  0x0008,
+    "gamma9":  0x0009,
+    "gamma10": 0x000A,
+}
+
+
+# ---------------------------------------------------------------------------
+# Mappers — appens råvärde -> SDCP enum/numeric
+# ---------------------------------------------------------------------------
+
+def _ui_0_100(v: Any) -> int:
+    try:
+        n = int(round(float(v)))
+    except (TypeError, ValueError):
+        n = 50
+    return max(0, min(100, n))
+
+def _power_to_sdcp(v: Any) -> int:
+    s = str(v).lower().strip()
+    return POWER_VAL["on"] if s in ("on", "1", "true") else POWER_VAL["off"]
+
+def _picmode_to_sdcp(v: Any) -> int:
     s = str(v).lower().strip()
     s = {
         "cinema_film_1": "cinema_film1",
         "cinema_film_2": "cinema_film2",
         "bright_cinema": "brt_cinema",
         "bright_tv":     "brt_tv",
-        # XW5000ES-only modes som UI fortfarande kan skicka -> mappa till HW65ES-motsvarighet
-        "user1":         "user",
-        "user2":         "user",
-        "user3":         "user",
+        "user1": "user", "user2": "user", "user3": "user",
         "imax_enhanced": "user",
-        "cinema_digital":"cinema_film1",
+        "cinema_digital": "cinema_film1",
     }.get(s, s)
-    if s not in _HW65ES_PIC_MODES:
+    if s not in PICMODE_VAL:
         _log(f"varning: picture_mode {s!r} stöds ej på HW65ES, faller tillbaka till 'cinema_film1'")
         s = "cinema_film1"
-    return s
+    return PICMODE_VAL[s]
 
-def _motion_to_adcp(v: Any) -> str:
-    """HW65ES motionflow: off, true_cinema, smooth_low, smooth_high
-    (HW65ES saknar impulse + combination — mappa till smooth_high)."""
+def _motion_to_sdcp(v: Any) -> int:
     s = str(v).lower().strip().replace("-", "_").replace(" ", "_")
-    valid = {"off", "smooth_high", "smooth_low", "true_cinema"}
-    if s in valid:
-        return s
     if s in ("impulse", "combination"):
         _log(f"varning: motionflow {s!r} stöds ej på HW65ES → smooth_high")
-        return "smooth_high"
-    return "off"
+        s = "smooth_high"
+    return MOTIONFLOW_VAL.get(s, MOTIONFLOW_VAL["off"])
 
-def _color_temp_to_adcp(v: Any) -> str:
+def _color_temp_to_sdcp(v: Any) -> int:
     s = str(v).lower().strip()
-    valid = {"d93","d75","d65","d55","custom1","custom2","custom3","custom4","custom5"}
-    return s if s in valid else "d65"
+    return COLOR_TEMP_VAL.get(s, COLOR_TEMP_VAL["d65"])
 
-def _input_to_adcp(v: Any) -> str:
+def _input_to_sdcp(v: Any) -> int:
     s = str(v).lower().strip()
-    return "hdmi1" if s in ("hdmi1", "1", "input1") else "hdmi2"
+    return INPUT_VAL["hdmi1"] if s in ("hdmi1", "1", "input1") else INPUT_VAL["hdmi2"]
 
-def _onoff(v: Any) -> str:
+def _lamp_to_sdcp(v: Any) -> int:
     s = str(v).lower().strip()
-    return "on" if s in ("on", "1", "true") else "off"
+    return LAMP_VAL["high"] if s in ("high", "1", "on", "true") else LAMP_VAL["low"]
+
+def _onoff_to_sdcp(v: Any) -> int:
+    s = str(v).lower().strip()
+    return ONOFF_VAL["on"] if s in ("on", "1", "true") else ONOFF_VAL["off"]
+
+def _gamma_to_sdcp(v: Any) -> int:
+    s = str(v).lower().strip()
+    return GAMMA_VAL.get(s, GAMMA_VAL["2.2"])
 
 
-# ADCP-kommandonamn enligt Sony Protocol Manual (SUPPORTED COMMAND LIST)
-# kolumn HW65ES. Ej-stödda actions har None som adcp_command och returneras
-# som "skipped" istället för att gå mot projektorn.
-ACTION_MAP: Dict[str, Tuple[Optional[str], Any, str]] = {
-    # power/select-kommandon använder citerade värden: command "value"
-    "power":               ("power",                  _power_to_adcp,    "select"),
-    "pic_mode":            ("picture_mode",           _picmode_to_adcp,   "select"),
-    "motionflow":          ("motionflow",             _motion_to_adcp,    "select"),
-    "color_temp":          ("color_temp",             _color_temp_to_adcp,"select"),
-    "input":               ("input",                  _input_to_adcp,     "select"),
-    "blank":               ("blank",                  _onoff,             "select"),
-    "lamp_control":        ("lamp_control",           _lamp_to_adcp,      "select"),
+# ACTION_MAP-format: (item_name, mapper, decoder_för_status)
+# mapper(value) -> int (SDCP-värde att skicka)
+# decoder(int) -> str|int (för status-builder)
+def _decode_0_100(n: int) -> int:
+    return int(n)
 
-    # numeric-kommandon utan citationstecken: command 50
-    "brightness":          ("brightness",             _ui_0_100,          "numeric"),
-    "contrast":            ("contrast",               _ui_0_100,          "numeric"),
-    "color":               ("color",                  _ui_0_100,          "numeric"),
-    "sharpness":           ("sharpness",              _ui_0_100,          "numeric"),
-
-    # Ej stödda på HW65ES — returnera "skipped" så UI inte ser fel.
-    "laser_output":        (None, None, "skip"),  # ersatt av lamp_control
-    "dynamic_control":     (None, None, "skip"),
-    "hdr_enhancer":        (None, None, "skip"),
-    "gamma_correction":    (None, None, "skip"),
-    "real_cre":            (None, None, "skip"),
-    "reality_creation":    (None, None, "skip"),
-    "reality_creation_val":(None, None, "skip"),
+ACTION_MAP: Dict[str, Tuple[Optional[str], Any, Any]] = {
+    "power":        ("POWER",            _power_to_sdcp,      lambda n: "on" if n else "off"),
+    "pic_mode":     ("PICTURE_MODE",     _picmode_to_sdcp,    lambda n: PICMODE_VAL_R.get(n, str(n))),
+    "motionflow":   ("MOTIONFLOW",       _motion_to_sdcp,     lambda n: MOTIONFLOW_VAL_R.get(n, str(n))),
+    "color_temp":   ("COLOR_TEMP",       _color_temp_to_sdcp, lambda n: COLOR_TEMP_VAL_R.get(n, str(n))),
+    "input":        ("INPUT",            _input_to_sdcp,      lambda n: INPUT_VAL_R.get(n, str(n))),
+    "blank":        ("BLANK_PICTURE",    _onoff_to_sdcp,      lambda n: ONOFF_VAL_R.get(n, str(n))),
+    "lamp_control": ("LAMP_CONTROL",     _lamp_to_sdcp,       lambda n: LAMP_VAL_R.get(n, str(n))),
+    "gamma_correction": ("GAMMA_CORRECTION", _gamma_to_sdcp,  lambda n: {v: k for k, v in GAMMA_VAL.items()}.get(n, str(n))),
+    "brightness":   ("BRIGHTNESS",       _ui_0_100,           _decode_0_100),
+    "contrast":     ("CONTRAST",         _ui_0_100,           _decode_0_100),
+    "color":        ("COLOR",            _ui_0_100,           _decode_0_100),
+    "sharpness":    ("SHARPNESS",        _ui_0_100,           _decode_0_100),
+    # Ej tillgängliga via SDCP på HW65ES — returnera "skipped" istället för fel.
+    "laser_output":         (None, None, None),
+    "dynamic_control":      (None, None, None),
+    "hdr_enhancer":         (None, None, None),
+    "real_cre":             (None, None, None),
+    "reality_creation":     (None, None, None),
+    "reality_creation_val": (None, None, None),
 }
 
-# GET-kommandon för status-endpoint (endast HW65ES-stödda items)
-STATUS_QUERIES = [
-    ("power",            "power_status"),
-    ("picture_mode",     "picture_mode"),
-    ("input",            "input"),
-    ("lamp_control",     "lamp_control"),
-    ("brightness",       "brightness"),
-    ("contrast",         "contrast"),
-    ("color",            "color"),
-    ("sharpness",        "sharpness"),
-    ("motionflow",       "motionflow"),
-    ("color_temp",       "color_temp"),
-    ("blank",            "blank"),
+# Items att läsa i build_status() — (ui_key, item_name)
+STATUS_QUERIES: list[Tuple[str, str]] = [
+    ("power",        "POWER_STATUS"),
+    ("picture_mode", "PICTURE_MODE"),
+    ("input",        "INPUT"),
+    ("lamp_control", "LAMP_CONTROL"),
+    ("brightness",   "BRIGHTNESS"),
+    ("contrast",     "CONTRAST"),
+    ("color",        "COLOR"),
+    ("sharpness",    "SHARPNESS"),
+    ("motionflow",   "MOTIONFLOW"),
+    ("color_temp",   "COLOR_TEMP"),
+    ("blank",        "BLANK_PICTURE"),
 ]
 
 
-
 # ---------------------------------------------------------------------------
-# ADCP TCP-klient
+# Logger + felklasser
 # ---------------------------------------------------------------------------
 
 def _log(msg: str) -> None:
@@ -657,66 +739,76 @@ def _log(msg: str) -> None:
 
 
 class AdcpError(Exception):
-    pass
+    """Behållet namn för bakåtkompabilitet med övriga moduler — det här
+    är nu en SDCP-felklass."""
 
 
-ADCP_LOCK = threading.Lock()
+SDCP_LOCK = threading.Lock()
+ADCP_LOCK = SDCP_LOCK  # alias för bakåtkompabilitet
 LAST_POWER_ON_TS = 0.0
 
 
-def _adcp_session(cmds: list[str], timeout: Optional[float] = None) -> list[str]:
+# ---------------------------------------------------------------------------
+# Lågnivå SDCP packet I/O
+# ---------------------------------------------------------------------------
+
+def _build_packet(req_type: int, item_code: int, data: int = 0, data_len: int = 2) -> bytes:
+    if data_len == 0:
+        payload = b""
+    elif data_len == 2:
+        payload = struct.pack(">H", data & 0xFFFF)
+    else:
+        payload = data.to_bytes(data_len, "big")
+    return SDCP_HEADER + SDCP_COMMUNITY + bytes([req_type]) + struct.pack(">H", item_code) + bytes([len(payload)]) + payload
+
+
+def _parse_packet(buf: bytes) -> Tuple[int, int, int]:
+    """Returnerar (resp_type, item_code, data_int).
+    resp_type: 0x01=ACK/OK, 0x00=NAK/error.
     """
-    Öppna en ADCP-session, autentisera och skicka en lista kommandon i sekvens.
-    Returnerar listan med rader projektorn svarade med (en per kommando).
-    """
+    if len(buf) < 10:
+        raise AdcpError(f"sdcp short response ({len(buf)} bytes)")
+    if buf[0:2] != SDCP_HEADER:
+        raise AdcpError(f"sdcp bad header: {buf[0:2]!r}")
+    if buf[2:6] != SDCP_COMMUNITY:
+        raise AdcpError(f"sdcp bad community: {buf[2:6]!r}")
+    resp_type = buf[6]
+    item = struct.unpack(">H", buf[7:9])[0]
+    dlen = buf[9]
+    data_bytes = buf[10:10 + dlen]
+    if dlen == 2:
+        data_int = struct.unpack(">H", data_bytes)[0]
+    elif dlen == 0:
+        data_int = 0
+    else:
+        data_int = int.from_bytes(data_bytes, "big")
+    return resp_type, item, data_int
+
+
+def _sdcp_round_trip(packet: bytes, timeout: Optional[float] = None) -> Tuple[int, int, int]:
     tmo = float(timeout if timeout is not None else SETTINGS["timeout"])
-    with ADCP_LOCK:
+    with SDCP_LOCK:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(tmo)
         try:
             sock.connect((SETTINGS["host"], SETTINGS["port"]))
-
-            # läs nonce
-            nonce_buf = b""
+            sock.sendall(packet)
+            buf = b""
             deadline = time.time() + tmo
-            while b"\r\n" not in nonce_buf and time.time() < deadline:
+            while len(buf) < 10 and time.time() < deadline:
                 chunk = sock.recv(64)
                 if not chunk:
                     break
-                nonce_buf += chunk
-            nonce = nonce_buf.split(b"\r\n", 1)[0].decode("ascii", errors="ignore").strip()
-
-            if nonce and nonce.upper() not in ("NOKEY",):
-                digest = hashlib.sha256((nonce + SETTINGS["passwd"]).encode("ascii")).hexdigest()
-                sock.sendall((digest + "\r\n").encode("ascii"))
-                auth_resp = b""
-                deadline = time.time() + tmo
-                while b"\r\n" not in auth_resp and time.time() < deadline:
+                buf += chunk
+            # Read remainder if data_len>0
+            if len(buf) >= 10:
+                expected = 10 + buf[9]
+                while len(buf) < expected and time.time() < deadline:
                     chunk = sock.recv(64)
                     if not chunk:
                         break
-                    auth_resp += chunk
-                auth_line = auth_resp.split(b"\r\n", 1)[0].decode("ascii", "ignore").strip()
-                if auth_line and auth_line.lower().startswith("err"):
-                    raise AdcpError(f"auth failed: {auth_line}")
-
-            results: list[str] = []
-            for cmd in cmds:
-                sock.sendall((cmd + "\r\n").encode("ascii"))
-                resp = b""
-                deadline = time.time() + tmo
-                while b"\r\n" not in resp and time.time() < deadline:
-                    chunk = sock.recv(256)
-                    if not chunk:
-                        break
-                    resp += chunk
-                line = resp.split(b"\r\n", 1)[0].decode("ascii", "ignore").strip()
-                results.append(line)
-                # Under warm-up kan projektorn sluta svara. Avbryt batchen direkt
-                # så inte statuspolling timeoutar en gång per GET-kommando.
-                if not line:
-                    break
-            return results
+                    buf += chunk
+            return _parse_packet(buf)
         finally:
             try:
                 sock.close()
@@ -724,124 +816,105 @@ def _adcp_session(cmds: list[str], timeout: Optional[float] = None) -> list[str]
                 pass
 
 
-def _format_adcp_set(adcp_command: str, value: str, mode: str) -> str:
-    if mode == "numeric":
-        return f"{adcp_command} {value}"
-    if mode == "raw":
-        return f"{adcp_command} {value}".strip()
-    return f'{adcp_command} "{value}"'
+# ---------------------------------------------------------------------------
+# Publika SDCP-helpers (behåller adcp_*-namn för bakåtkompabilitet)
+# ---------------------------------------------------------------------------
 
-
-def adcp_set(adcp_command: str, value: str, mode: str = "select", _retry_inactive: bool = True) -> str:
-    """SET-kommando. Select-värden citeras, numeric-värden skickas rått."""
+def sdcp_set(item_name: str, value_int: int) -> str:
+    """Skicka SET-kommando. Returnerar 'ok' vid ACK, 'err_<n>' vid NAK."""
     global LAST_POWER_ON_TS
-
-    candidates: list[Tuple[str, str, str]] = [(mode, str(value), "primary")]
-    if mode == "numeric" and adcp_command in ("brightness", "contrast", "color", "sharpness"):
-        try:
-            n = int(round(float(value)))
-            if 0 <= n <= 100:
-                signed = str(n - 50)
-                if signed != str(value):
-                    candidates.append(("numeric", signed, "signed-fallback"))
-        except (TypeError, ValueError):
-            pass
-
-    last_line = ""
-    for fmt, candidate_value, label in candidates:
-        cmd = _format_adcp_set(adcp_command, candidate_value, fmt)
-        suffix = "" if label == "primary" else f" ({label})"
-        _log(f"ADCP TX{suffix}: {cmd}")
-        out = _adcp_session([cmd])
-        line = out[0] if out else ""
-        _log(f"ADCP RX{suffix}: {line!r}")
-        last_line = line
-
-        if adcp_command == "power" and candidate_value == "on" and line.lower() == "ok":
-            LAST_POWER_ON_TS = time.time()
-
-        # Only try fallback for value/option errors. Other errors mean retrying with
-        # another scale is unlikely to help and can hide the real problem.
-        if line.lower() not in ("err_option", "err_val"):
-            break
-
-    if last_line.lower() == "err_inactive" and _retry_inactive and adcp_command != "power":
-        _log(f"ADCP {adcp_command} fick err_inactive — väntar på att projektorn ska bli aktiv...")
-        if _wait_until_active(timeout=45.0):
-            _log(f"ADCP {adcp_command} retry efter warm-up")
-            return adcp_set(adcp_command, value, mode=mode, _retry_inactive=False)
-        _log(f"ADCP {adcp_command} timeout — projektorn blev aldrig aktiv")
-    return last_line
-
-def _wait_until_active(timeout: float = 30.0, poll_interval: float = 1.5) -> bool:
-    """Polla `power_status ?` tills projektorn returnerar 'on' eller timeout."""
-    deadline = time.time() + timeout
-    while time.time() < deadline:
-        try:
-            reply = _adcp_session(["power_status ?"], timeout=SETTINGS["status_timeout"])
-            v = _parse_value(reply[0]) if reply else None
-            if v and v.lower() == "on":
-                return True
-            _log(f"  warm-up status: {v!r}")
-        except (socket.error, AdcpError) as e:
-            _log(f"  warm-up poll fail: {e}")
-        time.sleep(poll_interval)
-    return False
-
-
-def adcp_get(adcp_command: str) -> str:
-    """GET-kommando. Format: '<command> ?'."""
-    cmd = f"{adcp_command} ?"
-    out = _adcp_session([cmd])
-    return out[0] if out else ""
-
-
-def adcp_get_many(commands: list[Tuple[str, str]]) -> Dict[str, str]:
-    """Skicka flera GET i samma session — mycket snabbare än en session per värde."""
-    cmds = [f"{adcp} ?" for _, adcp in commands]
+    item_code = ITEM[item_name]
+    pkt = _build_packet(SDCP_SET, item_code, value_int, data_len=2)
+    _log(f"SDCP TX SET {item_name}=0x{value_int:04X} (item=0x{item_code:04X})")
     try:
-        replies = _adcp_session(cmds, timeout=SETTINGS["status_timeout"])
+        resp_type, _item, data = _sdcp_round_trip(pkt)
     except (socket.error, AdcpError) as e:
-        _log(f"ADCP batch GET fail: {e}")
-        return {}
-    out: Dict[str, str] = {}
-    for (key, _), reply in zip(commands, replies):
-        out[key] = reply
+        _log(f"SDCP SET {item_name} fail: {e}")
+        return f"err_io"
+    if resp_type == 0x01:
+        _log(f"SDCP RX ACK {item_name}")
+        if item_name == "POWER" and value_int == POWER_VAL["on"]:
+            LAST_POWER_ON_TS = time.time()
+        return "ok"
+    _log(f"SDCP RX NAK {item_name} data=0x{data:04X}")
+    return f"err_nak_0x{data:04X}"
+
+
+def sdcp_get(item_name: str) -> Optional[int]:
+    item_code = ITEM[item_name]
+    pkt = _build_packet(SDCP_GET, item_code, 0, data_len=0)
+    try:
+        resp_type, _item, data = _sdcp_round_trip(pkt, timeout=SETTINGS["status_timeout"])
+    except (socket.error, AdcpError) as e:
+        _log(f"SDCP GET {item_name} fail: {e}")
+        return None
+    if resp_type == 0x01:
+        return data
+    return None
+
+
+def sdcp_get_many(items: list[Tuple[str, str]]) -> Dict[str, Optional[int]]:
+    """Sekvens av GETs (en TCP-anslutning per query — SDCP saknar batch)."""
+    out: Dict[str, Optional[int]] = {}
+    for ui_key, item_name in items:
+        out[ui_key] = sdcp_get(item_name)
     return out
 
 
+# --- Bakåtkompatibla wrappers så Handler-koden inte behöver röras ---
+
+def adcp_set(adcp_command: str, value: Any, mode: str = "select", _retry_inactive: bool = True) -> str:
+    """Wrapper: tar gamla adcp_command-strängar (numeric värden eller enum-värden
+    som redan är ints från ACTION_MAP-mappers). value är nu ALLTID en int."""
+    try:
+        v = int(value)
+    except (TypeError, ValueError):
+        _log(f"adcp_set: invalid int value {value!r} for {adcp_command}")
+        return "err_val"
+    return sdcp_set(adcp_command, v)
+
+
+def adcp_get(adcp_command: str) -> str:
+    n = sdcp_get(adcp_command)
+    return "" if n is None else str(n)
+
+
+def adcp_get_many(commands: list[Tuple[str, str]]) -> Dict[str, str]:
+    raw = sdcp_get_many(commands)
+    return {k: ("" if v is None else str(v)) for k, v in raw.items()}
+
+
+def _format_adcp_set(adcp_command: str, value: Any, mode: str) -> str:
+    """För loggning i Handler — visar SDCP-paketet på läsbart sätt."""
+    return f"SDCP SET {adcp_command}={value}"
+
+
 def _parse_value(reply: str) -> Optional[str]:
-    """ADCP-svar: '"value"' eller 'ok' eller 'err_xxx'."""
+    """Behållen för bakåtkompabilitet — används inte längre i nya status-pathen."""
     if not reply:
         return None
-    r = reply.strip()
-    if r.lower().startswith("err"):
-        return None
-    if r.lower() == "ok":
-        return "ok"
-    return r.strip('"')
+    return reply.strip()
 
 
-REMOTE_KEY_MAP = {
-    "menu": 'key "menu"',
-    "up": 'key "up"',
-    "down": 'key "down"',
-    "left": 'key "left"',
-    "right": 'key "right"',
-    "enter": 'key "enter"',
-}
+REMOTE_KEY_MAP: Dict[str, str] = {}  # SDCP saknar remote-keys på HW65ES
 
 
 def adcp_key(key: str) -> str:
-    cmd = REMOTE_KEY_MAP.get(str(key).lower().strip())
-    if not cmd:
-        _log(f"REMOTE {key!r} -> SKIPPED (saknas/okänd knapp på XW5000ES)")
-        return "skipped"
-    _log(f"ADCP TX: {cmd}")
-    out = _adcp_session([cmd])
-    line = out[0] if out else ""
-    _log(f"ADCP RX: {line!r}")
-    return line
+    _log(f"REMOTE {key!r} -> SKIPPED (SDCP saknar remote-keys på HW65ES — använd CEC/IR)")
+    return "skipped"
+
+
+def _wait_until_active(timeout: float = 30.0, poll_interval: float = 1.5) -> bool:
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        st = sdcp_get("POWER_STATUS")
+        if st is not None:
+            label = POWER_STATUS_VAL.get(st, str(st))
+            if label == "on":
+                return True
+            _log(f"  warm-up status: {label}")
+        time.sleep(poll_interval)
+    return False
 
 
 # ---------------------------------------------------------------------------
@@ -849,47 +922,48 @@ def adcp_key(key: str) -> str:
 # ---------------------------------------------------------------------------
 
 def build_status() -> Dict[str, Any]:
-    # Direkt efter power on: fråga bara power_status. Full batch kan time outa
-    # under Sonys warm-up och blockera UI-status i onödan.
+    # Direkt efter power on: fråga bara power_status. Övriga GETs kan
+    # returnera NAK under warm-up.
     if LAST_POWER_ON_TS and (time.time() - LAST_POWER_ON_TS) < 45.0:
-        try:
-            reply = _adcp_session(["power_status ?"], timeout=SETTINGS["status_timeout"])
-            p = _parse_value(reply[0]) if reply else None
-            if p and p.lower() == "on":
-                return {"power": "on"}
-            return {"power": "on", "warming_up": True, "power_status": p or "startup"}
-        except (socket.error, AdcpError) as e:
-            _log(f"ADCP warm-up status fail: {e}")
-            return {"power": "on", "warming_up": True}
+        st = sdcp_get("POWER_STATUS")
+        label = POWER_STATUS_VAL.get(st, str(st)) if st is not None else None
+        if label == "on":
+            return {"power": "on"}
+        return {"power": "on", "warming_up": True, "power_status": label or "startup"}
 
-    raw = adcp_get_many(STATUS_QUERIES)
+    raw = sdcp_get_many(STATUS_QUERIES)
     out: Dict[str, Any] = {}
 
-    # power kräver normalisering: ADCP returnerar "standby"/"startup"/"on"/"cooling"
-    p = _parse_value(raw.get("power", ""))
+    # Power-status -> on/off
+    p = raw.get("power")
     if p is not None:
-        pl = p.lower()
-        if pl in ("on", "startup"):
+        label = POWER_STATUS_VAL.get(p, str(p))
+        if label in ("on", "startup"):
             out["power"] = "on"
-        elif pl in ("off", "standby", "cooling"):
+        elif label in ("standby", "cooling1", "cooling2", "saving_cool1", "saving_cool2", "saving_standby"):
             out["power"] = "off"
         else:
-            out["power"] = pl
+            out["power"] = label
 
-    # generella string-värden (HW65ES-stödda items)
-    for ui_key in ("picture_mode", "input", "color_temp", "blank", "lamp_control"):
-        v = _parse_value(raw.get(ui_key, ""))
-        if v is not None and v != "ok":
-            out[ui_key] = v
+    # Enum-värden via ACTION_MAP:s decoder
+    for ui_key in ("picture_mode", "input", "color_temp", "blank", "lamp_control", "motionflow"):
+        n = raw.get(ui_key)
+        if n is None:
+            continue
+        # Hitta motsvarande action för decoder
+        action_key = {"picture_mode": "pic_mode"}.get(ui_key, ui_key)
+        info = ACTION_MAP.get(action_key)
+        if info and info[2]:
+            try:
+                out[ui_key] = info[2](n)
+            except Exception:
+                out[ui_key] = n
 
+    # Numeriska 0..100
     for key in ("brightness", "contrast", "color", "sharpness"):
-        sv = _parse_value(raw.get(key, ""))
-        if sv is not None and sv.lstrip("-").isdigit():
-            out[key] = int(sv)
-
-    mf = _parse_value(raw.get("motionflow", ""))
-    if mf is not None and mf != "ok":
-        out["motionflow"] = mf
+        n = raw.get(key)
+        if n is not None:
+            out[key] = int(n)
 
     return out
 
