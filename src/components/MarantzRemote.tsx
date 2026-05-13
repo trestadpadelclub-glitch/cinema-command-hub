@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   Power,
   Volume2,
@@ -9,10 +9,15 @@ import {
   RefreshCw,
   CircleDot,
   CircleOff,
+  Pencil,
+  Check,
+  X,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -23,7 +28,7 @@ import {
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { sendMarantz, marantzMvToDb, type MarantzStatus } from "@/lib/projector";
-import { fetchInputs, type MarantzInput } from "@/lib/scenes";
+import { fetchInputs, fetchAppSettings, updateAppSettings, type MarantzInput, type MarantzLabels } from "@/lib/scenes";
 import { toast } from "sonner";
 
 interface Props {
