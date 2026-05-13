@@ -98,7 +98,7 @@ type KeyName = keyof typeof KEYCODES;
 // Standardpaket — kan justeras av användaren via popover om det skiljer sig
 // på just deras Formuler. Används för `adb shell monkey -p <pkg>`.
 const DEFAULT_APPS = {
-  mytvonline3: "com.formuler.mol3",
+  mytvonline3: "tv.formuler.mol3.real",
   youtube: "com.google.android.youtube.tv",
   redbull: "com.nousguide.android.rbtv",
   spotify: "com.spotify.tv.android",
@@ -107,6 +107,7 @@ const DEFAULT_APPS = {
 // Kandidatpaket att prova om standardvalet inte finns på boxen.
 const APP_CANDIDATES: Record<AppKey, string[]> = {
   mytvonline3: [
+    "tv.formuler.mol3.real",
     "com.formuler.mol3",
     "com.formuler.mytvonline3",
     "com.formuler.mytvonline2",

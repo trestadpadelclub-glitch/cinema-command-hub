@@ -61,7 +61,7 @@ interface Props {
 type AppKey = "mytvonline3" | "youtube" | "redbull" | "spotify";
 
 const APP_PACKAGES: Record<AppKey, string[]> = {
-  mytvonline3: ["com.formuler.mol3", "com.formuler.mytvonline3"],
+  mytvonline3: ["tv.formuler.mol3.real", "com.formuler.mol3", "com.formuler.mytvonline3"],
   youtube: ["com.google.android.youtube.tv", "com.google.android.youtube"],
   redbull: ["com.nousguide.android.rbtv"],
   spotify: ["com.spotify.tv.android", "com.spotify.music"],
