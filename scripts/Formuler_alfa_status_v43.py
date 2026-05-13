@@ -1,8 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Formuler_alfa_status_v41.py  (Sony VPL-HW65ES, SDCP / PJ Talk)
+Formuler_alfa_status_v43.py  (Sony VPL-HW65ES, SDCP / PJ Talk)
 ==============================================================
+
+v43 NYTT — Endast MyTVOnline3 (MOL3) triggar movie_*-scener:
+  - _FORMULER_PLAYER_PACKAGES innehåller nu ENBART MOL3-paketnamn.
+  - YouTube, Spotify, Red Bull TV, Netflix, VLC, Kodi, Plex m.fl. ignoreras
+    helt av ljusautomatiken — play/pause i dessa appar släcker/tänder INTE
+    längre lampor automatiskt.
+  - Behåller v42:s GET /api/remote/scene/<n> och v41:s smarta Blank-cykel.
 
 v41 NYTT — Smart tidsbaserad uppstartssekvens (Blank-cykel) i bridgen:
   - Konstanter högst upp vid SDCP-helpers: COLD_START_DELAY=40,
