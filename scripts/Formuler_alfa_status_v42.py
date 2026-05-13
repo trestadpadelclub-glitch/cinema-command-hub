@@ -193,6 +193,13 @@ SETTINGS = {
         "TRIGGER_URL",
         "https://projector-pal-97.lovable.app/api/public/trigger",
     ),
+    # v42: Endpoint för att hämta scen-payload via scene_number. Används av
+    # GET /api/remote/scene/<n> så fysiska fjärrkontrollsknappar kan starta
+    # scener (t.ex. Tänd=7, Släck=8) utan att gå via UI:t.
+    "scene_url": os.environ.get(
+        "SCENE_URL",
+        "https://projector-pal-97.lovable.app/api/public/scene",
+    ),
     "household_code": os.environ.get("HOUSEHOLD_CODE", ""),
     "adb_bin": os.environ.get("ADB_BIN", "adb"),
     # --- Chromecast (Google Cast via pychromecast) ---
