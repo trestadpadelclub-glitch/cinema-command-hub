@@ -26,6 +26,13 @@ import {
   type RemoteKey,
 } from "@/lib/projector";
 import { toast } from "sonner";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useRef, type ReactNode } from "react";
 
 interface Props {
