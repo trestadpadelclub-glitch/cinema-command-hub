@@ -1774,6 +1774,36 @@ def formuler_launch_app(package: str, timeout: float = 6.0) -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 # GLOBAL LOKAL EXEKVERING (headless-stöd, från bridge64.py)
 # ---------------------------------------------------------------------------
+def _fetch_scene_payload(scene_number: int, timeout: float = 8.0) -> Optional[Dict[str, Any]]:
+    """v42: Hämta exekveringspayload för en scen via scene_number.
+
+    Anropar backend (/api/public/scene) som returnerar samma struktur som
+    /api/public/trigger, så _execute_scene_payload kan köra resultatet rakt av.
+    """
+    url = SETTINGS["scene_url"]
+    hh = SETTINGS["household_code"]
+    if not hh:
+        _log(f"REMOTE scene {scene_number} (skipped — sätt HOUSEHOLD_CODE)")
+        return {"matched": False, "reason": "no_household_code"}
+    body = json.dumps({"household_code": hh, "scene_number": int(scene_number)}).encode("utf-8")
+    req = urllib.request.Request(
+        url, data=body, headers={"Content-Type": "application/json"}, method="POST"
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            raw = r.read().decode("utf-8", "replace")
+            try:
+                payload = json.loads(raw)
+            except json.JSONDecodeError:
+                _log(f"REMOTE scene {scene_number} bad json: {raw[:140]}")
+                return None
+            _log(f"REMOTE scene {scene_number} -> matched={payload.get('matched')} name={(payload.get('scene') or {}).get('name')}")
+            return payload
+    except (urllib.error.URLError, socket.timeout, OSError) as e:
+        _log(f"REMOTE scene {scene_number} fetch FAIL: {e}")
+        raise
+
+
 def _execute_scene_payload(payload: Optional[Dict[str, Any]]) -> None:
     """Kör scendatan lokalt direkt när molnet svarar på en trigger.
 
