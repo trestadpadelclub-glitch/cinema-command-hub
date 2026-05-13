@@ -228,7 +228,7 @@ export async function updateAppSettings(
   const { error } = await supabase
     .from("app_settings")
     .upsert(
-      { household_code: householdCode, ...patch },
+      { household_code: householdCode, ...patch } as never,
       { onConflict: "household_code" },
     );
   if (error) throw error;
