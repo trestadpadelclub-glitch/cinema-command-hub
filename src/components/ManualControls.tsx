@@ -478,20 +478,26 @@ export function ManualControls({ settings, onChange, showPowerAction }: Props) {
           <SectionLabel info={SECTION_INFO.gamma_correction}>
             Gamma Correction
           </SectionLabel>
-          <div className="grid grid-cols-7 gap-2">
-            {GAMMA_OPTS.map((g) => (
-              <OptionButton
-                key={g}
-                active={(settings.gamma_correction ?? "2.2") === g}
-                onClick={() =>
-                  update("gamma_correction", g, { gamma_correction: g })
-                }
-                info={GAMMA_INFO[g]}
-              >
-                {g}
-              </OptionButton>
-            ))}
-          </div>
+          <Select
+            value={settings.gamma_correction ?? "2.2"}
+            onValueChange={(v) =>
+              update("gamma_correction", v as Gamma, { gamma_correction: v as Gamma })
+            }
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Välj gamma" />
+            </SelectTrigger>
+            <SelectContent>
+              {GAMMA_OPTS.map((g) => (
+                <SelectItem key={g} value={g}>
+                  {GAMMA_LABELS[g]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="mt-2 text-xs text-muted-foreground">
+            {GAMMA_INFO[(settings.gamma_correction ?? "2.2") as Gamma]}
+          </p>
         </Card>
 
         <Card className="p-5">
