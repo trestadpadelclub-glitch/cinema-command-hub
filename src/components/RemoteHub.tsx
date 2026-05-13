@@ -6,6 +6,7 @@ import { FormulerRemote } from "@/components/FormulerRemote";
 import { LightsRemote } from "@/components/LightsRemote";
 import { ChromecastRemote } from "@/components/ChromecastRemote";
 import { BlurayRemote } from "@/components/BlurayRemote";
+import { PowerControl } from "@/components/PowerControl";
 import type { ProjectorSettings, MarantzStatus } from "@/lib/projector";
 
 interface Props {
