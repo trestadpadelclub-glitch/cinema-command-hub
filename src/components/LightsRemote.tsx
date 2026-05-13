@@ -85,6 +85,10 @@ export function LightsRemote({ householdCode }: Props) {
   // Debounce timer för live-skickning under draggning
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lightDebounceRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  // Senast skickade värden från detta UI — används för att upptäcka externa ändringar
+  // (t.ex. fjärrkontroll/Tuya-app) i statuspollningen.
+  const lastSentColorRef = useRef<Record<string, string>>({});
+  const lastSentLevelRef = useRef<Record<string, number>>({});
 
   // Initial load
   useEffect(() => {
