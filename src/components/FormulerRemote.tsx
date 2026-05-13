@@ -381,7 +381,8 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
           setProjOn(false);
         }
       } catch { if (alive) setProjOn(false); }
-      // Formuler — pinga bridge-endpoint för boxen
+      // Formuler — bryggan svarar alltid {ok:true} även när boxen är av.
+      // Räkna bara boxen som ON om adb verkligen fick lista appar (count > 0).
       try {
         const base = getBridgeUrl();
         const url = base.replace(/\/api\/projector$/i, "/api/formuler/list_apps");
@@ -392,16 +393,33 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
           signal: ctrl.signal,
         });
         clearTimeout(t);
-        const d = await res.json().catch(() => ({}));
+        const d = (await res.json().catch(() => ({}))) as {
+          ok?: boolean;
+          apps?: unknown[];
+          count?: number;
+        };
         if (!alive) return;
-        setFormulerOn(res.ok && !!d?.ok);
+        const apps = Array.isArray(d?.apps) ? d.apps.length : 0;
+        const count = typeof d?.count === "number" ? d.count : apps;
+        setFormulerOn(res.ok && !!d?.ok && count > 0);
       } catch { if (alive) setFormulerOn(false); }
-      // Lights — minst en lampa online och tänd
+      // Lights — minst en lampa online, tänd OCH med faktisk ljusstyrka.
+      // Bryggans Tuya-cache kan annars hänga kvar med on=true efter att lampan
+      // släckts utanför appen.
       try {
         const r = await getLightsStatus();
         if (!alive) return;
         if (r.ok) {
-          setLightsOn(r.lights.some((l) => l.online && l.on));
+          const now = Date.now() / 1000;
+          setLightsOn(
+            r.lights.some((l) => {
+              if (!l.online || !l.on) return false;
+              if (typeof l.brightness === "number" && l.brightness <= 0) return false;
+              // Ignorera helt stale cache (>2 min)
+              if (typeof l.last_seen === "number" && now - l.last_seen > 120) return false;
+              return true;
+            }),
+          );
         } else {
           setLightsOn(false);
         }
