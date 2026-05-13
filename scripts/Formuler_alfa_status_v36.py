@@ -1535,18 +1535,43 @@ def _execute_scene_payload(payload: Optional[Dict[str, Any]]) -> None:
 
     _log(f"*** AUTOMATION TRIGGERED: '{scene.get('name', 'Unknown')}' (via {trigger_key}) ***")
 
-    # 1) Projektor — endast power körs lokalt på HW65ES (övriga ADCP-set
-    #    är opålitliga i standby; resterande inställningar låts appen sköta
-    #    via /api/projector när projektorn är på och varm).
+    # 1) Projektor via SDCP — på HW65ES kan vi nu pålitligt skicka HELA scenen
+    #    (power + alla bildinställningar) eftersom SDCP/PJ Talk på TCP 53484
+    #    lyssnar även i standby (till skillnad från ADCP 53595 som inte finns
+    #    på HW65ES alls).
     if filters.get("run_projector", True):
         proj_settings = dict(scene.get("projector_settings") or {})
-        if "power" in proj_settings:
-            val = proj_settings.pop("power")
-            try:
-                adcp_set("power", val, mode="select")
-            except Exception as e:
-                _log(f"Projector power fail: {e}")
-            time.sleep(0.5)
+        power_val = proj_settings.pop("power", None)
+        # Power FIRST
+        if power_val is not None:
+            info = ACTION_MAP.get("power")
+            if info and info[0]:
+                try:
+                    adcp_set(info[0], info[1](power_val))
+                except Exception as e:
+                    _log(f"Projector power fail: {e}")
+        # Vänta på att projektorn blir aktiv om vi precis startade den
+        if str(power_val).lower() in ("on", "1", "true"):
+            _wait_until_active(timeout=45.0)
+        # Skicka övriga inställningar (skip om power är off)
+        if str(power_val).lower() not in ("off", "0", "false"):
+            for action_key, raw_val in proj_settings.items():
+                if raw_val is None:
+                    continue
+                info = ACTION_MAP.get(action_key)
+                if not info or info[0] is None:
+                    _log(f"  scene setting '{action_key}' -> SKIPPED (ej i SDCP-mappning)")
+                    continue
+                item_name, mapper, _decoder = info
+                try:
+                    adcp_set(item_name, mapper(raw_val))
+                except Exception as e:
+                    _log(f"Projector {action_key} fail: {e}")
+            # Reality Creation finns på HW65ES via SDCP men inte modellerat —
+            # logga om scenen försöker sätta det.
+            rc = scene.get("projector_settings", {}).get("reality_creation") if isinstance(scene.get("projector_settings"), dict) else None
+            if rc is not None:
+                _log(f"  reality_creation={rc} -> SKIPPED (ej i SDCP-mappning ännu)")
 
     # 2) Marantz
     if filters.get("run_marantz", True):
