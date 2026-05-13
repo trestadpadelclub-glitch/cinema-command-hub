@@ -547,7 +547,7 @@ ITEM = {
     "HUE":              0x0013,
     "SHARPNESS":        0x0014,
     "COLOR_TEMP":       0x0017,
-    "GAMMA_CORRECTION": 0x001C,
+    "GAMMA_CORRECTION": 0x0022,
     "LAMP_CONTROL":     0x001A,
     "IRIS_DYN_CONT":    0x0019,  # iris dynamic control (HW65ES, lampbaserad)
     "MOTIONFLOW":       0x0021,
