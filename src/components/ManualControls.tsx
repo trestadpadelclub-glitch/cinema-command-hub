@@ -178,6 +178,10 @@ const GAMMA_INFO: Record<Gamma, string> = {
   "2.4": "BT.1886 / hemmabio-standard. Mörkare mellantoner, mer kontrast — kräver mörkt rum.",
   "2.6":
     "Cinema/DCI-standard. Mycket mörka mellantoner. Endast för helt mörkt rum och kalibrerad miljö.",
+  gamma7: "Sony-specifik kurva 7. Alternativ profil — testa mot din källa.",
+  gamma8: "Sony-specifik kurva 8. Alternativ profil — testa mot din källa.",
+  gamma9: "Sony-specifik kurva 9. Alternativ profil — testa mot din källa.",
+  gamma10: "Sony-specifik kurva 10. Alternativ profil — testa mot din källa.",
 };
 
 const COLOR_TEMP_INFO: Record<ColorTemp, string> = {
