@@ -85,6 +85,10 @@ export function LightsRemote({ householdCode }: Props) {
   // Debounce timer för live-skickning under draggning
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lightDebounceRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  // Senast skickade värden från detta UI — används för att upptäcka externa ändringar
+  // (t.ex. fjärrkontroll/Tuya-app) i statuspollningen.
+  const lastSentColorRef = useRef<Record<string, string>>({});
+  const lastSentLevelRef = useRef<Record<string, number>>({});
 
   // Initial load
   useEffect(() => {
@@ -321,6 +325,13 @@ export function LightsRemote({ householdCode }: Props) {
       });
       return;
     }
+    // Spara senast skickade värden så vi kan upptäcka externa ändringar i pollningen.
+    if (on) {
+      if (typeof brightness === "number") lastSentLevelRef.current[light.id] = clamp(Math.round(brightness), 1, 100);
+      const sentColor = colorOverride ?? manualColors[light.id];
+      const norm = sentColor ? normalizeHex(sentColor) : null;
+      if (norm) lastSentColorRef.current[light.id] = norm;
+    }
     if (showToast) toast.success(`${light.name}: ${on ? "ON" : "OFF"}`);
     setTimeout(() => refetchLightsStatus().catch(() => {}), 450);
   };
@@ -343,6 +354,41 @@ export function LightsRemote({ householdCode }: Props) {
       void sendSingleLight(light, st, true, level, false, hex);
     }, 220);
   };
+
+  // Synka manuella overrides med extern status. Om bryggan rapporterar ett annat
+  // värde än det vi senast skickade så har någon ändrat utanför UI:t (fjärrkontroll
+  // eller Tuya-app) — släpp då vår override så live-statusen visas.
+  useEffect(() => {
+    if (lightStatus.length === 0) return;
+    setManualColors((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const light of lights) {
+        const st = lightStatus.find((s) => s.device_id === light.tuya_device_id);
+        const reported = st?.color_hex ? normalizeHex(st.color_hex) : null;
+        const sent = lastSentColorRef.current[light.id];
+        if (reported && next[light.id] && reported !== sent) {
+          delete next[light.id];
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+    setManualLevels((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const light of lights) {
+        const st = lightStatus.find((s) => s.device_id === light.tuya_device_id);
+        const reported = typeof st?.brightness === "number" ? st.brightness : null;
+        const sent = lastSentLevelRef.current[light.id];
+        if (reported !== null && next[light.id] !== undefined && reported !== sent) {
+          delete next[light.id];
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [lightStatus, lights]);
 
   useEffect(() => {
     return () => {
