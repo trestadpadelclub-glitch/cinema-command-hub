@@ -990,13 +990,14 @@ export interface LightStatus {
   error?: string;
 }
 
-export async function getLightsStatus(): Promise<{
+export async function getLightsStatus(deviceIds: string[] = []): Promise<{
   ok: boolean;
   lights: LightStatus[];
   error?: string;
 }> {
   try {
-    const url = lightsUrl() + "/status";
+    const qs = deviceIds.length > 0 ? `?devices=${encodeURIComponent(deviceIds.join(","))}` : "";
+    const url = lightsUrl() + "/status" + qs;
     const res = await fetch(url, {
       headers: { Accept: "application/json", "ngrok-skip-browser-warning": "true" },
     });
