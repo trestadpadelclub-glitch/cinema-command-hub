@@ -127,16 +127,16 @@ export function SettingsDialog() {
             <div className="rounded-md border border-border/50 bg-muted/30 p-3 text-xs text-muted-foreground space-y-1">
               <p className="font-medium text-foreground">Lokalt LAN-läge (iPhone/iPad på samma WiFi)</p>
               <p>1. Installera beroenden: <code>pip install tinytuya pychromecast</code></p>
-              <p>2. Starta bryggan (v39): <code>python Formuler_alfa_status_v39.py</code></p>
+              <p>2. Starta bryggan (v40): <code>python Formuler_alfa_status_v40.py</code></p>
               <p>3. Starta appen: <code>bun dev --host</code></p>
               <p>4. Öppna <code>http://&lt;datorns-IP&gt;:5173</code> i Safari på iPad/iPhone.</p>
               <p>5. Sätt Bridge URL ovan till <code>http://&lt;datorns-IP&gt;:5000/api/projector</code>.</p>
               <p className="pt-1 text-[10px]">
-                <a href="/downloads/Formuler_alfa_status_v39.py" download className="text-primary underline">
-                  Ladda ner v39
+                <a href="/downloads/Formuler_alfa_status_v40.py" download className="text-primary underline">
+                  Ladda ner v40
                 </a>
                 {" · "}
-                <span>v39 innehåller MOL3-paus/start via ljudstatus, Lights-status och Chromecast-fjärrkontroll.</span>
+                <span>v40 fixar MOL3-start (resolve-activity + LEANBACK_LAUNCHER + fler kända aktiviteter), MOL3-paus/start via ljudstatus, Lights-status och Chromecast-fjärrkontroll.</span>
               </p>
             </div>
           </div>
