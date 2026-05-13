@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Formuler_alfa_status_v36.py  (Sony VPL-HW65ES, SDCP / PJ Talk)
+Formuler_alfa_status_v39.py  (Sony VPL-HW65ES, SDCP / PJ Talk)
 ==============================================================
+
+v39 NYTT: MOL3 start/paus följer nu faktisk USAGE_MEDIA-ljudstatus även när MediaSession fastnar på pb_int=3.
 
 v36 NYTT (jämfört med v35) — ADCP HELT BORTTAGET:
   - HW65ES (Home Cinema-serien) stödjer INTE Sonys ADCP-protokoll
@@ -1792,13 +1794,16 @@ class FormulerMonitor(threading.Thread):
         # Playback — kan finnas flera media sessions, ta den senaste rapporterade.
         # I praktiken ger MOL3/VLC en aktiv session i taget.
         pb_states = [int(m) for m in _RE_PB_STATE.findall(sections["MEDIA"])]
-        pb_int = pb_states[-1] if pb_states else 0
-
-        if pb_int in _PB_PLAYING:
+        # Prioritera PLAYING > PAUSED > övrigt så att en parallell systemsession
+        # (t.ex. notifications=stopped) inte överröstar filmens PLAYING-state.
+        if any(s in _PB_PLAYING for s in pb_states):
+            pb_int = next(s for s in pb_states if s in _PB_PLAYING)
             play = "playing"
-        elif pb_int in _PB_PAUSED:
+        elif any(s in _PB_PAUSED for s in pb_states):
+            pb_int = next(s for s in pb_states if s in _PB_PAUSED)
             play = "paused"
         else:
+            pb_int = pb_states[-1] if pb_states else 0
             play = "stopped"
 
         audio_text = sections["AUDIO"]
