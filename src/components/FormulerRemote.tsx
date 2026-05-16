@@ -369,9 +369,9 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
   const [projOn, setProjOn] = useState<boolean | null>(null);
   const [formulerOn, setFormulerOn] = useState<boolean | null>(null);
   const [lightsOn, setLightsOn] = useState<boolean | null>(null);
+  const [picMode, setPicMode] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!locked) return;
     let alive = true;
     const tick = async () => {
       // Projektor
@@ -381,6 +381,7 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
         if (r.ok) {
           const p = parseStatus(r.data);
           setProjOn(p.power === "on");
+          setPicMode(p.pic_mode ?? null);
         } else {
           setProjOn(false);
         }
