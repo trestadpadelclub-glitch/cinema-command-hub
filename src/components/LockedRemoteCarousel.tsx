@@ -188,6 +188,24 @@ export function LockedRemoteCarousel({
             <BlurayRemote householdCode={householdCode} />
           </div>
         </div>
+        </div>
+        {/* Edge swipe/tap zones — overlay narrow strips on left/right so iOS users can swipe past inner sliders/buttons */}
+        <button
+          type="button"
+          aria-label="Föregående remote"
+          onClick={() => embla?.scrollPrev()}
+          disabled={selected === 0}
+          className="absolute left-0 top-0 h-full w-6 z-10 bg-transparent disabled:opacity-0"
+          style={{ touchAction: "pan-y" }}
+        />
+        <button
+          type="button"
+          aria-label="Nästa remote"
+          onClick={() => embla?.scrollNext()}
+          disabled={selected === PAGES.length - 1}
+          className="absolute right-0 top-0 h-full w-6 z-10 bg-transparent disabled:opacity-0"
+          style={{ touchAction: "pan-y" }}
+        />
       </div>
     </div>
   );
