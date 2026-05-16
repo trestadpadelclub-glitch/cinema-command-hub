@@ -84,6 +84,10 @@ interface Props {
   marantzStatus: MarantzStatus | null;
   marantzReachable: boolean | null;
   onMarantzRefresh: () => Promise<void>;
+  /** When true, the remote renders in locked layout but without its own
+   *  fixed-overlay chrome — the parent carousel owns the top header and
+   *  unlock affordance. */
+  forceLocked?: boolean;
 }
 
 const KEYCODES = {
@@ -250,7 +254,7 @@ function loadPackages(): Record<AppKey, string> {
 
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
 
-export function FormulerRemote({ householdCode, marantzStatus, marantzReachable, onMarantzRefresh }: Props) {
+export function FormulerRemote({ householdCode, marantzStatus, marantzReachable, onMarantzRefresh, forceLocked }: Props) {
   const [busy, setBusy] = useState<KeyName | null>(null);
   const [appBusy, setAppBusy] = useState<AppKey | null>(null);
   const [transportBusy, setTransportBusy] = useState<Transport | null>(null);
@@ -284,7 +288,8 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
   const [lightsBusy, setLightsBusy] = useState<"on" | "off" | null>(null);
   const [movieAutoBusy, setMovieAutoBusy] = useState(false);
   // Kiosk/lås-läge för telefonen — fixerar layouten på en skärm utan scroll.
-  const [locked, setLocked] = useState(false);
+  const [internalLocked, setLocked] = useState(false);
+  const locked = forceLocked ?? internalLocked;
   const lightDeviceIds = useMemo(
     () => lights.filter((l) => l.enabled).map((l) => l.tuya_device_id).filter(Boolean),
     [lights],
@@ -807,11 +812,13 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
     <div
       className={
         locked
-          ? "fixed inset-0 z-40 bg-background overflow-hidden flex flex-col"
+          ? forceLocked
+            ? "h-full w-full overflow-hidden flex flex-col"
+            : "fixed inset-0 z-40 bg-background overflow-hidden flex flex-col"
           : ""
       }
     >
-      {locked && (
+      {locked && !forceLocked && (
         <div className="shrink-0 w-full bg-primary/15 border-b border-primary/40">
           <div className="flex items-center justify-center gap-2 pt-1.5">
             {[
