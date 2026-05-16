@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, type TouchEvent } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { FormulerRemote } from "@/components/FormulerRemote";
 import { MarantzRemote } from "@/components/MarantzRemote";
@@ -48,12 +48,12 @@ export function LockedRemoteCarousel({
   const goPrev = () => setSelected((i) => Math.max(0, i - 1));
   const goNext = () => setSelected((i) => Math.min(PAGES.length - 1, i + 1));
 
-  const handleTouchStartCapture = (event: React.TouchEvent<HTMLDivElement>) => {
+  const handleTouchStartCapture = (event: TouchEvent<HTMLDivElement>) => {
     const touch = event.touches[0];
     touchStart.current = { x: touch.clientX, y: touch.clientY };
   };
 
-  const handleTouchEndCapture = (event: React.TouchEvent<HTMLDivElement>) => {
+  const handleTouchEndCapture = (event: TouchEvent<HTMLDivElement>) => {
     const start = touchStart.current;
     const touch = event.changedTouches[0];
     touchStart.current = null;
@@ -149,7 +149,7 @@ export function LockedRemoteCarousel({
         </button>
       </div>
 
-      {/* Embla viewport — fills remaining height */}
+      {/* Remote pages — fills remaining height */}
       <div
         className="relative flex-1 min-h-0 overflow-hidden"
         onTouchStartCapture={handleTouchStartCapture}
