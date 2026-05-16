@@ -56,6 +56,7 @@ import {
   getBridgeUrl,
   type MarantzStatus,
   type SceneLightCommand,
+  PIC_MODE_LABELS,
 } from "@/lib/projector";
 import {
   fetchScenes,
