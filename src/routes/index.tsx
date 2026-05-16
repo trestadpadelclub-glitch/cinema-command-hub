@@ -16,7 +16,7 @@ import { MarantzRemote } from "@/components/MarantzRemote";
 import { LightsManager } from "@/components/LightsManager";
 import { TriggerTester } from "@/components/TriggerTester";
 import { PollingControl } from "@/components/PollingControl";
-import { FavoriteRemote } from "@/components/FavoriteRemote";
+import { LockedRemoteCarousel } from "@/components/LockedRemoteCarousel";
 import { useKioskMode } from "@/hooks/useKioskMode";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
@@ -209,11 +209,14 @@ function Index() {
   if (kiosk.locked) {
     return (
       <>
-        <FavoriteRemote
+        <LockedRemoteCarousel
           householdCode={household}
+          settings={settings}
+          onSettingsChange={setSettings}
           marantzStatus={marantz.status}
-          onUnlock={kiosk.unlock}
+          marantzReachable={marantz.reachable}
           onMarantzRefresh={marantz.refetch}
+          onUnlock={kiosk.unlock}
         />
         <Toaster theme="dark" position="top-center" richColors />
       </>
