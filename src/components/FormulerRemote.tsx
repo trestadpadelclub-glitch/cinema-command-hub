@@ -1508,3 +1508,21 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
     </div>
   );
 }
+
+function StatusFlag({ label, value }: { label: string; value: string | null }) {
+  const active = !!value;
+  return (
+    <span
+      className={
+        "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold border " +
+        (active
+          ? "bg-primary/15 border-primary/50 text-primary"
+          : "bg-muted/30 border-muted-foreground/30 text-muted-foreground")
+      }
+      title={`${label}: ${value ?? "okänt"}`}
+    >
+      <span className="opacity-70">{label}</span>
+      <span className="font-mono uppercase">{value ?? "—"}</span>
+    </span>
+  );
+}
