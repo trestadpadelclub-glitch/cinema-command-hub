@@ -148,7 +148,8 @@ export function LockedRemoteCarousel({
       </div>
 
       {/* Embla viewport — fills remaining height */}
-      <div className="flex-1 min-h-0 overflow-hidden" ref={emblaRef}>
+      <div className="relative flex-1 min-h-0 overflow-hidden">
+        <div className="absolute inset-0 overflow-hidden" ref={emblaRef} style={{ touchAction: "pan-y" }}>
         <div className="flex h-full">
           {/* Sony */}
           <div className="min-w-0 shrink-0 grow-0 basis-full h-full overflow-y-auto p-3 space-y-4">
