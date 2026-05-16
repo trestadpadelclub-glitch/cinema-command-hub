@@ -56,6 +56,7 @@ import {
   getBridgeUrl,
   type MarantzStatus,
   type SceneLightCommand,
+  PIC_MODE_LABELS,
 } from "@/lib/projector";
 import {
   fetchScenes,
@@ -369,9 +370,9 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
   const [projOn, setProjOn] = useState<boolean | null>(null);
   const [formulerOn, setFormulerOn] = useState<boolean | null>(null);
   const [lightsOn, setLightsOn] = useState<boolean | null>(null);
+  const [picMode, setPicMode] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!locked) return;
     let alive = true;
     const tick = async () => {
       // Projektor
@@ -381,6 +382,7 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
         if (r.ok) {
           const p = parseStatus(r.data);
           setProjOn(p.power === "on");
+          setPicMode(p.pic_mode ?? null);
         } else {
           setProjOn(false);
         }
@@ -438,7 +440,7 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
     tick();
     const id = setInterval(tick, 8000);
     return () => { alive = false; clearInterval(id); };
-  }, [locked, lightDeviceIds]);
+  }, [lightDeviceIds]);
 
   const marantzOn = marantzReachable !== false && marantzStatus?.power === "on";
 
@@ -792,6 +794,15 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
 
   const volDb = marantzMvToDb(volDraft);
 
+  const picLabel = picMode ? (PIC_MODE_LABELS[picMode as keyof typeof PIC_MODE_LABELS] ?? picMode) : null;
+  const statusFlags = (
+    <div className="flex items-center justify-center gap-1.5 flex-wrap px-2">
+      <StatusFlag label="Sound" value={marantzStatus?.sound_mode ?? null} />
+      <StatusFlag label="Dirac" value={marantzStatus?.dirac ?? null} />
+      <StatusFlag label="Pic" value={picLabel} />
+    </div>
+  );
+
   return (
     <div
       className={
@@ -823,6 +834,7 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
               />
             ))}
           </div>
+          <div className="pb-1">{statusFlags}</div>
           <button
             type="button"
             onDoubleClick={() => setLocked(false)}
@@ -843,11 +855,12 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
       >
 
         {!locked && (
-          <div className="flex justify-end">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex-1 min-w-0">{statusFlags}</div>
             <Button
               variant="outline"
               size="sm"
-              className="h-8 text-xs"
+              className="h-8 text-xs shrink-0"
               onClick={() => setLocked(true)}
               title="Lås layout på skärmen (dubbelklicka rutan upptill för att låsa upp)"
             >
@@ -1495,5 +1508,23 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
       </Dialog>
       </div>
     </div>
+  );
+}
+
+function StatusFlag({ label, value }: { label: string; value: string | null }) {
+  const active = !!value;
+  return (
+    <span
+      className={
+        "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold border " +
+        (active
+          ? "bg-primary/15 border-primary/50 text-primary"
+          : "bg-muted/30 border-muted-foreground/30 text-muted-foreground")
+      }
+      title={`${label}: ${value ?? "okänt"}`}
+    >
+      <span className="opacity-70">{label}</span>
+      <span className="font-mono uppercase">{value ?? "—"}</span>
+    </span>
   );
 }
