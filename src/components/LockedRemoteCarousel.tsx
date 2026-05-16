@@ -148,7 +148,8 @@ export function LockedRemoteCarousel({
       </div>
 
       {/* Embla viewport — fills remaining height */}
-      <div className="flex-1 min-h-0 overflow-hidden" ref={emblaRef}>
+      <div className="relative flex-1 min-h-0 overflow-hidden">
+        <div className="absolute inset-0 overflow-hidden" ref={emblaRef} style={{ touchAction: "pan-y" }}>
         <div className="flex h-full">
           {/* Sony */}
           <div className="min-w-0 shrink-0 grow-0 basis-full h-full overflow-y-auto p-3 space-y-4">
@@ -187,6 +188,24 @@ export function LockedRemoteCarousel({
             <BlurayRemote householdCode={householdCode} />
           </div>
         </div>
+        </div>
+        {/* Edge swipe/tap zones — overlay narrow strips on left/right so iOS users can swipe past inner sliders/buttons */}
+        <button
+          type="button"
+          aria-label="Föregående remote"
+          onClick={() => embla?.scrollPrev()}
+          disabled={selected === 0}
+          className="absolute left-0 top-0 h-full w-6 z-10 bg-transparent disabled:opacity-0"
+          style={{ touchAction: "pan-y" }}
+        />
+        <button
+          type="button"
+          aria-label="Nästa remote"
+          onClick={() => embla?.scrollNext()}
+          disabled={selected === PAGES.length - 1}
+          className="absolute right-0 top-0 h-full w-6 z-10 bg-transparent disabled:opacity-0"
+          style={{ touchAction: "pan-y" }}
+        />
       </div>
     </div>
   );
