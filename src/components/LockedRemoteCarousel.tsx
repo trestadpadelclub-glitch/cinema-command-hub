@@ -150,9 +150,15 @@ export function LockedRemoteCarousel({
       </div>
 
       {/* Embla viewport — fills remaining height */}
-      <div className="relative flex-1 min-h-0 overflow-hidden">
-        <div className="absolute inset-0 overflow-hidden" ref={emblaRef} style={{ touchAction: "pan-y" }}>
-        <div className="flex h-full">
+      <div
+        className="relative flex-1 min-h-0 overflow-hidden"
+        onTouchStartCapture={handleTouchStartCapture}
+        onTouchEndCapture={handleTouchEndCapture}
+      >
+        <div
+          className="absolute inset-0 flex h-full transition-transform duration-300 ease-out"
+          style={{ transform: `translateX(-${selected * 100}%)` }}
+        >
           {/* Sony */}
           <div className="min-w-0 shrink-0 grow-0 basis-full h-full overflow-y-auto p-3 space-y-4">
             <PowerControl />
@@ -190,24 +196,29 @@ export function LockedRemoteCarousel({
             <BlurayRemote householdCode={householdCode} />
           </div>
         </div>
-        </div>
-        {/* Edge swipe/tap zones — overlay narrow strips on left/right so iOS users can swipe past inner sliders/buttons */}
+        {/* Edge tap zones — visible fallback navigation on top of controls */}
         <button
           type="button"
           aria-label="Föregående remote"
-          onClick={() => embla?.scrollPrev()}
+          onClick={goPrev}
           disabled={selected === 0}
-          className="absolute left-0 top-0 h-full w-6 z-10 bg-transparent disabled:opacity-0"
-          style={{ touchAction: "pan-y" }}
-        />
+          className="absolute left-0 top-0 h-full w-11 z-10 flex items-center justify-start pl-1 text-primary disabled:opacity-0"
+        >
+          <span className="inline-flex h-12 w-7 items-center justify-center rounded-r-md border-y border-r border-primary/40 bg-background/85 shadow-sm">
+            <ChevronLeft className="h-5 w-5" />
+          </span>
+        </button>
         <button
           type="button"
           aria-label="Nästa remote"
-          onClick={() => embla?.scrollNext()}
+          onClick={goNext}
           disabled={selected === PAGES.length - 1}
-          className="absolute right-0 top-0 h-full w-6 z-10 bg-transparent disabled:opacity-0"
-          style={{ touchAction: "pan-y" }}
-        />
+          className="absolute right-0 top-0 h-full w-11 z-10 flex items-center justify-end pr-1 text-primary disabled:opacity-0"
+        >
+          <span className="inline-flex h-12 w-7 items-center justify-center rounded-l-md border-y border-l border-primary/40 bg-background/85 shadow-sm">
+            <ChevronRight className="h-5 w-5" />
+          </span>
+        </button>
       </div>
     </div>
   );
