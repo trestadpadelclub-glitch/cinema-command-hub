@@ -834,6 +834,7 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
               />
             ))}
           </div>
+          <div className="pb-1">{statusFlags}</div>
           <button
             type="button"
             onDoubleClick={() => setLocked(false)}
