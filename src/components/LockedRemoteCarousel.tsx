@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import useEmblaCarousel from "embla-carousel-react";
+import { useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { FormulerRemote } from "@/components/FormulerRemote";
 import { MarantzRemote } from "@/components/MarantzRemote";
@@ -43,25 +42,28 @@ export function LockedRemoteCarousel({
   onMarantzRefresh,
   onUnlock,
 }: Props) {
-  const [emblaRef, embla] = useEmblaCarousel({
-    startIndex: DEFAULT_INDEX,
-    align: "start",
-    containScroll: "trimSnaps",
-    loop: false,
-  });
   const [selected, setSelected] = useState(DEFAULT_INDEX);
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
 
-  useEffect(() => {
-    if (!embla) return;
-    const onSelect = () => setSelected(embla.selectedScrollSnap());
-    embla.on("select", onSelect);
-    embla.on("reInit", onSelect);
-    onSelect();
-    return () => {
-      embla.off("select", onSelect);
-      embla.off("reInit", onSelect);
-    };
-  }, [embla]);
+  const goPrev = () => setSelected((i) => Math.max(0, i - 1));
+  const goNext = () => setSelected((i) => Math.min(PAGES.length - 1, i + 1));
+
+  const handleTouchStartCapture = (event: React.TouchEvent<HTMLDivElement>) => {
+    const touch = event.touches[0];
+    touchStart.current = { x: touch.clientX, y: touch.clientY };
+  };
+
+  const handleTouchEndCapture = (event: React.TouchEvent<HTMLDivElement>) => {
+    const start = touchStart.current;
+    const touch = event.changedTouches[0];
+    touchStart.current = null;
+    if (!start || !touch) return;
+    const dx = touch.clientX - start.x;
+    const dy = touch.clientY - start.y;
+    if (Math.abs(dx) < 45 || Math.abs(dx) < Math.abs(dy) * 1.2) return;
+    if (dx < 0) goNext();
+    else goPrev();
+  };
 
   const leds = useStatusLeds(householdCode, marantzStatus, marantzReachable);
   const picLabel = leds.picMode
@@ -103,12 +105,12 @@ export function LockedRemoteCarousel({
         <div className="flex items-center justify-between px-2 pb-1">
           <button
             type="button"
-            onClick={() => embla?.scrollPrev()}
-            className="h-7 w-7 inline-flex items-center justify-center rounded-md text-primary disabled:opacity-30"
+            onClick={goPrev}
+            className="h-9 w-9 inline-flex items-center justify-center rounded-md border border-primary/40 bg-primary/10 text-primary disabled:opacity-30"
             disabled={selected === 0}
             aria-label="Föregående"
           >
-            <ChevronLeft className="h-5 w-5" />
+            <ChevronLeft className="h-6 w-6" />
           </button>
           <div className="flex flex-col items-center gap-0.5">
             <div className="text-xs font-semibold text-primary tracking-wide">
@@ -128,12 +130,12 @@ export function LockedRemoteCarousel({
           </div>
           <button
             type="button"
-            onClick={() => embla?.scrollNext()}
-            className="h-7 w-7 inline-flex items-center justify-center rounded-md text-primary disabled:opacity-30"
+            onClick={goNext}
+            className="h-9 w-9 inline-flex items-center justify-center rounded-md border border-primary/40 bg-primary/10 text-primary disabled:opacity-30"
             disabled={selected === PAGES.length - 1}
             aria-label="Nästa"
           >
-            <ChevronRight className="h-5 w-5" />
+            <ChevronRight className="h-6 w-6" />
           </button>
         </div>
         <button
@@ -143,7 +145,7 @@ export function LockedRemoteCarousel({
           className="w-full text-center text-[11px] font-semibold py-1 text-primary select-none touch-manipulation border-t border-primary/30"
           title="Dubbelklicka för att låsa upp"
         >
-          🔒 LÅST — dubbelklicka här för att låsa upp · svep för att byta
+          🔒 LÅST — dubbelklicka här för att låsa upp
         </button>
       </div>
 
