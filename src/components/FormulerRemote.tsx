@@ -855,11 +855,12 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
       >
 
         {!locked && (
-          <div className="flex justify-end">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex-1 min-w-0">{statusFlags}</div>
             <Button
               variant="outline"
               size="sm"
-              className="h-8 text-xs"
+              className="h-8 text-xs shrink-0"
               onClick={() => setLocked(true)}
               title="Lås layout på skärmen (dubbelklicka rutan upptill för att låsa upp)"
             >
