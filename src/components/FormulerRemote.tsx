@@ -439,7 +439,7 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
     tick();
     const id = setInterval(tick, 8000);
     return () => { alive = false; clearInterval(id); };
-  }, [locked, lightDeviceIds]);
+  }, [lightDeviceIds]);
 
   const marantzOn = marantzReachable !== false && marantzStatus?.power === "on";
 
