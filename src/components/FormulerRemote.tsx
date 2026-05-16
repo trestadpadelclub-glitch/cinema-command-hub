@@ -794,6 +794,15 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
 
   const volDb = marantzMvToDb(volDraft);
 
+  const picLabel = picMode ? (PIC_MODE_LABELS[picMode as keyof typeof PIC_MODE_LABELS] ?? picMode) : null;
+  const statusFlags = (
+    <div className="flex items-center justify-center gap-1.5 flex-wrap px-2">
+      <StatusFlag label="Sound" value={marantzStatus?.sound_mode ?? null} />
+      <StatusFlag label="Dirac" value={marantzStatus?.dirac ?? null} />
+      <StatusFlag label="Pic" value={picLabel} />
+    </div>
+  );
+
   return (
     <div
       className={
