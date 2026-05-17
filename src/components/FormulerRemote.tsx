@@ -78,6 +78,7 @@ import { toast } from "sonner";
 import logoYoutube from "@/assets/logo-youtube.png";
 import logoRedbull from "@/assets/logo-redbull.png";
 import logoSpotify from "@/assets/logo-spotify.png";
+import { setKioskEnabled } from "@/hooks/useKioskMode";
 
 interface Props {
   householdCode: string;
@@ -868,8 +869,8 @@ export function FormulerRemote({ householdCode, marantzStatus, marantzReachable,
               variant="outline"
               size="sm"
               className="h-8 text-xs shrink-0"
-              onClick={() => setLocked(true)}
-              title="Lås layout på skärmen (dubbelklicka rutan upptill för att låsa upp)"
+              onClick={() => setKioskEnabled(true)}
+              title="Lås alla remote-flikar på skärmen (dubbelklicka rutan upptill för att låsa upp)"
             >
               🔒 Lås på skärmen
             </Button>
