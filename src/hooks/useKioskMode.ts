@@ -32,7 +32,11 @@ export function useKioskMode() {
 
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
-    const onKioskChange = () => setEnabled(getKioskEnabled());
+    const onKioskChange = () => {
+      const next = getKioskEnabled();
+      setEnabled(next);
+      if (next) setUnlocked(false);
+    };
     window.addEventListener("resize", onResize);
     window.addEventListener("kiosk-changed", onKioskChange);
     return () => {
