@@ -40,17 +40,33 @@ interface Props {
 
 const SMART_SELECTS = [1, 2, 3, 4] as const;
 
+// Marantz/Denon MS-koder. Skickas som `MS<CODE>`. Statussvar returnerar
+// motsvarande sträng (t.ex. "DOLBY ATMOS"). Vissa upmixers (Atmos/Auro/Neural:X)
+// är bara giltiga om aktuell källa har en kompatibel bitström — annars
+// ignorerar AVR:n kommandot.
 const SOUND_MODES: { code: string; label: string }[] = [
+  // Snabbval — AVR väljer bästa läge utifrån källa
   { code: "MOVIE", label: "Movie" },
   { code: "MUSIC", label: "Music" },
   { code: "GAME", label: "Game" },
-  { code: "DIRECT", label: "Direct" },
-  { code: "PURE DIRECT", label: "Pure Direct" },
-  { code: "STEREO", label: "Stereo" },
   { code: "AUTO", label: "Auto" },
-  { code: "MCH STEREO", label: "Multi Ch Stereo" },
+  // Surround-upmixers
+  { code: "DOLBY ATMOS", label: "Dolby Atmos" },
+  { code: "DOLBY SURROUND", label: "Dolby Surround" },
+  { code: "DTS NEURAL:X", label: "DTS Neural:X" },
+  { code: "DTS VIRTUAL:X", label: "DTS Virtual:X" },
+  { code: "AURO3D", label: "Auro-3D" },
+  { code: "AURO2DSURR", label: "Auro-2D Surround" },
+  // Native bitstream-lägen
   { code: "DOLBY DIGITAL", label: "Dolby Digital" },
   { code: "DTS SURROUND", label: "DTS Surround" },
+  { code: "MULTI CH IN", label: "Multi Ch In" },
+  // Stereo / direct
+  { code: "STEREO", label: "Stereo" },
+  { code: "MCH STEREO", label: "Multi Ch Stereo" },
+  { code: "VIRTUAL", label: "Virtual" },
+  { code: "DIRECT", label: "Direct" },
+  { code: "PURE DIRECT", label: "Pure Direct" },
 ];
 
 const DIRAC_SLOTS: { value: string; label: string }[] = [
