@@ -485,29 +485,40 @@ export function MarantzRemote({
       {/* Sound Mode */}
       <Card className="p-4">
         <SettingHeader label="Sound Mode" value={soundModeLabel} />
-        <RadioGroup
-          value={soundMode}
-          onValueChange={handleSoundMode}
-          className="grid grid-cols-2 sm:grid-cols-3 gap-2"
-        >
-          {SOUND_MODES.map((m) => {
-            const active = soundMode === m.code;
-            return (
-              <label
-                key={m.code}
-                htmlFor={`sm-${m.code}`}
-                className={`flex items-center gap-2 px-3 h-11 rounded-md border cursor-pointer transition-colors ${
-                  active
-                    ? "border-primary bg-primary/15"
-                    : "border-border bg-secondary/40 hover:bg-secondary"
-                }`}
-              >
-                <RadioGroupItem id={`sm-${m.code}`} value={m.code} />
-                <span className="text-sm">{m.label}</span>
-              </label>
-            );
-          })}
-        </RadioGroup>
+        <TooltipProvider delayDuration={150}>
+          <RadioGroup
+            value={soundMode}
+            onValueChange={handleSoundMode}
+            className="grid grid-cols-2 sm:grid-cols-3 gap-2"
+          >
+            {SOUND_MODES.map((m) => {
+              const active = soundMode === m.code;
+              return (
+                <Tooltip key={m.code}>
+                  <TooltipTrigger asChild>
+                    <label
+                      htmlFor={`sm-${m.code}`}
+                      className={`flex items-center gap-2 px-3 h-11 rounded-md border cursor-pointer transition-colors ${
+                        active
+                          ? "border-primary bg-primary/15"
+                          : "border-border bg-secondary/40 hover:bg-secondary"
+                      }`}
+                    >
+                      <RadioGroupItem id={`sm-${m.code}`} value={m.code} />
+                      <span className="text-sm">{m.label}</span>
+                    </label>
+                  </TooltipTrigger>
+                  <TooltipContent
+                    side="top"
+                    className="max-w-xs whitespace-normal text-left leading-snug"
+                  >
+                    {m.info}
+                  </TooltipContent>
+                </Tooltip>
+              );
+            })}
+          </RadioGroup>
+        </TooltipProvider>
       </Card>
 
       {/* Dirac Live slot */}
