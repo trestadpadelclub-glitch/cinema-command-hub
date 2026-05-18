@@ -27,6 +27,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { sendMarantz, marantzMvToDb, type MarantzStatus } from "@/lib/projector";
 import { fetchInputs, fetchAppSettings, updateAppSettings, type MarantzInput, type MarantzLabels } from "@/lib/scenes";
 import { toast } from "sonner";
@@ -44,29 +50,29 @@ const SMART_SELECTS = [1, 2, 3, 4] as const;
 // motsvarande sträng (t.ex. "DOLBY ATMOS"). Vissa upmixers (Atmos/Auro/Neural:X)
 // är bara giltiga om aktuell källa har en kompatibel bitström — annars
 // ignorerar AVR:n kommandot.
-const SOUND_MODES: { code: string; label: string }[] = [
+const SOUND_MODES: { code: string; label: string; info: string }[] = [
   // Snabbval — AVR väljer bästa läge utifrån källa
-  { code: "MOVIE", label: "Movie" },
-  { code: "MUSIC", label: "Music" },
-  { code: "GAME", label: "Game" },
-  { code: "AUTO", label: "Auto" },
+  { code: "MOVIE", label: "Movie", info: "Snabbval för film. AVR:n väljer automatiskt bästa surroundbearbetning (oftast Dolby Surround eller DTS Neural:X) baserat på källans bitström. Bra default för filmkvällar." },
+  { code: "MUSIC", label: "Music", info: "Snabbval för musik. Mjukare surround och mer fokus på fronthögtalare. Lägger till diskret rumskänsla utan att färga vokaler." },
+  { code: "GAME", label: "Game", info: "Snabbval för spel. Bred surroundbild och accentuerade effekter för riktningslyssning. Låg latens jämfört med direkta lägen." },
+  { code: "AUTO", label: "Auto", info: "AVR:n följer källans flagga och spelar i originalformat (t.ex. Atmos om strömmen är Atmos, annars stereo). Tryggast valet — låter innehållet bestämma." },
   // Surround-upmixers
-  { code: "DOLBY ATMOS", label: "Dolby Atmos" },
-  { code: "DOLBY SURROUND", label: "Dolby Surround" },
-  { code: "DTS NEURAL:X", label: "DTS Neural:X" },
-  { code: "DTS VIRTUAL:X", label: "DTS Virtual:X" },
-  { code: "AURO3D", label: "Auro-3D" },
-  { code: "AURO2DSURR", label: "Auro-2D Surround" },
+  { code: "DOLBY ATMOS", label: "Dolby Atmos", info: "Objektbaserad 3D-ljud med höjdkanaler. Aktiveras bara om källan faktiskt är Atmos-kodad. För icke-Atmos källor, använd Dolby Surround för uppmixning till takkanaler." },
+  { code: "DOLBY SURROUND", label: "Dolby Surround", info: "Dolbys upmixer — tar 2.0/5.1/7.1-källor och fyller takkanalerna med syntetiserade höjdobjekt. Använd för att få ’Atmos-känsla’ på material utan Atmos-flagga." },
+  { code: "DTS NEURAL:X", label: "DTS Neural:X", info: "DTS upmixer — motsvarighet till Dolby Surround för DTS-källor. Skapar höjd/surround från stereo eller 5.1. Föredra för DTS-material." },
+  { code: "DTS VIRTUAL:X", label: "DTS Virtual:X", info: "Virtuell höjd/surround utan takhögtalare. Designad för system utan Atmos-konfig — ger pseudo-3D via psykoakustisk bearbetning. Skippa om du har riktiga takhögtalare." },
+  { code: "AURO3D", label: "Auro-3D", info: "Auros 3D-format med höjd och ’Voice of God’-kanal. Aktiverar Auro-Matic upmixer även för icke-Auro-källor. Mer naturlig, kupolformad rymd jämfört med Atmos objektmix." },
+  { code: "AURO2DSURR", label: "Auro-2D Surround", info: "Auros 2D-upmixer — fyller surroundkanaler utan höjd. Använd när du vill ha Auros klangbild men saknar takhögtalare." },
   // Native bitstream-lägen
-  { code: "DOLBY DIGITAL", label: "Dolby Digital" },
-  { code: "DTS SURROUND", label: "DTS Surround" },
-  { code: "MULTI CH IN", label: "Multi Ch In" },
+  { code: "DOLBY DIGITAL", label: "Dolby Digital", info: "Spelar Dolby Digital/DD+/TrueHD i originalkanaler utan upmixning. Inga takhögtalare aktiveras även om de finns. Renast återgivning för 5.1-mix." },
+  { code: "DTS SURROUND", label: "DTS Surround", info: "Spelar DTS/DTS-HD MA i originalkanaler utan upmixning. Motsvarigheten till ’Dolby Digital’-läget fast för DTS-strömmar." },
+  { code: "MULTI CH IN", label: "Multi Ch In", info: "Direktläge för analog flerkanalsingång (t.ex. SACD-spelare via 7.1 RCA). Bypass av all surroundbearbetning — alla kanaler går rakt till respektive högtalare." },
   // Stereo / direct
-  { code: "STEREO", label: "Stereo" },
-  { code: "MCH STEREO", label: "Multi Ch Stereo" },
-  { code: "VIRTUAL", label: "Virtual" },
-  { code: "DIRECT", label: "Direct" },
-  { code: "PURE DIRECT", label: "Pure Direct" },
+  { code: "STEREO", label: "Stereo", info: "Tvåkanaligt över front L/R + sub. Tonkontroller och bashantering aktiva. Bra för vardagsmusik och bakgrundsljud." },
+  { code: "MCH STEREO", label: "Multi Ch Stereo", info: "Speglar stereo till alla högtalare (front, surround, höjd). ’Party mode’ — hög volym utan riktningskänsla. Inte för kritisk lyssning." },
+  { code: "VIRTUAL", label: "Virtual", info: "Virtuell surround över bara front/hörlurar. För när inga surroundhögtalare är anslutna men du vill ha en breddad ljudbild." },
+  { code: "DIRECT", label: "Direct", info: "Bypass av tonkontroller och de flesta DSP. Behåller källans kanalkonfiguration. Använd för rena inspelningar där du vill höra signalen oförändrad." },
+  { code: "PURE DIRECT", label: "Pure Direct", info: "Som Direct men stänger även av display och videokretsar för minimal störning. Audiofilt läge — högsta tänkbara renhet, bara för lyssning." },
 ];
 
 const DIRAC_SLOTS: { value: string; label: string }[] = [
@@ -479,29 +485,40 @@ export function MarantzRemote({
       {/* Sound Mode */}
       <Card className="p-4">
         <SettingHeader label="Sound Mode" value={soundModeLabel} />
-        <RadioGroup
-          value={soundMode}
-          onValueChange={handleSoundMode}
-          className="grid grid-cols-2 sm:grid-cols-3 gap-2"
-        >
-          {SOUND_MODES.map((m) => {
-            const active = soundMode === m.code;
-            return (
-              <label
-                key={m.code}
-                htmlFor={`sm-${m.code}`}
-                className={`flex items-center gap-2 px-3 h-11 rounded-md border cursor-pointer transition-colors ${
-                  active
-                    ? "border-primary bg-primary/15"
-                    : "border-border bg-secondary/40 hover:bg-secondary"
-                }`}
-              >
-                <RadioGroupItem id={`sm-${m.code}`} value={m.code} />
-                <span className="text-sm">{m.label}</span>
-              </label>
-            );
-          })}
-        </RadioGroup>
+        <TooltipProvider delayDuration={150}>
+          <RadioGroup
+            value={soundMode}
+            onValueChange={handleSoundMode}
+            className="grid grid-cols-2 sm:grid-cols-3 gap-2"
+          >
+            {SOUND_MODES.map((m) => {
+              const active = soundMode === m.code;
+              return (
+                <Tooltip key={m.code}>
+                  <TooltipTrigger asChild>
+                    <label
+                      htmlFor={`sm-${m.code}`}
+                      className={`flex items-center gap-2 px-3 h-11 rounded-md border cursor-pointer transition-colors ${
+                        active
+                          ? "border-primary bg-primary/15"
+                          : "border-border bg-secondary/40 hover:bg-secondary"
+                      }`}
+                    >
+                      <RadioGroupItem id={`sm-${m.code}`} value={m.code} />
+                      <span className="text-sm">{m.label}</span>
+                    </label>
+                  </TooltipTrigger>
+                  <TooltipContent
+                    side="top"
+                    className="max-w-xs whitespace-normal text-left leading-snug"
+                  >
+                    {m.info}
+                  </TooltipContent>
+                </Tooltip>
+              );
+            })}
+          </RadioGroup>
+        </TooltipProvider>
       </Card>
 
       {/* Dirac Live slot */}
