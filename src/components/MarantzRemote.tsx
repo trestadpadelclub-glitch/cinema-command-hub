@@ -27,6 +27,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { sendMarantz, marantzMvToDb, type MarantzStatus } from "@/lib/projector";
 import { fetchInputs, fetchAppSettings, updateAppSettings, type MarantzInput, type MarantzLabels } from "@/lib/scenes";
 import { toast } from "sonner";
