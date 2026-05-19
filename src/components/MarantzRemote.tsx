@@ -64,8 +64,6 @@ const SOUND_MODES: { code: string; label: string; info: string }[] = [
   { code: "AURO3D", label: "Auro-3D", info: "Auros 3D-format med höjd och ’Voice of God’-kanal. Aktiverar Auro-Matic upmixer även för icke-Auro-källor. Mer naturlig, kupolformad rymd jämfört med Atmos objektmix." },
   
   // Native bitstream-lägen
-  { code: "DOLBY DIGITAL", label: "Dolby Digital", info: "Spelar Dolby Digital/DD+/TrueHD i originalkanaler utan upmixning. Inga takhögtalare aktiveras även om de finns. Renast återgivning för 5.1-mix." },
-  { code: "DTS SURROUND", label: "DTS Surround", info: "Spelar DTS/DTS-HD MA i originalkanaler utan upmixning. Motsvarigheten till ’Dolby Digital’-läget fast för DTS-strömmar." },
   
   // Stereo / direct
   { code: "STEREO", label: "Stereo", info: "Tvåkanaligt över front L/R + sub. Tonkontroller och bashantering aktiva. Bra för vardagsmusik och bakgrundsljud." },

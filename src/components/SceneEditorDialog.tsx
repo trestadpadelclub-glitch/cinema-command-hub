@@ -63,8 +63,6 @@ const SOUND_MODES = [
   { code: "DOLBY SURROUND", label: "Dolby Surround" },
   { code: "DTS NEURAL:X", label: "DTS Neural:X" },
   { code: "AURO3D", label: "Auro-3D" },
-  { code: "DOLBY DIGITAL", label: "Dolby Digital" },
-  { code: "DTS SURROUND", label: "DTS Surround" },
   { code: "STEREO", label: "Stereo" },
   { code: "MCH STEREO", label: "Multi Ch Stereo" },
   { code: "DIRECT", label: "Direct" },
