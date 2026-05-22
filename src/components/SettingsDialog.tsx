@@ -126,18 +126,19 @@ export function SettingsDialog() {
               )}
             <div className="rounded-md border border-border/50 bg-muted/30 p-3 text-xs text-muted-foreground space-y-1">
               <p className="font-medium text-foreground">Lokalt LAN-läge (iPhone/iPad på samma WiFi)</p>
-              <p>1. Installera beroenden: <code>pip install tinytuya pychromecast</code></p>
-              <p>2. Starta bryggan (v43): <code>python Formuler_alfa_status_v43.py</code></p>
+              <p>1. Installera beroenden: <code>pip install tinytuya pychromecast broadlink</code></p>
+              <p>2. Starta bryggan (v44): <code>python Formuler_alfa_status_v44.py</code></p>
               <p>3. Starta appen: <code>bun dev --host</code></p>
               <p>4. Öppna <code>http://&lt;datorns-IP&gt;:5173</code> i Safari på iPad/iPhone.</p>
               <p>5. Sätt Bridge URL ovan till <code>http://&lt;datorns-IP&gt;:5000/api/projector</code>.</p>
               <p className="pt-1 text-[10px]">
-                <a href="/downloads/Formuler_alfa_status_v43.py" download className="text-primary underline">
-                  Ladda ner v43
+                <a href="/downloads/Formuler_alfa_status_v44.py" download className="text-primary underline">
+                  Ladda ner v44
                 </a>
                 {" · "}
-                <span>v43: <strong>endast MyTVOnline3</strong> triggar movie_*-scener (ljusautomatik). YouTube, Spotify, Red Bull TV, Netflix m.fl. ignoreras helt — play/paus i dem släcker/tänder INTE längre lampor. Behåller v42:s <code>GET /api/remote/scene/&lt;n&gt;</code> och v41:s smarta Blank-cykel.</span>
+                <span>v44: <strong>Broadlink IR-stöd</strong> för Panasonic Blu-ray (DP-UB154) m.fl. Nya endpoints <code>/api/ir/learn</code>, <code>/api/ir/send</code>, <code>/api/ir/codes</code>. Standardvärden: <code>BROADLINK_HOST=192.168.86.23</code>, <code>BROADLINK_MAC=34:8e:89:2d:ba:9c</code>. IR-koder sparas i <code>ir_codes.json</code> bredvid scriptet. Behåller v43:s ljusautomatik.</span>
               </p>
+
 
             </div>
           </div>
