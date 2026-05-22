@@ -285,7 +285,7 @@ export function BlurayRemote({ householdCode }: Props) {
     return lights.map((l) => {
       const cmd: SceneLightCommand = {
         device_id: l.tuya_device_id,
-        type: (l.type as SceneLightCommand["type"]) ?? "dimmer",
+        type: (l.light_type as SceneLightCommand["type"]) ?? "dimmer",
         on,
       };
       if (on && typeof level === "number") {
@@ -344,7 +344,7 @@ export function BlurayRemote({ householdCode }: Props) {
       if (lightsOn.length === 0) return;
       const payload: SceneLightCommand[] = lightsOn.map((l) => ({
         device_id: l.tuya_device_id,
-        type: (l.type as SceneLightCommand["type"]) ?? "dimmer",
+        type: (l.light_type as SceneLightCommand["type"]) ?? "dimmer",
         on: true,
         brightness: value,
       }));
