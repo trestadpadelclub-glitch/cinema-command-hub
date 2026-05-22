@@ -1174,3 +1174,102 @@ export async function runBridgeCommands(
   }
   return results;
 }
+
+// ---------- Broadlink IR (v44) ----------
+
+function irUrl(action: string): string {
+  const base = getBridgeUrl().replace(/\/api\/projector$/i, "");
+  return base.replace(/\/+$/, "") + `/api/ir/${action}`;
+}
+
+export interface IrStatus {
+  ok: boolean;
+  host?: string;
+  mac?: string;
+  port?: number;
+  devtype?: string;
+  reachable?: boolean;
+  error?: string | null;
+  codes_file?: string;
+  keys?: string[];
+}
+
+export async function getIrStatus(): Promise<IrStatus> {
+  try {
+    const res = await fetch(irUrl("status"), {
+      headers: { Accept: "application/json", "ngrok-skip-browser-warning": "true" },
+    });
+    const data = (await res.json().catch(() => ({}))) as IrStatus;
+    if (!res.ok) return { ok: false, error: data?.error || `Status ${res.status}` };
+    return data;
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+export async function getIrCodes(): Promise<{ ok: boolean; keys: string[]; error?: string }> {
+  try {
+    const res = await fetch(irUrl("codes"), {
+      headers: { Accept: "application/json", "ngrok-skip-browser-warning": "true" },
+    });
+    const data = (await res.json().catch(() => ({}))) as { ok?: boolean; keys?: string[]; error?: string };
+    if (!res.ok) return { ok: false, keys: [], error: data?.error || `Status ${res.status}` };
+    return { ok: !!data.ok, keys: Array.isArray(data.keys) ? data.keys : [], error: data.error };
+  } catch (e) {
+    return { ok: false, keys: [], error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+export async function sendIr(key: string): Promise<CommandResult> {
+  return postJson(irUrl("send"), { key }, { action: "remote_key" as Action, value: `ir_${key}` });
+}
+
+export async function learnIr(
+  key: string,
+  timeoutSeconds = 20,
+): Promise<{ ok: boolean; key?: string; bytes?: number; error?: string }> {
+  try {
+    const res = await fetch(irUrl("learn"), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "ngrok-skip-browser-warning": "true",
+      },
+      body: JSON.stringify({ key, timeout: timeoutSeconds }),
+    });
+    const data = (await res.json().catch(() => ({}))) as {
+      ok?: boolean;
+      key?: string;
+      bytes?: number;
+      error?: string;
+    };
+    return {
+      ok: !!data.ok,
+      key: data.key,
+      bytes: data.bytes,
+      error: data.error,
+    };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+export async function forgetIr(key: string): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const res = await fetch(irUrl("forget"), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "ngrok-skip-browser-warning": "true",
+      },
+      body: JSON.stringify({ key }),
+    });
+    const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+    return { ok: !!data.ok, error: data.error };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
