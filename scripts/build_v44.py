@@ -281,10 +281,9 @@ text = text.replace(get_anchor, get_inject + get_anchor, 1)
 
 # do_POST: insert before the final `else:` branch returning 404
 post_anchor = '        elif path.startswith("/api/chromecast/"):'
-post_inject = '''        elif path.startswith("/api/ir/"):
-            self._handle_ir(path[len("/api/ir/"):], body)
-            return
-        '''
+post_inject = ('        elif path.startswith("/api/ir/"):\n'
+               '            self._handle_ir(path[len("/api/ir/"):], body)\n'
+               '            return\n')
 text = text.replace(post_anchor, post_inject + post_anchor, 1)
 
 # 6) Add _handle_ir method on Handler — insert just before _handle_chromecast
