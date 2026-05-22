@@ -11,7 +11,7 @@ import {
   Loader2,
   Info,
   Lightbulb,
-  Eject,
+  Disc3 as Eject,
   GraduationCap,
   Trash2,
   CheckCircle2,
@@ -26,6 +26,7 @@ import {
   ArrowLeft,
   Home,
 } from "lucide-react";
+
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
