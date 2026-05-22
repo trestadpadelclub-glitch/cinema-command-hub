@@ -2950,7 +2950,7 @@ class Handler(BaseHTTPRequestHandler):
         elif path.startswith("/api/ir/"):
             self._handle_ir(path[len("/api/ir/"):], body)
             return
-                elif path.startswith("/api/chromecast/"):
+        elif path.startswith("/api/chromecast/"):
             # v33: /api/chromecast/play | pause | stop | next | previous
             #      /api/chromecast/volume   body {level: 0-100}
             #      /api/chromecast/mute     body {muted: true/false}
