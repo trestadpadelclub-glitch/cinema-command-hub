@@ -216,6 +216,27 @@ export function BlurayRemote({ householdCode }: Props) {
   const handleLearn = async (key: string) => {
     setLearning(true);
     try {
+      // Pre-flight: om bryggan inte ens svarar på /status, ge tydligt fel
+      // direkt istället för att vänta 25 s i lärläge.
+      const st = await getIrStatus();
+      const httpsPage =
+        typeof window !== "undefined" && window.location.protocol === "https:";
+      if (!st.ok) {
+        toast.error("Når inte Broadlink-bryggan", {
+          description:
+            (st.error || "okänt nätverksfel") +
+            (httpsPage
+              ? " — appen körs på HTTPS men bryggan är HTTP (Mixed Content blockeras). Öppna appen via http://<datorns-IP>:5173 på samma WiFi."
+              : " — kontrollera att v44-bryggan kör och att Bridge URL i Settings stämmer."),
+        });
+        return;
+      }
+      if (st.reachable === false) {
+        toast.error("Broadlink-dosan svarar inte", {
+          description: st.error || `Bryggan kör, men kan inte auth:a mot ${st.host ?? "Broadlink"}.`,
+        });
+        return;
+      }
       const res = await learnIr(key, 25);
       if (!res.ok) {
         toast.error("Lärning misslyckades", { description: res.error ?? "okänt fel" });
