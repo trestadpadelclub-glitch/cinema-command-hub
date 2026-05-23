@@ -651,7 +651,7 @@ export function BlurayRemote({ householdCode }: Props) {
                   <Button
                     size="sm"
                     variant={isTarget && learning ? "default" : "outline"}
-                    disabled={learning || !irReachable}
+                    disabled={learning}
                     onClick={() => {
                       setLearnTargetKey(b.irKey);
                       void handleLearn(b.irKey);
