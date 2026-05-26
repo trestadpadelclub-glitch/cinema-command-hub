@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ValvetRouteImport } from './routes/valvet'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as InkorgenRouteImport } from './routes/inkorgen'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiPublicTriggerRouteImport } from './routes/api/public/trigger'
@@ -19,6 +20,11 @@ import { Route as ApiPublicCinemaBrainRouteImport } from './routes/api/public/ci
 const ValvetRoute = ValvetRouteImport.update({
   id: '/valvet',
   path: '/valvet',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InkorgenRoute = InkorgenRouteImport.update({
@@ -50,6 +56,7 @@ const ApiPublicCinemaBrainRoute = ApiPublicCinemaBrainRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/inkorgen': typeof InkorgenRoute
+  '/login': typeof LoginRoute
   '/valvet': typeof ValvetRoute
   '/api/public/cinema-brain': typeof ApiPublicCinemaBrainRoute
   '/api/public/scene': typeof ApiPublicSceneRoute
@@ -58,6 +65,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/inkorgen': typeof InkorgenRoute
+  '/login': typeof LoginRoute
   '/valvet': typeof ValvetRoute
   '/api/public/cinema-brain': typeof ApiPublicCinemaBrainRoute
   '/api/public/scene': typeof ApiPublicSceneRoute
@@ -67,6 +75,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/inkorgen': typeof InkorgenRoute
+  '/login': typeof LoginRoute
   '/valvet': typeof ValvetRoute
   '/api/public/cinema-brain': typeof ApiPublicCinemaBrainRoute
   '/api/public/scene': typeof ApiPublicSceneRoute
@@ -77,6 +86,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/inkorgen'
+    | '/login'
     | '/valvet'
     | '/api/public/cinema-brain'
     | '/api/public/scene'
@@ -85,6 +95,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/inkorgen'
+    | '/login'
     | '/valvet'
     | '/api/public/cinema-brain'
     | '/api/public/scene'
@@ -93,6 +104,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/inkorgen'
+    | '/login'
     | '/valvet'
     | '/api/public/cinema-brain'
     | '/api/public/scene'
@@ -102,6 +114,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   InkorgenRoute: typeof InkorgenRoute
+  LoginRoute: typeof LoginRoute
   ValvetRoute: typeof ValvetRoute
   ApiPublicCinemaBrainRoute: typeof ApiPublicCinemaBrainRoute
   ApiPublicSceneRoute: typeof ApiPublicSceneRoute
@@ -115,6 +128,13 @@ declare module '@tanstack/react-router' {
       path: '/valvet'
       fullPath: '/valvet'
       preLoaderRoute: typeof ValvetRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/inkorgen': {
@@ -158,6 +178,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   InkorgenRoute: InkorgenRoute,
+  LoginRoute: LoginRoute,
   ValvetRoute: ValvetRoute,
   ApiPublicCinemaBrainRoute: ApiPublicCinemaBrainRoute,
   ApiPublicSceneRoute: ApiPublicSceneRoute,
