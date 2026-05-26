@@ -9,12 +9,18 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ValvetRouteImport } from './routes/valvet'
 import { Route as InkorgenRouteImport } from './routes/inkorgen'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiPublicTriggerRouteImport } from './routes/api/public/trigger'
 import { Route as ApiPublicSceneRouteImport } from './routes/api/public/scene'
 import { Route as ApiPublicCinemaBrainRouteImport } from './routes/api/public/cinema-brain'
 
+const ValvetRoute = ValvetRouteImport.update({
+  id: '/valvet',
+  path: '/valvet',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const InkorgenRoute = InkorgenRouteImport.update({
   id: '/inkorgen',
   path: '/inkorgen',
@@ -44,6 +50,7 @@ const ApiPublicCinemaBrainRoute = ApiPublicCinemaBrainRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/inkorgen': typeof InkorgenRoute
+  '/valvet': typeof ValvetRoute
   '/api/public/cinema-brain': typeof ApiPublicCinemaBrainRoute
   '/api/public/scene': typeof ApiPublicSceneRoute
   '/api/public/trigger': typeof ApiPublicTriggerRoute
@@ -51,6 +58,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/inkorgen': typeof InkorgenRoute
+  '/valvet': typeof ValvetRoute
   '/api/public/cinema-brain': typeof ApiPublicCinemaBrainRoute
   '/api/public/scene': typeof ApiPublicSceneRoute
   '/api/public/trigger': typeof ApiPublicTriggerRoute
@@ -59,6 +67,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/inkorgen': typeof InkorgenRoute
+  '/valvet': typeof ValvetRoute
   '/api/public/cinema-brain': typeof ApiPublicCinemaBrainRoute
   '/api/public/scene': typeof ApiPublicSceneRoute
   '/api/public/trigger': typeof ApiPublicTriggerRoute
@@ -68,6 +77,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/inkorgen'
+    | '/valvet'
     | '/api/public/cinema-brain'
     | '/api/public/scene'
     | '/api/public/trigger'
@@ -75,6 +85,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/inkorgen'
+    | '/valvet'
     | '/api/public/cinema-brain'
     | '/api/public/scene'
     | '/api/public/trigger'
@@ -82,6 +93,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/inkorgen'
+    | '/valvet'
     | '/api/public/cinema-brain'
     | '/api/public/scene'
     | '/api/public/trigger'
@@ -90,6 +102,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   InkorgenRoute: typeof InkorgenRoute
+  ValvetRoute: typeof ValvetRoute
   ApiPublicCinemaBrainRoute: typeof ApiPublicCinemaBrainRoute
   ApiPublicSceneRoute: typeof ApiPublicSceneRoute
   ApiPublicTriggerRoute: typeof ApiPublicTriggerRoute
@@ -97,6 +110,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/valvet': {
+      id: '/valvet'
+      path: '/valvet'
+      fullPath: '/valvet'
+      preLoaderRoute: typeof ValvetRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/inkorgen': {
       id: '/inkorgen'
       path: '/inkorgen'
@@ -138,6 +158,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   InkorgenRoute: InkorgenRoute,
+  ValvetRoute: ValvetRoute,
   ApiPublicCinemaBrainRoute: ApiPublicCinemaBrainRoute,
   ApiPublicSceneRoute: ApiPublicSceneRoute,
   ApiPublicTriggerRoute: ApiPublicTriggerRoute,
