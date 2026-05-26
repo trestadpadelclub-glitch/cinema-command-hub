@@ -1,7 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Inbox } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { Projector, RotateCw, Loader2 } from "lucide-react";
+import { Projector, RotateCw, Loader2, Inbox } from "lucide-react";
 import { Toaster } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
 import { SettingsDialog } from "@/components/SettingsDialog";
