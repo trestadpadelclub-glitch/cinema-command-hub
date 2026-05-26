@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { Projector, RotateCw, Loader2 } from "lucide-react";
+import { Projector, RotateCw, Loader2, Inbox } from "lucide-react";
 import { Toaster } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
 import { SettingsDialog } from "@/components/SettingsDialog";
@@ -274,6 +274,12 @@ function Index() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Link to="/inkorgen">
+              <Button variant="secondary" size="sm" title="Inkorgen">
+                <Inbox className="h-4 w-4 mr-1.5" />
+                Inkorgen
+              </Button>
+            </Link>
             <Button
               variant="secondary"
               size="sm"

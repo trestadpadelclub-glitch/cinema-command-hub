@@ -9,11 +9,17 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as InkorgenRouteImport } from './routes/inkorgen'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiPublicTriggerRouteImport } from './routes/api/public/trigger'
 import { Route as ApiPublicSceneRouteImport } from './routes/api/public/scene'
 import { Route as ApiPublicCinemaBrainRouteImport } from './routes/api/public/cinema-brain'
 
+const InkorgenRoute = InkorgenRouteImport.update({
+  id: '/inkorgen',
+  path: '/inkorgen',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -37,12 +43,14 @@ const ApiPublicCinemaBrainRoute = ApiPublicCinemaBrainRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/inkorgen': typeof InkorgenRoute
   '/api/public/cinema-brain': typeof ApiPublicCinemaBrainRoute
   '/api/public/scene': typeof ApiPublicSceneRoute
   '/api/public/trigger': typeof ApiPublicTriggerRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/inkorgen': typeof InkorgenRoute
   '/api/public/cinema-brain': typeof ApiPublicCinemaBrainRoute
   '/api/public/scene': typeof ApiPublicSceneRoute
   '/api/public/trigger': typeof ApiPublicTriggerRoute
@@ -50,6 +58,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/inkorgen': typeof InkorgenRoute
   '/api/public/cinema-brain': typeof ApiPublicCinemaBrainRoute
   '/api/public/scene': typeof ApiPublicSceneRoute
   '/api/public/trigger': typeof ApiPublicTriggerRoute
@@ -58,18 +67,21 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/inkorgen'
     | '/api/public/cinema-brain'
     | '/api/public/scene'
     | '/api/public/trigger'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/inkorgen'
     | '/api/public/cinema-brain'
     | '/api/public/scene'
     | '/api/public/trigger'
   id:
     | '__root__'
     | '/'
+    | '/inkorgen'
     | '/api/public/cinema-brain'
     | '/api/public/scene'
     | '/api/public/trigger'
@@ -77,6 +89,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  InkorgenRoute: typeof InkorgenRoute
   ApiPublicCinemaBrainRoute: typeof ApiPublicCinemaBrainRoute
   ApiPublicSceneRoute: typeof ApiPublicSceneRoute
   ApiPublicTriggerRoute: typeof ApiPublicTriggerRoute
@@ -84,6 +97,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/inkorgen': {
+      id: '/inkorgen'
+      path: '/inkorgen'
+      fullPath: '/inkorgen'
+      preLoaderRoute: typeof InkorgenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -117,6 +137,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  InkorgenRoute: InkorgenRoute,
   ApiPublicCinemaBrainRoute: ApiPublicCinemaBrainRoute,
   ApiPublicSceneRoute: ApiPublicSceneRoute,
   ApiPublicTriggerRoute: ApiPublicTriggerRoute,
@@ -124,3 +145,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
