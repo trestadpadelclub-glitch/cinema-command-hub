@@ -241,6 +241,7 @@ function Index() {
               <Projector className="h-6 w-6 text-primary-foreground" />
             </div>
             <div>
+              <div className="flex items-center gap-2">
                 <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Master Control Hub</h1>
                 <span
                   title={
