@@ -241,7 +241,13 @@ function Index() {
               <Projector className="h-6 w-6 text-primary-foreground" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
+            <Link to="/inkorgen">
+              <Button variant="secondary" size="sm" title="Inkorgen">
+                <Inbox className="h-4 w-4 mr-1.5" />
+                Inkorgen
+              </Button>
+            </Link>
                 <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Master Control Hub</h1>
                 <span
                   title={
