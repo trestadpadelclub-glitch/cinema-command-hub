@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { Projector, RotateCw, Loader2, Inbox, Images } from "lucide-react";
+import { Projector, RotateCw, Loader2, Inbox, Images, Users } from "lucide-react";
 import { Toaster } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
 import { SettingsDialog } from "@/components/SettingsDialog";
@@ -284,6 +284,12 @@ function Index() {
               <Button variant="secondary" size="sm" title="Valvet">
                 <Images className="h-4 w-4 mr-1.5" />
                 Valvet
+              </Button>
+            </Link>
+            <Link to="/admin">
+              <Button variant="secondary" size="sm" title="Admin">
+                <Users className="h-4 w-4 mr-1.5" />
+                Admin
               </Button>
             </Link>
             <Button

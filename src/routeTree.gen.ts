@@ -10,7 +10,9 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ValvetRouteImport } from './routes/valvet'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as InkorgenRouteImport } from './routes/inkorgen'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiPublicTriggerRouteImport } from './routes/api/public/trigger'
 import { Route as ApiPublicSceneRouteImport } from './routes/api/public/scene'
@@ -21,9 +23,19 @@ const ValvetRoute = ValvetRouteImport.update({
   path: '/valvet',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const InkorgenRoute = InkorgenRouteImport.update({
   id: '/inkorgen',
   path: '/inkorgen',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -49,7 +61,9 @@ const ApiPublicCinemaBrainRoute = ApiPublicCinemaBrainRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/inkorgen': typeof InkorgenRoute
+  '/login': typeof LoginRoute
   '/valvet': typeof ValvetRoute
   '/api/public/cinema-brain': typeof ApiPublicCinemaBrainRoute
   '/api/public/scene': typeof ApiPublicSceneRoute
@@ -57,7 +71,9 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/inkorgen': typeof InkorgenRoute
+  '/login': typeof LoginRoute
   '/valvet': typeof ValvetRoute
   '/api/public/cinema-brain': typeof ApiPublicCinemaBrainRoute
   '/api/public/scene': typeof ApiPublicSceneRoute
@@ -66,7 +82,9 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/inkorgen': typeof InkorgenRoute
+  '/login': typeof LoginRoute
   '/valvet': typeof ValvetRoute
   '/api/public/cinema-brain': typeof ApiPublicCinemaBrainRoute
   '/api/public/scene': typeof ApiPublicSceneRoute
@@ -76,7 +94,9 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/admin'
     | '/inkorgen'
+    | '/login'
     | '/valvet'
     | '/api/public/cinema-brain'
     | '/api/public/scene'
@@ -84,7 +104,9 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/admin'
     | '/inkorgen'
+    | '/login'
     | '/valvet'
     | '/api/public/cinema-brain'
     | '/api/public/scene'
@@ -92,7 +114,9 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/admin'
     | '/inkorgen'
+    | '/login'
     | '/valvet'
     | '/api/public/cinema-brain'
     | '/api/public/scene'
@@ -101,7 +125,9 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRoute
   InkorgenRoute: typeof InkorgenRoute
+  LoginRoute: typeof LoginRoute
   ValvetRoute: typeof ValvetRoute
   ApiPublicCinemaBrainRoute: typeof ApiPublicCinemaBrainRoute
   ApiPublicSceneRoute: typeof ApiPublicSceneRoute
@@ -117,11 +143,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ValvetRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/inkorgen': {
       id: '/inkorgen'
       path: '/inkorgen'
       fullPath: '/inkorgen'
       preLoaderRoute: typeof InkorgenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -157,7 +197,9 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRoute,
   InkorgenRoute: InkorgenRoute,
+  LoginRoute: LoginRoute,
   ValvetRoute: ValvetRoute,
   ApiPublicCinemaBrainRoute: ApiPublicCinemaBrainRoute,
   ApiPublicSceneRoute: ApiPublicSceneRoute,
