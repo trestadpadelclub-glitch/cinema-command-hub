@@ -221,8 +221,17 @@ export const Route = createFileRoute("/api/public/trigger")({
         // 4. Marantz power FIRST
         let marantzOff = false;
         if (scene.marantz_power === "on" || scene.marantz_power === "off") {
-          pushMarantz({ action: "marantz", value: scene.marantz_power === "on" ? "PWON" : "PWSTANDBY" });
-          if (scene.marantz_power === "off") marantzOff = true;
+          if (scene.marantz_power === "on") {
+            pushMarantz({ action: "marantz", value: "PWON" });
+            // Säkerställ att frontdisplayen inte ligger kvar i DIMMER OFF efter CEC/standby.
+            pushMarantz({ action: "marantz", value: "DIM BRI" });
+          } else {
+            // Stäng extra zoner först så receivern inte hamnar i "display släckt men aktiv".
+            pushMarantz({ action: "marantz", value: "Z2OFF" });
+            pushMarantz({ action: "marantz", value: "Z3OFF" });
+            pushMarantz({ action: "marantz", value: "PWSTANDBY" });
+            marantzOff = true;
+          }
         }
 
         // 5. Marantz input
