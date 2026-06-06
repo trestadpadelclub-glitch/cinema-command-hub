@@ -843,7 +843,14 @@ export async function sendScene(p: SceneCommandPayload): Promise<CommandResult[]
   // Marantz power FIRST — om "off" så skippa input/volym
   if (p.marantzPower === "on" || p.marantzPower === "off") {
     await waitMarantz();
-    results.push(await sendMarantz(p.marantzPower === "on" ? "PWON" : "PWSTANDBY"));
+    if (p.marantzPower === "on") {
+      results.push(await sendMarantz("PWON"));
+      results.push(await sendMarantz("DIM BRI"));
+    } else {
+      results.push(await sendMarantz("Z2OFF"));
+      results.push(await sendMarantz("Z3OFF"));
+      results.push(await sendMarantz("PWSTANDBY"));
+    }
     if (p.marantzPower === "off") {
       if (p.projectorSettings && Object.keys(p.projectorSettings).length > 0) {
         await applyProjectorSettingsWithBlankDelay(p.projectorSettings);

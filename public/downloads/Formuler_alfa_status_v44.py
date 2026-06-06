@@ -1835,6 +1835,53 @@ def _execute_scene_payload(payload: Optional[Dict[str, Any]]) -> None:
     if not payload or not payload.get("matched"):
         return
 
+    commands = payload.get("commands") or []
+    if isinstance(commands, list) and commands:
+        _log(f"*** AUTOMATION COMMANDS: {len(commands)} steg (via {payload.get('trigger_key', 'unknown')}) ***")
+        for cmd in commands:
+            if not isinstance(cmd, dict):
+                continue
+            delay_ms = cmd.get("delay_ms") or 0
+            try:
+                delay_s = max(0.0, float(delay_ms) / 1000.0)
+            except (TypeError, ValueError):
+                delay_s = 0.0
+            if delay_s > 0:
+                time.sleep(delay_s)
+            endpoint = cmd.get("endpoint")
+            body = cmd.get("body") or {}
+            if not isinstance(body, dict):
+                body = {}
+            action = str(body.get("action", "")).strip().lower()
+            value = body.get("value")
+            _log(f"  CMD {endpoint} {body}")
+            try:
+                if endpoint == "/api/projector":
+                    if action == "scene":
+                        continue
+                    if action == "power":
+                        info = ACTION_MAP.get("power")
+                        if info and info[0]:
+                            adcp_set(info[0], info[1](value))
+                            if str(value).lower() in ("on", "1", "true"):
+                                _wait_until_active(timeout=45.0)
+                        continue
+                    info = ACTION_MAP.get(action)
+                    if info and info[0] is not None:
+                        item_name, mapper, _decoder = info
+                        adcp_set(item_name, mapper(value))
+                    else:
+                        _log(f"  projector action {action!r} -> SKIPPED")
+                elif endpoint == "/api/marantz":
+                    if isinstance(value, str) and value.strip():
+                        marantz_send(value.strip())
+                elif endpoint == "/api/lights":
+                    if action == "scene_lights" and isinstance(value, dict):
+                        tuya_apply_lights(value.get("lights") or [])
+            except Exception as e:
+                _log(f"  CMD fail {endpoint}: {e}")
+        return
+
     filters = payload.get("filters", {}) or {}
     scene = payload.get("scene", {}) or {}
     trigger_key = payload.get("trigger_key", "unknown")
